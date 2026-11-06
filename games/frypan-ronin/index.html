@@ -93,6 +93,13 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--room);color:var(
 #bDodge{right:0;bottom:96px;width:62px;height:62px}
 .err{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:13px;color:var(--ink);padding-inline:max(16px,env(safe-area-inset-left,0px));text-align:center}
 @media (prefers-reduced-motion:reduce){.combo .num.pop,.bar.hurt,#alarm.on{animation:none}}
+
+/* Readability on phones: the heavy display font turns small kanji into blobs,
+   so small labels and the touch buttons use the system Japanese font. */
+.vit span,.moves .n,.kills span,.redinfo,.mode,.hint span,.btn{
+  font-family:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic","Noto Sans JP",system-ui,sans-serif;font-weight:700}
+.btn{font-size:14px;line-height:1.1;text-align:center;letter-spacing:.02em}
+#bAtk{font-size:18px}
 </style>
 
 </head>
@@ -133,11 +140,11 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--room);color:var(
   <div id="stickZone"></div>
   <div id="stick"><div id="knob"></div></div>
   <div class="btns">
-    <div class="btn" id="bAtk">叩</div>
-    <div class="btn" id="bKick">蹴</div>
-    <div class="btn" id="bSlide">滑</div>
-    <div class="btn" id="bGuard">受</div>
-    <div class="btn" id="bDodge">避</div>
+    <div class="btn" id="bAtk">たたく</div>
+    <div class="btn" id="bKick">けり</div>
+    <div class="btn" id="bSlide">すべる</div>
+    <div class="btn" id="bGuard">ガード</div>
+    <div class="btn" id="bDodge">よける</div>
   </div>
 </div>
 
