@@ -141,7 +141,8 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--room);color:var(
   </div>
 </div>
 
-<script src="../_lib/three.min.js"></script>
+<script src="../shared/three.min.js"></script>
+<script>window.THREE||document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>')</script>
 <script>
 (function(){
 if(!window.THREE){document.body.insertAdjacentHTML('beforeend','<div class="err">3Dエンジンを読み込めませんでした。接続を確認して再読み込みしてください。</div>');return;}

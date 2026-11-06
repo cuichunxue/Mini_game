@@ -254,7 +254,8 @@ a.btn{text-decoration:none;color:inherit;box-sizing:border-box}
   </section>
 </div>
 
-<script src="../_lib/three.min.js"></script>
+<script src="../shared/three.min.js"></script>
+<script>window.THREE||document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>')</script>
 <script>
 /* ===== SIM: コース定義・物理・AI (DOM / THREE 非依存) ===== */
 const GRAV = 9.8, SLOPE_K = 1.9, AIR_G = 9.0;

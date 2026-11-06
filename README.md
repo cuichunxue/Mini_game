@@ -8,7 +8,7 @@
 index.html               統合サイト（ゲーム一覧・プレイ画面・管理画面）
 games.js                 組み込みゲームの一覧（ここに登録したゲームがサイトに並ぶ）
 games/<id>/index.html    各ゲーム本体
-games/_lib/three.min.js  3Dゲーム用の共通ライブラリ（Frypan Ronin・Sky Slide King）
+games/shared/three.min.js   3Dゲーム用の共通ライブラリ（Frypan Ronin・Sky Slide King）
 ```
 
 ## 遊び方
