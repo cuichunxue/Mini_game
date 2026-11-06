@@ -1,0 +1,1643 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>Tokyo Sky King</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@500;600&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap">
+<style>
+/* Layout: full-bleed chase-cam canvas over Tokyo; HUD painted on canvas; menus are HTML sheets over the live city. Single dark cockpit look (from PLANE LANDING KING). */
+:root{
+  --night:#0c1720;      /* panel ground */
+  --ink:#16252f;        /* raised panel */
+  --paper:#eef3f1;      /* primary text */
+  --mute:#93a7ae;       /* secondary text */
+  --orange:#ff6a1a;     /* aviation orange: KING livery + rings + primary action */
+  --asphalt:#2e3338;    /* runway */
+  --warn:#ffc83d;
+  --bad:#ff5a4f;
+  --good:#5fdc9b;
+  --display:"Dela Gothic One","Hiragino Sans","Yu Gothic",sans-serif;
+  --body:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  color-scheme:dark;
+}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0;background:var(--night);color:var(--paper);overflow:hidden;
+  touch-action:none;overscroll-behavior:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+body{font-family:var(--body);font-size:15px}
+#cv{position:fixed;inset:0;width:100%;height:100%;display:block;background:#7aa9c9}
+#insetProbe{position:fixed;visibility:hidden;pointer-events:none;
+  padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)}
+
+#stickZone{position:fixed;left:0;top:64px;bottom:0;width:55%;touch-action:none}
+#touchUI{position:fixed;right:calc(14px + env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));
+  display:flex;align-items:flex-end;gap:16px;touch-action:none}
+#thrTrack{position:relative;width:54px;height:min(190px,42vh);border-radius:14px;background:rgba(12,23,32,.62);
+  border:1.5px solid rgba(238,243,241,.35);overflow:hidden;touch-action:none}
+#thrFill{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(to top,rgba(255,106,26,.75),rgba(255,106,26,.35))}
+#thrKnob{position:absolute;left:4px;right:4px;height:6px;border-radius:3px;background:var(--paper)}
+#thrTrack span{position:absolute;top:6px;left:0;right:0;text-align:center;font:600 11px var(--mono);letter-spacing:.08em;color:var(--paper)}
+#actBtn{width:86px;height:86px;border-radius:50%;border:2px solid var(--paper);background:rgba(255,106,26,.82);color:#fff;
+  font:400 15px var(--display);letter-spacing:.04em;touch-action:none}
+#actBtn.held{background:var(--orange);transform:scale(.95)}
+#pauseBtn{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));left:calc(10px + env(safe-area-inset-left,0px));
+  width:40px;height:40px;border-radius:10px;border:1.5px solid rgba(238,243,241,.45);background:rgba(12,23,32,.6);color:var(--paper);
+  font:600 14px var(--mono);cursor:pointer}
+
+.screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;overflow-y:auto;touch-action:pan-y;
+  padding-block:max(20px,env(safe-area-inset-top,0px)) max(20px,env(safe-area-inset-bottom,0px));
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  background:linear-gradient(180deg,rgba(12,23,32,.2),rgba(12,23,32,.8) 70%)}
+.sheet{width:100%;max-width:760px;margin:auto;display:flex;flex-direction:column;gap:18px}
+.eyebrow{font:600 12px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--mute)}
+h1,h2,h3{margin:0;text-wrap:balance}
+.logo{font-family:var(--display);font-weight:400;line-height:.92;letter-spacing:.01em}
+.logo .l1{display:block;font-size:clamp(24px,min(6.4vw,9vh),56px)}
+.logo .l2{display:block;font-size:clamp(52px,min(17vw,22vh),150px);color:var(--orange);text-shadow:0 4px 0 rgba(0,0,0,.25)}
+.piano{height:22px;border-radius:3px;background:
+  repeating-linear-gradient(90deg,var(--paper) 0 14px,transparent 14px 26px) center/calc(100% - 24px) 70% no-repeat,var(--asphalt)}
+.tag{font-size:clamp(17px,2.6vw,21px);font-weight:700}
+.lead{color:var(--mute);max-width:60ch;line-height:1.7;margin:0}
+.row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.btn{appearance:none;border:1.5px solid rgba(238,243,241,.5);background:rgba(22,37,47,.85);color:var(--paper);
+  font:700 15px var(--body);padding:12px 20px;border-radius:12px;cursor:pointer;min-height:46px}
+.btn:hover{border-color:var(--paper)}
+.btn.primary{background:var(--orange);border-color:var(--orange);color:#fff}
+.btn .k{font:600 11px var(--mono);opacity:.8;margin-left:8px;padding:2px 6px;border:1px solid currentColor;border-radius:5px}
+.btn:focus-visible,.card:focus-visible{outline:3px solid var(--warn);outline-offset:2px}
+.panel{background:rgba(22,37,47,.9);border:1px solid rgba(238,243,241,.14);border-radius:16px;padding:16px 18px}
+.keys{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:6px 22px;font-size:14px}
+.keys div{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px dashed rgba(238,243,241,.14)}
+.keys b{font:600 13px var(--mono);color:var(--warn);white-space:nowrap}
+
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.card{appearance:none;text-align:left;cursor:pointer;color:var(--paper);font:inherit;background:rgba(22,37,47,.92);
+  border:1.5px solid rgba(238,243,241,.16);border-radius:16px;padding:0;overflow:hidden;display:flex;flex-direction:column}
+.card:hover{border-color:var(--orange)}
+.card .strip{height:44px;background:var(--asphalt);display:flex;align-items:center;justify-content:space-between;padding:0 14px;
+  font:400 20px var(--display);letter-spacing:.06em}
+.card .strip small{font:600 11px var(--mono);color:var(--mute);letter-spacing:.1em}
+.card .body{padding:12px 14px 14px;display:flex;flex-direction:column;gap:8px;flex:1}
+.card h3{font-size:18px}
+.card p{margin:0;color:var(--mute);font-size:13.5px;line-height:1.6}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font:600 11.5px var(--mono);padding:3px 8px;border-radius:999px;border:1px solid rgba(238,243,241,.25);color:var(--paper)}
+.best{margin-top:auto;display:flex;justify-content:space-between;align-items:baseline;font:600 13px var(--mono);color:var(--mute);
+  padding-top:8px;border-top:1px solid rgba(238,243,241,.12)}
+.best b{font:400 18px var(--display);color:var(--orange)}
+
+.res{display:grid;grid-template-columns:minmax(0,200px) minmax(0,1fr);gap:18px;align-items:start}
+@media (max-width:620px){.res{grid-template-columns:minmax(0,1fr)}}
+.rank{font:400 clamp(52px,min(13vw,18vh),76px)/1 var(--display);white-space:nowrap;color:var(--orange);text-align:center}
+.rank.fail{color:var(--bad);font-size:clamp(44px,10vw,64px)}
+.score{font:600 26px var(--mono);text-align:center;font-variant-numeric:tabular-nums}
+.quip{text-align:center;font-weight:700;color:var(--warn)}
+.newbest{text-align:center;font:600 12px var(--mono);color:var(--good);letter-spacing:.1em}
+.why{border-left:4px solid var(--bad);padding:4px 0 4px 12px}
+.why h3{font-size:18px;color:var(--bad)}
+.why p{margin:6px 0 0;line-height:1.65;color:var(--paper)}
+.bars{display:flex;flex-direction:column;gap:9px}
+.bar{display:grid;grid-template-columns:7.5em minmax(0,1fr) 8.6em;gap:10px;align-items:center;font-size:13.5px}
+.bar .t{height:9px;border-radius:5px;background:rgba(238,243,241,.12);overflow:hidden}
+.bar .t i{display:block;height:100%;background:var(--orange)}
+.bar .n{font:600 12.5px var(--mono);text-align:right;font-variant-numeric:tabular-nums;color:var(--mute)}
+.data{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
+.data div{background:rgba(12,23,32,.55);border-radius:10px;padding:8px 10px}
+.data span{display:block;font-size:11.5px;color:var(--mute)}
+.data b{font:600 16px var(--mono);font-variant-numeric:tabular-nums}
+.data b.ok{color:var(--good)} .data b.ng{color:var(--bad)}
+#scrResult .sheet,#scrPause .sheet{background:rgba(12,23,32,.94);border:1px solid rgba(238,243,241,.14);border-radius:20px;padding:20px}
+.toggles{display:flex;flex-direction:column;gap:10px}
+.toggles label{display:flex;align-items:center;gap:10px;cursor:pointer}
+.toggles input{width:20px;height:20px;accent-color:var(--orange)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div id="insetProbe"></div>
+<canvas id="cv"></canvas>
+<div id="stickZone" hidden></div>
+<div id="touchUI" hidden>
+  <button id="actBtn" type="button">FLARE</button>
+  <div id="thrTrack"><div id="thrFill"></div><div id="thrKnob"></div><span>THR</span></div>
+</div>
+<button id="pauseBtn" type="button" aria-label="一時停止" hidden>II</button>
+
+<section id="scrTitle" class="screen">
+  <div class="sheet">
+    <div class="eyebrow">Plane Landing King · Tokyo Edition</div>
+    <h1 class="logo"><span class="l1">TOKYO SKY</span><span class="l2">KING</span></h1>
+    <div class="piano" aria-hidden="true"></div>
+    <div class="tag">ビルの谷間をすり抜けて、羽田に降りろ。</div>
+    <p class="lead">新宿の摩天楼、東京タワー、スカイツリー、レインボーブリッジ。オレンジのリングをくぐって東京上空を飛び、最後は羽田空港へ着陸。ぶつかったら R で即リトライ。</p>
+    <div class="row">
+      <button class="btn primary" id="goSelect" type="button">フライト開始 <span class="k">Enter</span></button>
+      <button class="btn" id="toggleHelp" type="button">操作方法</button>
+    </div>
+    <div class="panel" id="help" hidden>
+      <div class="keys">
+        <div>機首上げ / 下げ<b>↑ ↓ / W S</b></div>
+        <div>左右の傾き（旋回）<b>← → / A D</b></div>
+        <div>スロットル増 / 減<b>E / Q</b></div>
+        <div>フレア補助（空中）<b>Space 長押し</b></div>
+        <div>ブレーキ（接地後）<b>Space 長押し</b></div>
+        <div>接地後の操向<b>← →</b></div>
+        <div>リトライ<b>R</b></div>
+        <div>一時停止<b>Esc</b></div>
+      </div>
+      <p class="lead" style="margin-top:12px">スマホ：画面左側をドラッグで機首と傾き、右下のスライダーでスロットル、丸ボタンでフレア／ブレーキ。次のリングの方向は画面端の矢印と左上のマップで確認。</p>
+    </div>
+  </div>
+</section>
+
+<section id="scrSelect" class="screen" hidden>
+  <div class="sheet">
+    <div class="eyebrow">Tokyo · 東京上空 → 羽田空港</div>
+    <h2 class="logo" style="font-size:clamp(30px,6vw,44px)">ルートを選ぶ</h2>
+    <div class="cards" id="cards"></div>
+    <div class="row"><button class="btn" id="backTitle" type="button">タイトルへ</button>
+      <span class="eyebrow" id="stats"></span></div>
+  </div>
+</section>
+
+<section id="scrResult" class="screen" hidden>
+  <div class="sheet">
+    <div class="eyebrow" id="resStage"></div>
+    <div class="res">
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div class="rank" id="resRank">S</div>
+        <div class="score" id="resScore">0</div>
+        <div class="quip" id="resQuip"></div>
+        <div class="newbest" id="resBest" hidden>自己ベスト更新</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:16px;min-width:0">
+        <div class="why" id="resWhy" hidden><h3 id="resWhyT"></h3><p id="resWhyP"></p></div>
+        <div class="bars" id="resBars"></div>
+        <div class="data" id="resData"></div>
+      </div>
+    </div>
+    <div class="row">
+      <button class="btn primary" id="btnRetry" type="button">リトライ <span class="k">R</span></button>
+      <button class="btn" id="btnNext" type="button">次のルート <span class="k">N</span></button>
+      <button class="btn" id="btnSel" type="button">ルート選択</button>
+    </div>
+  </div>
+</section>
+
+<section id="scrPause" class="screen" hidden>
+  <div class="sheet" style="max-width:440px">
+    <h2 class="logo" style="font-size:36px">一時停止</h2>
+    <div class="panel toggles">
+      <label><input type="checkbox" id="optGuide" checked> 進入ガイド・接地予測・リング矢印を表示</label>
+      <label><input type="checkbox" id="optInvert"> 機首操作を反転（下で機首上げ）</label>
+      <label><input type="checkbox" id="optSound" checked> 効果音</label>
+    </div>
+    <div class="row">
+      <button class="btn primary" id="btnResume" type="button">再開 <span class="k">Esc</span></button>
+      <button class="btn" id="btnPRetry" type="button">リトライ</button>
+      <button class="btn" id="btnPSel" type="button">ルート選択</button>
+    </div>
+  </div>
+</section>
+
+<script>
+//SIM-START
+const SIM = (() => {
+  const G = 9.81, D2R = Math.PI / 180, R2D = 180 / Math.PI, DT = 1 / 60, GS = 3 * D2R;
+  const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+  const AC = { KL: 0.003337, CL0: 0.3, CLA: 0.1, AST: 11, CD0: 0.07, K: 0.06, TMAX: 2.5,
+    PR: 10, BR: 40, BMAX: 40, PMIN: -14, PMAX: 16, VWARN: 56, VMAX: 88, TLIMIT: 180, CEIL: 900 };
+
+  // Tokyo, squeezed into a game map. +z = flight direction toward Haneda. Runway threshold at z=0.
+  const WD = {
+    B: 140, X0: -3220, Z0: -9800, NI: 46, NJ: 47, shore: -3150,
+    shinjuku: { x: -1050, z: -7700, r: 720 },
+    palace: { x0: -260, x1: 260, z0: -5650, z1: -5150 },
+    marunouchi: { x0: 300, x1: 820, z0: -5800, z1: -5000 },
+    parks: [{ x0: -1680, x1: -1260, z0: -6950, z1: -6520 }, { x0: -900, x1: -640, z0: -4900, z1: -4650 }],
+    tower: { x: -330, z: -4200, h: 333 },
+    tree: { x: 960, z: -6450, h: 634 },
+    bridge: { z: -2700, x0: -780, x1: 780, d0: 44, d1: 52, tx: [-230, 230], th: 126 },
+    odaiba: { x0: 420, x1: 1400, z0: -2660, z1: -2000 },
+    westPier: { x0: -1500, x1: -760, z0: -3150, z1: -2620 }
+  };
+  const STAGES = [
+    { id: 1, code: 'ROUTE 1', name: '湾岸ルート', time: 'day',
+      desc: '新宿の高層ビル街から皇居を越え、東京タワーの横を抜けてレインボーブリッジの上へ。無風で穏やか。',
+      length: 3000, width: 60, aimZ: 300, wind: { x: 0, z: 0 }, gust: 0, turb: 0,
+      start: { x: -560, z: -8500, h: 228, v: 72 },
+      rings: [[-560, -7500, 225], [-380, -6500, 210], [0, -5400, 185], [-170, -4300, 165], [-80, -3500, 150], [0, -2700, 140], [0, -1500, 95]] },
+    { id: 2, code: 'ROUTE 2', name: 'タワー回廊', time: 'dusk',
+      desc: '夕暮れのスカイツリーをかすめ、東京タワーの脇をすり抜けるスラローム。右からの横風に注意。',
+      length: 2500, width: 50, aimZ: 300, wind: { x: -4, z: -3 }, gust: 1, turb: 0.2,
+      start: { x: 200, z: -8600, h: 262, v: 72 },
+      rings: [[420, -7600, 270], [620, -6650, 300], [260, -5700, 235], [-150, -4900, 190], [-200, -4200, 150], [-300, -3550, 142, 36], [-60, -2700, 138, 36], [0, -1500, 95]] },
+    { id: 3, code: 'ROUTE 3', name: 'レインボーくぐり', time: 'night',
+      desc: '夜景の中を急降下して、レインボーブリッジの橋桁の下をくぐる。左からの突風と乱気流。',
+      length: 2500, width: 45, aimZ: 300, wind: { x: 5, z: -3 }, gust: 2, turb: 0.5,
+      start: { x: 700, z: -8600, h: 330, v: 74 },
+      rings: [[850, -7700, 350], [720, -6550, 365], [300, -5700, 280], [-120, -4900, 200], [-180, -4100, 120], [-80, -3300, 60], [0, -2700, 26, 15], [0, -1600, 55]] }
+  ];
+  const FAILS = {
+    UNDERSHOOT: ['滑走路の手前に接地', 'PAPI が赤4つなら低すぎ。機首を少し上げてスロットルを足し、橙の◆を滑走路上に保とう。'],
+    MISSED: ['滑走路を飛び越えた', '高すぎ・速すぎ。最後のリングを抜けたら PAPI を見て、白4つなら機首を下げスロットルを絞る。'],
+    OFFSIDE: ['滑走路の外に接地', '横風で流される。風上側へ少し機首を向け、◆を中心線に重ねたまま降りる。'],
+    HARD: ['ハードランディング', '高度10m前後から機首をゆっくり上げてフレア。Space 長押しで補助が入る。'],
+    STALL: ['失速して落下', '速度 56m/s 未満や機首上げすぎで揚力を失った。スロットルを足して機首を下げる。'],
+    WING: ['翼端が地面に接触', '接地直前は左右の傾きを水平に戻す。傾き20°超は翼が当たる。'],
+    TAIL: ['テールストライク', '機首上げ12°超で尾部が接触。フレアは機首 2〜6° で十分。'],
+    FAST: ['接地速度オーバー', '88m/s 超で接地。最後のリングの後でスロットルを絞って 70m/s 前後へ。'],
+    BOUNCE: ['バウンドが止まらない', '降下率が大きいと跳ねる。機首をわずかに上げた姿勢で接地。'],
+    VEER: ['滑走路から逸脱', '接地後は ← → で前輪操向。中心線から離れる前に戻す。'],
+    OVERRUN: ['オーバーラン', '接地点が奥すぎるか、ブレーキが遅い。接地したらすぐ Space 長押し。'],
+    TIMEOUT: ['時間切れ', '180秒以内に羽田で停止しよう。'],
+    BUILDING: ['ビルに激突', 'リングとリングの間はビルの上を通るコース。高度を保ち、次のリングへは早めに傾けて旋回。PULL UP が出たら機首上げ。'],
+    TOWER: ['東京タワーに激突', 'タワーは下ほど太い。リングを抜けたらすぐ次のリングの方向へ機首を向けよう。'],
+    TREE: ['スカイツリーに激突', '634m の電波塔。展望台（350m・450m）は張り出しているので余裕をもって。'],
+    BRIDGE: ['レインボーブリッジに激突', '橋桁は高さ 44〜52m、主塔は 126m。くぐるなら 40m 以下、越えるなら 130m 以上で。'],
+    GROUND: ['街に墜落', '高度が下がりすぎ。ALT と V/S を見て、↓が大きいときは機首を上げてスロットルを足す。'],
+    SEA: ['東京湾に着水', '羽田は湾の中。最後のリングから滑走路まで、PAPI 白2・赤2 の進入角を保とう。'],
+    LOST: ['コースを外れた', '左上のマップと画面端の矢印で次のリングを探そう。']
+  };
+
+  const hsh = (a, b) => { let h = (a * 374761393 + b * 668265263) | 0; h = (h ^ (h >>> 13)) * 1274126177 | 0; return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
+  const inR = (r, x, z, m = 0) => x > r.x0 - m && x < r.x1 + m && z > r.z0 - m && z < r.z1 + m;
+
+  function routePts(st) {
+    const p = [{ x: st.start.x, z: st.start.z - 800, h: st.start.h }, { x: st.start.x, z: st.start.z, h: st.start.h }];
+    st.rings.forEach(r => p.push({ x: r[0], z: r[1], h: r[2] }));
+    p.push({ x: 0, z: 0, h: 0 }); p.push({ x: 0, z: st.length, h: 0 });
+    return p;
+  }
+  function nearRoute(pts, x, z) {
+    let best = 1e9, alt = 0;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const a = pts[i], b = pts[i + 1], dx = b.x - a.x, dz = b.z - a.z, L2 = dx * dx + dz * dz || 1;
+      const t = clamp(((x - a.x) * dx + (z - a.z) * dz) / L2, 0, 1);
+      const d = Math.hypot(x - a.x - dx * t, z - a.z - dz * t);
+      if (d < best) { best = d; alt = a.h + (b.h - a.h) * t; }
+    }
+    return [best, alt];
+  }
+  const worlds = {};
+  function buildWorld(st) {
+    if (worlds[st.id]) return worlds[st.id];
+    const pts = routePts(st), B = WD.B, grid = new Array(WD.NI * WD.NJ).fill(null), buildings = [], extra = [];
+    const place = (cx, cz, i, j, h, maxW) => {
+      const r2 = hsh(i + 101, j + 7), r3 = hsh(i + 33, j + 211), r4 = hsh(i + 7, j + 999), r5 = hsh(i + 5, j + 55);
+      const w = 44 + r2 * (maxW - 44), d = 44 + r3 * (maxW - 44);
+      const ox = (r4 - 0.5) * (B - 24 - w), oz = (r5 - 0.5) * (B - 24 - d);
+      const [dr, alt] = nearRoute(pts, cx + ox, cz + oz);
+      const clr = dr - Math.max(w, d) / 2;
+      if (clr < 95) return null;
+      if (clr < 320) { h = Math.min(h, alt - 65); if (h < 10) return null; }
+      return { x0: cx + ox - w / 2, x1: cx + ox + w / 2, z0: cz + oz - d / 2, z1: cz + oz + d / 2, h, c: Math.floor(hsh(i + 3, j + 17) * 6), id: i * 997 + j };
+    };
+    for (let i = 0; i < WD.NI; i++) for (let j = 0; j < WD.NJ; j++) {
+      const cx = WD.X0 + (i + 0.5) * B, cz = WD.Z0 + (j + 0.5) * B;
+      if (cz + B / 2 > WD.shore - 20) continue;
+      if (inR(WD.palace, cx, cz, 40) || WD.parks.some(p => inR(p, cx, cz, 30))) continue;
+      if (Math.hypot(cx - WD.tower.x, cz - WD.tower.z) < 140 || Math.hypot(cx - WD.tree.x, cz - WD.tree.z) < 140) continue;
+      const r1 = hsh(i, j);
+      let h = 12 + Math.pow(r1, 3) * 70;
+      const dS = Math.hypot(cx - WD.shinjuku.x, cz - WD.shinjuku.z);
+      if (dS < WD.shinjuku.r) h = Math.max(h, 70 + (1 - dS / WD.shinjuku.r) * 110 + r1 * 70);
+      if (inR(WD.marunouchi, cx, cz)) h = Math.max(h, 70 + r1 * 100);
+      if (hsh(i + 77, j + 3) > 0.965) h = Math.max(h, 100 + r1 * 100);
+      const b = place(cx, cz, i, j, h, 104);
+      if (b) { grid[i + j * WD.NI] = b; buildings.push(b); }
+    }
+    // Odaiba: low waterfront blocks
+    const od = WD.odaiba;
+    for (let x = od.x0 + 70; x < od.x1 - 60; x += B) for (let z = od.z0 + 80; z < od.z1 - 60; z += B) {
+      const i = Math.round(x), j = Math.round(z);
+      const b = place(x, z, i, j, 15 + hsh(i, j) * 45, 90);
+      if (b) { extra.push(b); buildings.push(b); }
+    }
+    // ring geometry: normal = average of incoming and outgoing direction
+    const rings = st.rings.map((r, k) => {
+      const prev = k ? st.rings[k - 1] : [st.start.x, st.start.z], next = st.rings[k + 1] || [0, 0];
+      let ax = r[0] - prev[0], az = r[1] - prev[1], la = Math.hypot(ax, az); ax /= la; az /= la;
+      let bx = next[0] - r[0], bz = next[1] - r[1], lb = Math.hypot(bx, bz); bx /= lb; bz /= lb;
+      let nx = ax + bx, nz = az + bz, ln = Math.hypot(nx, nz); nx /= ln; nz /= ln;
+      return { x: r[0], z: r[1], h: r[2], r: r[3] || 30, nx, nz };
+    });
+    return worlds[st.id] = { grid, buildings, extra, rings, pts };
+  }
+  function hitTest(Wd, x, h, z) {
+    if (h < 0) return null;
+    const B = WD.B, i = Math.floor((x - WD.X0) / B), j = Math.floor((z - WD.Z0) / B), M = 6;
+    for (let di = -1; di <= 1; di++) for (let dj = -1; dj <= 1; dj++) {
+      const ii = i + di, jj = j + dj; if (ii < 0 || jj < 0 || ii >= WD.NI || jj >= WD.NJ) continue;
+      const b = Wd.grid[ii + jj * WD.NI];
+      if (b && h < b.h + 2 && x > b.x0 - M && x < b.x1 + M && z > b.z0 - M && z < b.z1 + M) return 'BUILDING';
+    }
+    for (const b of Wd.extra) if (h < b.h + 2 && x > b.x0 - M && x < b.x1 + M && z > b.z0 - M && z < b.z1 + M) return 'BUILDING';
+    const T = WD.tower, dT = Math.hypot(x - T.x, z - T.z);
+    if (h < T.h && dT < 44 * Math.pow(1 - h / T.h, 1.6) + 5) return 'TOWER';
+    const S = WD.tree, dS = Math.hypot(x - S.x, z - S.z);
+    if (h < S.h) { let r = Math.max(4, 30 - h * 0.04); if (Math.abs(h - 357) < 20) r = 25; if (Math.abs(h - 448) < 11) r = 20; if (dS < r + 5) return 'TREE'; }
+    const Bd = WD.bridge;
+    if (Math.abs(z - Bd.z) < 16 && x > Bd.x0 - 30 && x < Bd.x1 + 30 && h > Bd.d0 - 3 && h < Bd.d1 + 3) return 'BRIDGE';
+    for (const tx of Bd.tx) if (Math.abs(x - tx) < 12 && Math.abs(z - Bd.z) < 16 && h < Bd.th + 2) return 'BRIDGE';
+    return null;
+  }
+  function surface(st, x, z) {
+    if (z < WD.shore || inR(WD.odaiba, x, z) || inR(WD.westPier, x, z)) return 'land';
+    if (Math.abs(x) < 520 && z > -450 && z < st.length + 400) return 'airport';
+    return 'sea';
+  }
+
+  function windAt(st, t) {
+    const g = st.gust, tb = st.turb;
+    return {
+      x: st.wind.x + g * (0.6 * Math.sin(t * 0.37 + 1.3) + 0.4 * Math.sin(t * 1.13 + 0.2)),
+      z: st.wind.z + g * 0.5 * Math.sin(t * 0.53 + 2.1),
+      y: tb * (0.6 * Math.sin(t * 1.7 + 0.5) + 0.4 * Math.sin(t * 3.1 + 1.9))
+    };
+  }
+  const glideH = (st, z) => Math.max(0, (st.aimZ - z) * Math.tan(GS));
+  function cl(a) {
+    if (a <= AC.AST) return Math.max(-0.4, AC.CL0 + AC.CLA * a);
+    return Math.max(0.7, AC.CL0 + AC.CLA * AC.AST - 0.08 * (a - AC.AST));
+  }
+  function trim(v, gam) {
+    const CL = G * Math.cos(gam) / (AC.KL * v * v);
+    const CD = AC.CD0 + AC.K * CL * CL;
+    return { alpha: (CL - AC.CL0) / AC.CLA, thr: (AC.KL * v * v * CD + G * Math.sin(gam)) / AC.TMAX };
+  }
+  function create(st) {
+    const Wd = buildWorld(st), S = st.start, r0 = Wd.rings[0];
+    const v = S.v, gam = 0, tr = trim(v, gam), psi = Math.atan2(r0.x - S.x, r0.z - S.z);
+    const s = { st, W: Wd, t: 0, phase: 'air', x: S.x, h: S.h, z: S.z, v, gam,
+      pitch: tr.alpha, alpha: tr.alpha, bank: 0, psi, thrCmd: tr.thr, thr: tr.thr,
+      w: windAt(st, 0), vx: 0, vy: 0, vz: v, gdot: 0, bounces: 0, td: null, maxDev: 0, stallT: -9,
+      trk: 0, result: null, events: [], ring: 0, hits: [] };
+    s.vx = v * Math.sin(psi) + s.w.x; s.vz = v * Math.cos(psi) + s.w.z; s.vy = 0;
+    return s;
+  }
+  const finalLeg = s => s.ring >= s.W.rings.length;
+  function finish(s, ok, code, extra) {
+    if (s.result) return;
+    s.phase = 'done';
+    s.result = { ok, code: code || null, title: code ? FAILS[code][0] + (extra || '') : '', hint: code ? FAILS[code][1] : '' };
+    if (ok) Object.assign(s.result, score(s));
+    s.events.push({ type: ok ? 'stop' : 'crash', code });
+  }
+  function checkRing(s, px, ph, pz) {
+    const R = s.W.rings[s.ring]; if (!R) return;
+    const d0 = (px - R.x) * R.nx + (pz - R.z) * R.nz, d1 = (s.x - R.x) * R.nx + (s.z - R.z) * R.nz;
+    if (d0 < 0 && d1 >= 0) {
+      const t = d0 / (d0 - d1), ix = px + (s.x - px) * t, iz = pz + (s.z - pz) * t, ih = ph + (s.h - ph) * t;
+      const lat = Math.hypot(Math.hypot(ix - R.x, iz - R.z), ih - R.h);
+      const ok = lat <= R.r, q = ok ? (lat < R.r * 0.45 ? 1 : 0.75) : 0;
+      s.hits.push({ ok, q, lat: Math.round(lat) }); s.events.push({ type: 'ring', ok, q, idx: s.ring, n: s.W.rings.length }); s.ring++;
+    } else if (d1 > 350) {
+      s.hits.push({ ok: false, q: 0, lat: 999 }); s.events.push({ type: 'ring', ok: false, q: 0, idx: s.ring, n: s.W.rings.length }); s.ring++;
+    }
+  }
+  function contact(s) {
+    const st = s.st, sink = -s.vy, track = Math.atan2(s.vx, s.vz);
+    const m = { sink, x: s.x, z: s.z, v: s.v, bank: s.bank, pitch: s.pitch, crab: Math.abs(s.psi - track) * R2D, t: s.t };
+    s.h = 0;
+    const onRwy = s.z >= 0 && s.z <= st.length && Math.abs(s.x) <= st.width / 2;
+    if (!onRwy) {
+      const sf = surface(st, s.x, s.z);
+      const code = sf === 'land' ? 'GROUND' : sf === 'sea' ? 'SEA' : s.z < 0 && Math.abs(s.x) < st.width ? 'UNDERSHOOT' : 'OFFSIDE';
+      return finish(s, false, code);
+    }
+    if (!finalLeg(s)) { // skipped remaining rings: count as missed
+      while (!finalLeg(s)) { s.hits.push({ ok: false, q: 0, lat: 999 }); s.ring++; }
+    }
+    if (!s.td) s.td = m;
+    let f = null, ex = '';
+    if (sink > 6) { f = (s.t - s.stallT < 3) ? 'STALL' : 'HARD'; ex = `（降下率 ${sink.toFixed(1)} m/s）`; }
+    else if (Math.abs(s.bank) > 20) f = 'WING';
+    else if (s.pitch > 12) f = 'TAIL';
+    else if (s.v > AC.VMAX) f = 'FAST';
+    if (f) return finish(s, false, f, ex);
+    if (sink > 2.6 || s.pitch < -1.5) {
+      s.bounces++;
+      if (s.bounces >= 3) return finish(s, false, 'BOUNCE');
+      s.gam = Math.asin(clamp(0.35 * sink / s.v, 0.004, 0.2)); s.h = 0.02; s.vy = 0.35 * sink;
+      s.events.push({ type: 'bounce', sink });
+      return;
+    }
+    s.events.push({ type: 'touchdown', sink, first: s.bounces === 0 });
+    s.phase = 'roll'; s.trk = track; s.v = Math.hypot(s.vx, s.vz); s.vy = 0; s.gam = 0; s.thr = 0;
+  }
+  function step(s, inp) {
+    if (s.result) return;
+    const st = s.st;
+    s.t += DT;
+    if (s.t > AC.TLIMIT) return finish(s, false, 'TIMEOUT');
+    const wp = s.w, w = windAt(st, s.t); s.w = w;
+    s.thrCmd = clamp(inp.thr, 0, 1);
+    if (s.phase === 'air') {
+      const px = s.x, ph = s.h, pz = s.z;
+      const fx = Math.sin(s.psi), fz = Math.cos(s.psi);
+      s.v += -((w.x - wp.x) * fx + (w.z - wp.z) * fz);
+      let pr = inp.pitch * AC.PR;
+      if (inp.flare && s.h < 15) pr += clamp((-s.vy - 1.2) * 2.5, -2, 6);
+      s.pitch = clamp(s.pitch + pr * DT, AC.PMIN, AC.PMAX);
+      let br = inp.bank * AC.BR;
+      if (Math.abs(inp.bank) < 0.05) br = -Math.sign(s.bank) * Math.min(Math.abs(s.bank) / DT, 8);
+      s.bank = clamp(s.bank + br * DT, -AC.BMAX, AC.BMAX);
+      s.thr += clamp(s.thrCmd - s.thr, -0.5 * DT, 0.5 * DT);
+      const alpha = s.pitch - s.gam * R2D; s.alpha = alpha;
+      const ge = clamp(1 - s.h / 20, 0, 1);
+      const CL = cl(alpha) * (1 + 0.12 * ge);
+      const q = AC.KL * s.v * s.v, L = q * CL;
+      const CD = AC.CD0 + AC.K * CL * CL * (1 - 0.4 * ge) + (alpha > AC.AST ? 0.02 * (alpha - AC.AST) : 0);
+      const bk = s.bank * D2R;
+      const vdot = s.thr * AC.TMAX - q * CD - G * Math.sin(s.gam);
+      const gdot = (L * Math.cos(bk) - G * Math.cos(s.gam)) / s.v;
+      s.gdot = gdot * R2D;
+      s.psi += L * Math.sin(bk) / (s.v * Math.cos(s.gam)) * DT;
+      s.v = Math.max(25, s.v + vdot * DT);
+      s.gam = clamp(s.gam + gdot * DT, -40 * D2R, 30 * D2R);
+      const vh = s.v * Math.cos(s.gam);
+      s.vx = vh * Math.sin(s.psi) + w.x; s.vz = vh * Math.cos(s.psi) + w.z; s.vy = s.v * Math.sin(s.gam) + w.y * clamp(s.h / 30, 0, 1);
+      s.x += s.vx * DT; s.z += s.vz * DT; s.h += s.vy * DT;
+      if (alpha > AC.AST - 1 || s.v < AC.VWARN) s.stallT = s.t;
+      if (!finalLeg(s)) checkRing(s, px, ph, pz);
+      const hc = hitTest(s.W, s.x, s.h, s.z);
+      if (hc) return finish(s, false, hc);
+      if (s.h <= 0) contact(s);
+      else if (s.z > st.length + 150) finish(s, false, 'MISSED');
+      else if (s.h > AC.CEIL || Math.abs(s.x) > 6000 || s.z < -13000) finish(s, false, 'LOST');
+    } else if (s.phase === 'roll') {
+      s.thr = 0;
+      s.trk += inp.bank * 4 * D2R * DT * clamp(s.v / 15, 0, 1);
+      s.psi += (s.trk - s.psi) * Math.min(1, DT * 4);
+      s.pitch = Math.max(0, s.pitch - 4 * DT);
+      s.bank += -s.bank * Math.min(1, DT * 6);
+      const dec = 1.5 + AC.KL * s.v * s.v * 0.15 + (inp.flare ? 6 : 0);
+      s.v = Math.max(0, s.v - dec * DT);
+      s.vx = s.v * Math.sin(s.trk); s.vz = s.v * Math.cos(s.trk); s.vy = 0;
+      s.x += s.vx * DT; s.z += s.vz * DT;
+      s.maxDev = Math.max(s.maxDev, Math.abs(s.x));
+      if (Math.abs(s.x) > st.width / 2) return finish(s, false, 'VEER');
+      if (s.z > st.length) return finish(s, false, 'OVERRUN');
+      if (s.v < 0.8) finish(s, true);
+    }
+  }
+  const lin = (val, good, zero) => val <= good ? 1 : val >= zero ? 0 : 1 - (val - good) / (zero - good);
+  function score(s) {
+    const st = s.st, td = s.td;
+    const dz = Math.abs(td.z - st.aimZ), half = st.width / 2;
+    const spdDev = td.v < 60 ? 60 - td.v : td.v > 75 ? td.v - 75 : 0;
+    const remain = st.length - s.z, N = s.W.rings.length;
+    const rq = s.hits.reduce((a, h) => a + h.q, 0) / N;
+    const parts = [
+      { label: 'リング通過', max: 3000, pts: 3000 * rq },
+      { label: '接地精度', max: 2000, pts: 1400 * lin(dz, 60, 450) + 600 * lin(Math.abs(td.x), 3, half) },
+      { label: '降下速度・姿勢', max: 2500, pts: 1700 * lin(td.sink, 1.5, 6) + 500 * lin(Math.abs(td.bank), 3, 20) + 300 * lin(td.crab, 2, 15) },
+      { label: '速度管理', max: 1000, pts: 1000 * lin(spdDev, 0, 15) },
+      { label: '停止位置', max: 1000, pts: 600 * lin(Math.max(0, 300 - remain), 0, 300) + 400 * lin(Math.abs(s.x), 3, half) },
+      { label: '着陸安定性', max: 500, pts: 500 * clamp(1 - s.bounces * 0.4 - Math.max(0, s.maxDev - 3) / half * 0.6, 0, 1) }
+    ];
+    parts.forEach(p => p.pts = Math.round(p.pts));
+    const total = parts.reduce((a, p) => a + p.pts, 0);
+    const rank = total >= 9500 ? 'SSS' : total >= 9000 ? 'SS' : total >= 8000 ? 'S' : total >= 6500 ? 'A' : total >= 5000 ? 'B' : 'C';
+    return { total, rank, parts };
+  }
+  function predict(s) {
+    if (s.phase !== 'air' || s.vy >= -0.2 || !finalLeg(s)) return null;
+    const t = s.h / -s.vy; if (t > 70) return null;
+    return { x: s.x + s.vx * t, z: s.z + s.vz * t, t };
+  }
+  function papi(s) {
+    if (!finalLeg(s)) return null;
+    const d = s.st.aimZ - s.z; if (d <= 0) return null;
+    const a = Math.atan2(s.h + 3, d) * R2D;
+    return [3.5, 3.17, 2.83, 2.5].map(th => a > th);
+  }
+  function angWrap(a) { while (a > Math.PI) a -= 2 * Math.PI; while (a < -Math.PI) a += 2 * Math.PI; return a; }
+  function autopilot(s) {
+    const st = s.st, inp = { pitch: 0, bank: 0, thr: s.thrCmd, flare: false };
+    if (s.phase === 'air') {
+      const gd = s.gam * R2D, track = Math.atan2(s.vx, s.vz);
+      let gcmd, want, bmax = 32;
+      if (!finalLeg(s)) {
+        const R = s.W.rings[s.ring];
+        const dist = Math.hypot(R.x - s.x, R.z - s.z), lead = Math.min(dist * 0.45, 260);
+        want = Math.atan2(R.x - R.nx * lead - s.x, R.z - R.nz * lead - s.z);
+        gcmd = clamp(Math.atan2(R.h - s.h, Math.max(dist, 150)) * R2D * 1.4, -9, 8);
+      } else {
+        if (s.h > 14) gcmd = clamp(-3 + (glideH(st, s.z) - s.h) * 0.08, -6, 0);
+        else gcmd = -Math.asin(clamp((0.8 + s.h / 14 * 3) / s.v, 0, 0.2)) * R2D;
+        want = clamp(-s.x * 0.006, -0.3, 0.3);
+        if (s.h < 8) bmax = 0;
+      }
+      const bcmd = clamp(angWrap(want - track) * R2D * 2.5, -bmax, bmax);
+      inp.bank = clamp((bcmd - s.bank) / 12, -1, 1);
+      inp.pitch = clamp(0.5 * (gcmd - gd) - 0.35 * s.gdot, -1, 1);
+      inp.thr = finalLeg(s) && s.h < 9 ? 0 : clamp(trim(72, gcmd * D2R).thr + 0.08 * (72 - s.v), 0, 1);
+    } else { inp.flare = true; inp.bank = clamp(-s.x * 0.15 - s.trk * R2D * 0.3, -1, 1); }
+    return inp;
+  }
+  return { G, D2R, R2D, DT, AC, WD, STAGES, FAILS, create, step, predict, papi, glideH, autopilot, trim, windAt, clamp, hitTest, surface, finalLeg, buildWorld, angWrap };
+})();
+//SIM-END
+
+/* ================= SAVE ================= */
+const Save = (() => {
+  const KEY = 'tsk_v1';
+  let d = { best: {}, perfect: 0, streak: 0, bestStreak: 0, opt: { guide: true, invert: false, sound: true } };
+  try { const r = localStorage.getItem(KEY); if (r) { const p = JSON.parse(r); d = Object.assign(d, p); d.opt = Object.assign({ guide: true, invert: false, sound: true }, p.opt || {}); } } catch (e) {}
+  const write = () => { try { localStorage.setItem(KEY, JSON.stringify(d)); } catch (e) {} };
+  return { d, write };
+})();
+
+/* ================= AUDIO ================= */
+const Snd = {
+  ctx: null, ok: false,
+  init() {
+    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
+    if (this.ctx) { this.unlock(); return; }
+    try {
+      const C = window.AudioContext || window.webkitAudioContext; const c = this.ctx = new C();
+      this.master = c.createGain(); this.master.gain.value = 0.9;
+      const comp = c.createDynamicsCompressor(); this.master.connect(comp); comp.connect(c.destination);
+      const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1400;
+      this.eg = c.createGain(); this.eg.gain.value = 0; lp.connect(this.eg); this.eg.connect(this.master);
+      this.o1 = c.createOscillator(); this.o1.type = 'sawtooth'; this.o1.frequency.value = 110;
+      this.o2 = c.createOscillator(); this.o2.type = 'sawtooth'; this.o2.frequency.value = 223;
+      this.o1.connect(lp); this.o2.connect(lp); this.o1.start(); this.o2.start();
+      this.wh = c.createOscillator(); this.wh.type = 'triangle'; this.wh.frequency.value = 700;
+      this.whg = c.createGain(); this.whg.gain.value = 0; this.wh.connect(this.whg); this.whg.connect(this.master); this.wh.start();
+      const len = c.sampleRate * 2, buf = c.createBuffer(1, len, c.sampleRate), ch = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) ch[i] = Math.random() * 2 - 1;
+      this.noiseBuf = buf;
+      const n = c.createBufferSource(); n.buffer = buf; n.loop = true;
+      const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1100; bp.Q.value = 0.5;
+      this.wg = c.createGain(); this.wg.gain.value = 0; n.connect(bp); bp.connect(this.wg); this.wg.connect(this.master); n.start();
+      this.ok = true;
+      this.unlock();
+    } catch (e) { this.ok = false; }
+  },
+  unlock() {
+    const c = this.ctx; if (!c) return;
+    if (c.state !== 'running') { try { c.resume(); } catch (e) {} }
+    if (this.unlocked) return;
+    this.unlocked = true;
+    try { const src = c.createBufferSource(); src.buffer = c.createBuffer(1, 1, 22050); src.connect(c.destination); src.start(0); } catch (e) {}
+    try {
+      const sr = 8000, n = sr / 2, b = new ArrayBuffer(44 + n), v = new DataView(b);
+      const w = (o, t) => { for (let i = 0; i < t.length; i++) v.setUint8(o + i, t.charCodeAt(i)); };
+      w(0, 'RIFF'); v.setUint32(4, 36 + n, true); w(8, 'WAVEfmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+      v.setUint32(24, sr, true); v.setUint32(28, sr, true); v.setUint16(32, 1, true); v.setUint16(34, 8, true); w(36, 'data'); v.setUint32(40, n, true);
+      for (let i = 0; i < n; i++) v.setUint8(44 + i, 128);
+      const el = this.el = new Audio(URL.createObjectURL(new Blob([b], { type: 'audio/wav' })));
+      el.loop = true; el.setAttribute('playsinline', ''); const pr = el.play(); if (pr && pr.catch) pr.catch(() => {});
+    } catch (e) {}
+  },
+  on() { return this.ok && Save.d.opt.sound; },
+  update(s, active) {
+    if (!this.ok || this.ctx.state !== 'running') return;
+    const t = this.ctx.currentTime, on = this.on() && active && s;
+    const thr = s ? s.thr : 0;
+    this.eg.gain.setTargetAtTime(on ? 0.05 + thr * 0.10 : 0, t, 0.15);
+    this.whg.gain.setTargetAtTime(on ? 0.012 + thr * 0.03 : 0, t, 0.2);
+    if (s) {
+      this.o1.frequency.setTargetAtTime(95 + thr * 60, t, 0.3); this.o2.frequency.setTargetAtTime(190 + thr * 125, t, 0.3);
+      this.wh.frequency.setTargetAtTime(520 + thr * 900, t, 0.4);
+    }
+    this.wg.gain.setTargetAtTime(on ? Math.min(0.28, s.v / 300) : 0, t, 0.2);
+  },
+  beep(f, dur, type = 'square', vol = 0.08, f2) {
+    if (!this.on()) return;
+    const c = this.ctx, o = c.createOscillator(), g = c.createGain(), t = c.currentTime;
+    o.type = type; o.frequency.setValueAtTime(f, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + dur);
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(this.master); o.start(t); o.stop(t + dur + 0.02);
+  },
+  thump(vol = 0.5, dur = 0.25, freq = 700) {
+    if (!this.on()) return;
+    const c = this.ctx, n = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain(), t = c.currentTime;
+    n.buffer = this.noiseBuf; f.type = 'lowpass'; f.frequency.value = freq;
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    n.connect(f); f.connect(g); g.connect(this.master); n.start(t); n.stop(t + dur + 0.05);
+  },
+  jingle(good) {
+    const seq = good ? [523, 659, 784, 1047] : [392, 330, 262];
+    seq.forEach((f, i) => setTimeout(() => this.beep(f, 0.18, 'triangle', 0.1), i * 110));
+  }
+};
+
+/* ================= INPUT ================= */
+const Inp = {
+  keys: new Set(), thr: 0.4, stick: null, act: false, touch: false,
+  read(dt) {
+    const k = this.keys, inv = Save.d.opt.invert ? -1 : 1;
+    let pitch = ((k.has('ArrowUp') || k.has('KeyW')) ? 1 : 0) - ((k.has('ArrowDown') || k.has('KeyS')) ? 1 : 0);
+    let bank = ((k.has('ArrowRight') || k.has('KeyD')) ? 1 : 0) - ((k.has('ArrowLeft') || k.has('KeyA')) ? 1 : 0);
+    if (this.stick) { const dz = v => Math.abs(v) < 0.08 ? 0 : v; bank += dz(this.stick.nx); pitch += dz(-this.stick.ny); }
+    pitch *= inv;
+    const up = k.has('KeyE') || k.has('ShiftLeft') || k.has('ShiftRight') || k.has('PageUp');
+    const dn = k.has('KeyQ') || k.has('PageDown');
+    if (up) this.thr = Math.min(1, this.thr + 0.5 * dt);
+    if (dn) this.thr = Math.max(0, this.thr - 0.5 * dt);
+    return { pitch: SIM.clamp(pitch, -1, 1), bank: SIM.clamp(bank, -1, 1), thr: this.thr, flare: k.has('Space') || this.act };
+  }
+};
+
+/* ================= RENDER ================= */
+const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+let W = 0, H = 0, DPR = 1, INS = { t: 0, r: 0, b: 0, l: 0 };
+function resize() {
+  DPR = Math.min(2, window.devicePixelRatio || 1); W = cv.clientWidth; H = cv.clientHeight;
+  cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+  const cs = getComputedStyle(document.getElementById('insetProbe'));
+  INS = { t: parseFloat(cs.paddingTop) || 0, r: parseFloat(cs.paddingRight) || 0, b: parseFloat(cs.paddingBottom) || 0, l: parseFloat(cs.paddingLeft) || 0 };
+}
+window.addEventListener('resize', resize);
+
+const THEMES = {
+  day: { skyTop: [62, 122, 176], skyHz: [205, 226, 234], haze: [196, 214, 222], sea: [58, 108, 138], land: [170, 170, 162], park: [98, 132, 82],
+    bld: [[200, 202, 200], [178, 184, 190], [146, 166, 188], [212, 204, 188], [150, 158, 166], [226, 224, 218]], fog: 0.88, fuji: 0.55 },
+  dusk: { skyTop: [38, 40, 84], skyHz: [244, 170, 110], haze: [204, 146, 124], sea: [64, 72, 98], land: [118, 104, 108], park: [70, 82, 64],
+    bld: [[170, 140, 136], [150, 126, 128], [120, 118, 140], [182, 150, 130], [126, 112, 120], [196, 168, 150]], fog: 0.85, fuji: 0.2 },
+  night: { skyTop: [6, 10, 26], skyHz: [36, 46, 84], haze: [30, 38, 66], sea: [10, 20, 38], land: [26, 30, 44], park: [16, 24, 26],
+    bld: [[40, 46, 66], [32, 38, 56], [48, 54, 76], [44, 44, 58], [36, 42, 62], [54, 58, 78]], fog: 0.7, fuji: 0.1 }
+};
+const rgb = (c, a) => a == null ? `rgb(${c[0] | 0},${c[1] | 0},${c[2] | 0})` : `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a})`;
+const mixc = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+const scl = (c, k) => [c[0] * k, c[1] * k, c[2] * k];
+function hash(i, j) { let h = (i * 374761393 + j * 668265263) | 0; h = (h ^ (h >>> 13)) * 1274126177 | 0; return ((h ^ (h >>> 16)) >>> 0) / 4294967296; }
+
+const PAL = [
+  [[112, 144, 170], [94, 126, 154], [134, 158, 178], [100, 120, 138], [146, 168, 184], [86, 112, 120]], // glass
+  [[214, 214, 208], [198, 200, 198], [226, 222, 212], [182, 186, 188], [204, 200, 190]],               // office
+  [[224, 216, 198], [208, 198, 180], [234, 230, 220], [196, 184, 166], [218, 206, 190]],               // apartment
+  [[156, 108, 86], [138, 100, 82], [170, 132, 106], [124, 96, 84]]                                     // brick
+];
+const TINT = { day: [1, 1, 1], dusk: [0.86, 0.7, 0.66], night: [0.2, 0.23, 0.34] };
+let sceneCache = null;
+function buildScene(st) {
+  const th = THEMES[st.time], Wd = SIM.buildWorld(st);
+  const stars = [];
+  if (st.time !== 'day') for (let i = 0; i < 160; i++) {
+    const a = hash(i, 1) * 6.2832, e = 0.04 + Math.pow(hash(i, 2), 1.5) * 1.2;
+    stars.push([Math.sin(a) * Math.cos(e), Math.sin(e), Math.cos(a) * Math.cos(e), 0.3 + hash(i, 3) * 0.7]);
+  }
+  const street = [];
+  if (st.time === 'night') {
+    const WD = SIM.WD;
+    for (let i = 0; i <= WD.NI; i++) for (let z = WD.Z0; z < WD.shore - 10; z += 46) street.push([WD.X0 + i * WD.B, 0.5, z]);
+    for (let j = 0; j <= WD.NJ; j++) { const z = WD.Z0 + j * WD.B; if (z > WD.shore) break; for (let x = WD.X0; x < -WD.X0; x += 46) street.push([x, 0.5, z]); }
+  }
+  // facade style, colour and massing per building
+  const tint = TINT[st.time];
+  for (const b of Wd.buildings) {
+    const r = hash(b.id, 71), r2 = hash(b.id, 72), r3 = hash(b.id, 73);
+    const type = b.h >= 80 ? (r < 0.6 ? 0 : 1) : r < 0.35 ? 1 : r < 0.68 ? 2 : r < 0.86 ? 3 : 0;
+    const pal = PAL[type], base = pal[Math.floor(r2 * pal.length)];
+    b.type = type; b.col = [base[0] * tint[0], base[1] * tint[1], base[2] * tint[2]];
+    const { x0, x1, z0, z1, h } = b, w = x1 - x0, d = z1 - z0;
+    const ins = (k, y0, y1) => ({ x0: x0 + w * k, x1: x1 - w * k, z0: z0 + d * k, z1: z1 - d * k, y0, y1 });
+    if (h >= 90 && r3 < 0.8) {
+      const ph = Math.min(26, h * 0.18), k = 0.12 + r * 0.08;
+      b.parts = [ins(0, 0, ph)];
+      if (r3 < 0.4) { b.parts.push(ins(k, ph, h * 0.84)); b.parts.push(ins(k + 0.1, h * 0.84, h)); }
+      else b.parts.push(ins(k, ph, h));
+    } else if (h >= 36 && r3 > 0.55) b.parts = [ins(0, 0, h * 0.7), ins(0.16, h * 0.7, h)];
+    else b.parts = [ins(0, 0, h)];
+    b.heli = h >= 140 && r2 > 0.35;
+  }
+  sceneCache = { st, Wd, theme: th, stars, street };
+}
+
+const cam = { x: 0, y: 0, z: 0, yaw: 0, pitch: 0, roll: 0, f: 600, cx: 0, cy: 0, cyw: 1, syw: 0, cp: 1, sp: 0 };
+function toCam(x, y, z) {
+  const dx = x - cam.x, dy = y - cam.y, dz = z - cam.z;
+  const rx = dx * cam.cyw - dz * cam.syw, rz = dx * cam.syw + dz * cam.cyw;
+  return [rx, dy * cam.cp - rz * cam.sp, dy * cam.sp + rz * cam.cp];
+}
+const NEAR = 1.5;
+function clipNear(ps) {
+  const out = [];
+  for (let i = 0; i < ps.length; i++) {
+    const a = ps[i], b = ps[(i + 1) % ps.length], ai = a[2] >= NEAR, bi = b[2] >= NEAR;
+    if (ai) out.push(a);
+    if (ai !== bi) { const t = (NEAR - a[2]) / (b[2] - a[2]); out.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, NEAR]); }
+  }
+  return out;
+}
+function polyC(cs, fill, stroke, lw) {
+  let c = cs;
+  for (const p of cs) if (p[2] < NEAR) { c = clipNear(cs); break; }
+  if (c.length < 3) return false;
+  ctx.beginPath();
+  for (let i = 0; i < c.length; i++) { const p = c[i], sx = cam.cx + cam.f * p[0] / p[2], sy = cam.cy - cam.f * p[1] / p[2]; i ? ctx.lineTo(sx, sy) : ctx.moveTo(sx, sy); }
+  ctx.closePath();
+  if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+  if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw || 2; ctx.stroke(); }
+  return true;
+}
+const polyW = (pts, fill, stroke, lw) => polyC(pts.map(p => toCam(p[0], p[1], p[2])), fill, stroke, lw);
+const rectG = (x0, x1, z0, z1, fill, y = 0) => polyW([[x0, y, z0], [x1, y, z0], [x1, y, z1], [x0, y, z1]], fill);
+function lineW(pts, color, w) {
+  ctx.strokeStyle = color; ctx.lineCap = 'round'; ctx.beginPath(); let pen = false, minz = 1e9;
+  for (const p of pts) {
+    const c = toCam(p[0], p[1], p[2]);
+    if (c[2] < NEAR) { pen = false; continue; }
+    minz = Math.min(minz, c[2]);
+    const sx = cam.cx + cam.f * c[0] / c[2], sy = cam.cy - cam.f * c[1] / c[2];
+    pen ? ctx.lineTo(sx, sy) : ctx.moveTo(sx, sy); pen = true;
+  }
+  ctx.lineWidth = Math.max(1, cam.f * w / minz); ctx.stroke();
+}
+function dots(list, color, size, glow, maxD = 6000) {
+  ctx.fillStyle = color; ctx.beginPath();
+  for (const p of list) {
+    const c = toCam(p[0], p[1], p[2]); if (c[2] < 3 || c[2] > maxD) continue;
+    const r = Math.max(glow ? 1.6 : 1.1, cam.f * size / c[2]);
+    const sx = cam.cx + cam.f * c[0] / c[2], sy = cam.cy - cam.f * c[1] / c[2];
+    ctx.moveTo(sx + r, sy); ctx.arc(sx, sy, r, 0, 6.2832);
+  }
+  ctx.fill();
+}
+
+// ---- 3D solids (painter's order) ----
+let HZ = [0, 0, 0];
+const FAR = 4600;
+const fogAt = (d, th) => Math.min(th.fog, Math.max(0, (d - 250) / (FAR - 250)) * th.fog * 1.15);
+let TIME = 'day';
+const DETAIL = 1150;
+const lerp3 = (A, B, t) => [A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t, A[2] + (B[2] - A[2]) * t];
+function seg(P, Q) {
+  if (P[2] < NEAR || Q[2] < NEAR) return;
+  ctx.moveTo(cam.cx + cam.f * P[0] / P[2], cam.cy - cam.f * P[1] / P[2]);
+  ctx.lineTo(cam.cx + cam.f * Q[0] / Q[2], cam.cy - cam.f * Q[1] / Q[2]);
+}
+// facade pattern on one wall. q = [bottom-left, bottom-right, top-right, top-left] in camera space (lerp in camera space is exact)
+function facade(q, wlen, p, b, d, fog) {
+  const H = p.y1 - p.y0, FL = 3.8, n = Math.floor(H / FL), step = d < 420 ? 1 : d < 760 ? 2 : 3;
+  const lw = m => Math.max(0.6, cam.f * m / d), fade = Math.min(1, (DETAIL - d) / 350);
+  const at = y => (y - p.y0) / H;
+  const hline = (y, color, w) => { const t = at(y); if (t <= 0 || t >= 1) return; ctx.strokeStyle = color; ctx.lineWidth = lw(w); ctx.beginPath(); seg(lerp3(q[0], q[3], t), lerp3(q[1], q[2], t)); ctx.stroke(); };
+  const rows = (off, color, w, from = 1) => {
+    ctx.strokeStyle = color; ctx.lineWidth = lw(w); ctx.beginPath();
+    for (let k = from; k < n; k += step) { const t = at(p.y0 + k * FL + off); if (t >= 1) break; seg(lerp3(q[0], q[3], t), lerp3(q[1], q[2], t)); }
+    ctx.stroke();
+  };
+  const cols = (spacing, color, w) => {
+    const m = Math.floor(wlen / spacing); if (m < 2) return;
+    const st2 = d < 420 ? 1 : 2;
+    ctx.strokeStyle = color; ctx.lineWidth = lw(w); ctx.beginPath();
+    for (let k = 1; k < m; k += st2) { const t = k / m; seg(lerp3(q[0], q[1], t), lerp3(q[3], q[2], t)); }
+    ctx.stroke();
+  };
+  const C = c => rgb(mixc(c, HZ, fog), fade);
+  const night = TIME === 'night', dusk = TIME === 'dusk';
+  ctx.lineCap = 'butt';
+  if (!night) {
+    const dim = dusk ? 0.72 : 1;
+    if (b.type === 0) { // curtain wall: spandrel lines + mullions, sky reflection
+      rows(0.1, C(scl([214, 228, 236], dim)), 0.35, 0);
+      cols(4.2, C(scl([64, 84, 104], dim)), 0.3);
+    } else if (b.type === 1) { // office: ribbon windows
+      rows(2.0, C(scl([58, 72, 90], dim)), 1.7);
+    } else if (b.type === 2) { // apartment: dark windows + white balcony rails + unit dividers
+      rows(1.7, C(scl([82, 84, 92], dim)), 1.2);
+      rows(0.35, C(scl([246, 244, 238], dim)), 0.45);
+      cols(7.5, C(scl([160, 156, 148], dim)), 0.35);
+    } else { // brick / older mid-rise: punched windows
+      const dash = Math.max(1, cam.f * 1.5 / d), gap = Math.max(1, cam.f * 1.7 / d);
+      ctx.setLineDash([dash, gap]); rows(2.0, C(scl([44, 40, 40], dim)), 1.5); ctx.setLineDash([]);
+    }
+  }
+  if (p.y0 === 0) hline(2.0, night ? rgb([255, 196, 120], 0.85 * fade) : C([38, 42, 48]), 3.2); // street-level shopfronts
+}
+function box(x0, x1, z0, z1, y0, y1, col, fog, d, b, top) {
+  const P = toCam;
+  const a = P(x0, y0, z0), bb = P(x1, y0, z0), c = P(x1, y0, z1), dd = P(x0, y0, z1);
+  const e = P(x0, y1, z0), f = P(x1, y1, z0), g = P(x1, y1, z1), h = P(x0, y1, z1);
+  const fc = k => rgb(mixc(scl(col, k), HZ, fog));
+  const faces = [], det = b && d < DETAIL, part = { y0, y1 };
+  const side = (q, k, fi, wlen) => { polyC(q, fc(k)); faces.push(fi); if (det) facade(q, wlen, part, b, d, fog); };
+  if (cam.z < z0) side([a, bb, f, e], 0.8, 0, x1 - x0);
+  if (cam.z > z1) side([c, dd, h, g], 0.62, 1, x1 - x0);
+  if (cam.x < x0) side([dd, a, e, h], 0.94, 2, z1 - z0);
+  if (cam.x > x1) side([bb, c, g, f], 0.7, 3, z1 - z0);
+  if (cam.y > y1) {
+    const roof = b ? (TIME === 'night' ? scl(col, 1.05) : mixc(scl(col, 0.9), [118, 120, 124], 0.55)) : scl(col, 1.1);
+    polyC([e, f, g, h], rgb(mixc(roof, HZ, fog)));
+    if (b && top && d < 1500) roofDetail(x0, x1, z0, z1, y1, col, fog, d, b);
+  }
+  return faces;
+}
+function roofDetail(x0, x1, z0, z1, y1, col, fog, d, b) {
+  const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, w = x1 - x0, dp = z1 - z0;
+  if (b.heli) {
+    const r = Math.min(w, dp) * 0.34, pts = [];
+    for (let i = 0; i < 20; i++) { const a = i / 20 * 6.2832; pts.push(toCam(cx + Math.cos(a) * r, y1 + 0.2, cz + Math.sin(a) * r)); }
+    const c = TIME === 'night' ? 'rgba(255,220,120,.9)' : rgb(mixc([236, 236, 230], HZ, fog));
+    polyC(pts, null, c, Math.max(0.8, cam.f * 0.7 / d));
+    ctx.strokeStyle = c; ctx.lineWidth = Math.max(0.8, cam.f * 0.9 / d); ctx.beginPath();
+    const k = r * 0.45, Y = y1 + 0.2;
+    seg(toCam(cx - k, Y, cz - k), toCam(cx - k, Y, cz + k)); seg(toCam(cx + k, Y, cz - k), toCam(cx + k, Y, cz + k)); seg(toCam(cx - k, Y, cz), toCam(cx + k, Y, cz));
+    ctx.stroke();
+  } else if (w * dp > 1400) { // elevator / machine room + AC units
+    const mh = 3.5 + hash(b.id, 9) * 3;
+    box(cx - w * 0.2, cx + w * 0.12, cz - dp * 0.16, cz + dp * 0.22, y1, y1 + mh, scl(col, 0.85), fog);
+    if (d < 700) {
+      const ac = TIME === 'night' ? [40, 44, 56] : [196, 198, 200];
+      box(x0 + w * 0.62, x0 + w * 0.82, z0 + dp * 0.12, z0 + dp * 0.3, y1, y1 + 1.8, ac, fog);
+      box(x0 + w * 0.62, x0 + w * 0.82, z0 + dp * 0.62, z0 + dp * 0.8, y1, y1 + 1.8, ac, fog);
+    }
+  }
+}
+function windows(b, id, faces, depth) {
+  if (depth > 1300 || b.y1 - b.y0 < 8) return;
+  const fade = Math.min(1, (1300 - depth) / 400);
+  ctx.fillStyle = `rgba(255,214,140,${0.85 * fade})`;
+  const sz = Math.max(1, cam.f * 2.2 / depth);
+  for (const fi of faces) {
+    const alongX = fi < 2, z = fi === 0 ? b.z0 - 0.3 : b.z1 + 0.3, x = fi === 2 ? b.x0 - 0.3 : b.x1 + 0.3;
+    const a0 = alongX ? b.x0 : b.z0, a1 = alongX ? b.x1 : b.z1;
+    let row = 0;
+    for (let y = b.y0 + 6; y < b.y1 - 3; y += 9, row++) {
+      let col = 0;
+      for (let u = a0 + 6; u < a1 - 4; u += 13, col++) {
+        if (hash(id * 7 + fi * 131 + row, col * 17 + 3) < 0.55) continue;
+        const p = alongX ? toCam(u, y, z) : toCam(x, y, u);
+        if (p[2] < 3) continue;
+        ctx.fillRect(cam.cx + cam.f * p[0] / p[2] - sz / 2, cam.cy - cam.f * p[1] / p[2] - sz / 2, sz, sz * 0.8);
+      }
+    }
+  }
+}
+function frustum(x, z, y0, y1, w0, w1, col, fog) {
+  const P = toCam, dy = y1 - y0, dw = w0 - w1;
+  const b = [P(x - w0, y0, z - w0), P(x + w0, y0, z - w0), P(x + w0, y0, z + w0), P(x - w0, y0, z + w0)];
+  const t = [P(x - w1, y1, z - w1), P(x + w1, y1, z - w1), P(x + w1, y1, z + w1), P(x - w1, y1, z + w1)];
+  const fc = k => rgb(mixc(scl(col, k), HZ, fog));
+  const ey = cam.y - y0;
+  if (ey * dw - (cam.z - (z - w0)) * dy > 0) polyC([b[0], b[1], t[1], t[0]], fc(0.84));
+  if (ey * dw + (cam.z - (z + w0)) * dy > 0) polyC([b[2], b[3], t[3], t[2]], fc(0.66));
+  if (ey * dw - (cam.x - (x - w0)) * dy > 0) polyC([b[3], b[0], t[0], t[3]], fc(0.94));
+  if (ey * dw + (cam.x - (x + w0)) * dy > 0) polyC([b[1], b[2], t[2], t[1]], fc(0.74));
+  if (cam.y > y1 && w1 > 0.8) polyC(t, fc(1.08));
+}
+const LM_COL = {
+  day: { R: [226, 74, 40], W: [238, 238, 232], D: [200, 208, 214], S: [226, 232, 240], SD: [176, 190, 206] },
+  dusk: { R: [214, 76, 50], W: [222, 196, 180], D: [180, 168, 172], S: [210, 196, 204], SD: [160, 150, 168] },
+  night: { R: [255, 118, 40], W: [255, 196, 120], D: [255, 226, 180], S: [150, 172, 255], SD: [226, 214, 255] }
+};
+const TOWER = [[0, 45, 44, 28, 'R'], [45, 90, 28, 19, 'W'], [90, 122, 19, 14, 'R'], [122, 150, 17, 17, 'D'], [150, 190, 11, 8, 'W'], [190, 223, 8, 6, 'R'], [223, 250, 8, 8, 'D'], [250, 290, 5, 3, 'W'], [290, 333, 2.6, 0.5, 'R']];
+const TREE = [[0, 30, 34, 28, 'S'], [30, 200, 28, 19, 'S'], [200, 340, 19, 14, 'S'], [340, 375, 24, 24, 'SD'], [375, 440, 14, 12, 'S'], [440, 456, 19, 19, 'SD'], [456, 495, 11, 8, 'S'], [495, 634, 5, 1, 'S']];
+function drawLandmark(L, sections, time, fog) {
+  const C = LM_COL[time], nf = time === 'night' ? fog * 0.25 : fog;
+  for (const s of sections) frustum(L.x, L.z, s[0], s[1], s[2], s[3], C[s[4]], nf);
+  if (time !== 'day' && Math.sin(performance.now() / 300) > -0.2) dots([[L.x, L.h + 2, L.z]], 'rgb(255,60,50)', 2.5, true, 9000);
+}
+function bridgeCable(Bd, zoff) {
+  const pts = [];
+  for (let x = Bd.x0; x <= Bd.x1 + 1; x += 40) {
+    const ax = Math.abs(x);
+    const y = ax <= 230 ? 126 - 66 * (1 - (x / 230) ** 2) : 126 - (ax - 230) / (Bd.x1 - 230) * 72;
+    pts.push([x, y, Bd.z + zoff]);
+  }
+  return pts;
+}
+function drawRing(R, kind) {
+  const c0 = toCam(R.x, R.h, R.z); if (c0[2] < 12) return;
+  const rx = R.nz, rz = -R.nx, pts = [];
+  for (let i = 0; i < 16; i++) {
+    const a = i / 16 * 6.2832, ca = Math.cos(a) * R.r, sa = Math.sin(a) * R.r;
+    pts.push(toCam(R.x + rx * ca, R.h + sa, R.z + rz * ca));
+  }
+  const lw = SIM.clamp(cam.f * 3.2 / c0[2], 1.5, 40);
+  if (kind === 0) {
+    const pulse = 0.75 + 0.25 * Math.sin(performance.now() / 160);
+    polyC(pts, null, `rgba(255,255,255,${0.55 * pulse})`, lw * 1.7);
+    polyC(pts, null, '#ff6a1a', lw);
+  } else polyC(pts, null, 'rgba(255,106,26,.45)', lw * 0.8);
+}
+
+// street grid: segments bucketed by depth so each bucket is one stroke with a perspective-correct-ish width
+const ROAD_EDGES = [0, 50, 100, 180, 320, 560, 1000, 1700, 3000];
+function drawRoads(th) {
+  const WD = SIM.WD, B = WD.B, buckets = ROAD_EDGES.slice(1).map(() => []);
+  const add = (x0, z0, x1, z1, wide) => {
+    const mx = (x0 + x1) / 2, mz = (z0 + z1) / 2;
+    const d = (mx - cam.x) * cam.syw + (mz - cam.z) * cam.cyw;
+    if (d < -150 || d > 3000) return;
+    const lat = (mx - cam.x) * cam.cyw - (mz - cam.z) * cam.syw;
+    if (Math.abs(lat) > d * 1.1 + 300) return;
+    let P = toCam(x0, 0.05, z0), Q = toCam(x1, 0.05, z1);
+    if (P[2] < NEAR && Q[2] < NEAR) return;
+    if (P[2] < NEAR) P = lerp3(P, Q, (NEAR - P[2]) / (Q[2] - P[2]));
+    else if (Q[2] < NEAR) Q = lerp3(Q, P, (NEAR - Q[2]) / (P[2] - Q[2]));
+    const dz = Math.max(NEAR, Math.min(P[2], Q[2]) * 0.6 + Math.max(P[2], Q[2]) * 0.4);
+    let k = 0; while (k < ROAD_EDGES.length - 2 && dz > ROAD_EDGES[k + 1]) k++;
+    buckets[k].push(P, Q, wide);
+  };
+  const Z1 = WD.shore - 4;
+  for (let i = 0; i <= WD.NI; i++) { const x = WD.X0 + i * B; for (let z = WD.Z0; z < Z1; z += 2 * B) add(x, z, x, Math.min(Z1, z + 2 * B), i % 4 === 0); }
+  for (let j = 0; j <= WD.NJ; j++) { const z = WD.Z0 + j * B; if (z > Z1) break; for (let x = WD.X0; x < -WD.X0; x += 2 * B) add(x, z, x + 2 * B, z, j % 4 === 0); }
+  const road = rgb(scl(th.land, 0.72)), ave = rgb(scl(th.land, 0.6));
+  ctx.lineCap = 'butt';
+  for (let k = 0; k < buckets.length; k++) {
+    const L = buckets[k]; if (!L.length) continue;
+    const rep = (ROAD_EDGES[k] + ROAD_EDGES[k + 1]) / 2;
+    for (const wide of [false, true]) {
+      ctx.beginPath(); let any = false;
+      for (let i = 0; i < L.length; i += 3) if (L[i + 2] === wide) { seg(L[i], L[i + 1]); any = true; }
+      if (!any) continue;
+      ctx.strokeStyle = wide ? ave : road; ctx.lineWidth = Math.max(0.7, cam.f * (wide ? 26 : 13) / rep); ctx.stroke();
+    }
+  }
+}
+
+let shake = 0;
+const parts = [];
+function spawnSmoke(s, n) {
+  for (let i = 0; i < n; i++) for (const side of [-3, 3]) {
+    parts.push({ x: s.x + side, y: Math.max(0.6, s.h), z: s.z + Math.random() * 3, vx: (Math.random() - .5) * 3, vy: 1 + Math.random() * 2, vz: s.vz * 0.15, life: 1, size: 1.5 + Math.random() });
+  }
+}
+
+function render(s, opt) {
+  const st = s.st, sc = sceneCache, th = sc.theme, Wd = sc.Wd, WD = SIM.WD, time = st.time;
+  HZ = th.haze; TIME = time;
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  const onG = s.phase !== 'air' && s.h <= 0.05;
+  const back = onG ? 62 : 70, up = onG ? 8 : 12;
+  cam.yaw += (s.psi - cam.yaw) * 0.07;
+  const fx = Math.sin(cam.yaw), fz = Math.cos(cam.yaw);
+  cam.x = s.x - fx * back; cam.z = s.z - fz * back; cam.y = Math.max(2.5, s.h + 3 + up);
+  const tp = (-7 + SIM.clamp(s.gam * SIM.R2D, -12, 8) * 0.5) * SIM.D2R;
+  cam.pitch += (tp - cam.pitch) * 0.1;
+  cam.roll += (s.bank * 0.22 * SIM.D2R - cam.roll) * 0.1;
+  cam.cyw = Math.cos(cam.yaw); cam.syw = Math.sin(cam.yaw); cam.cp = Math.cos(cam.pitch); cam.sp = Math.sin(cam.pitch);
+  cam.f = Math.min(W * 0.95, H * 1.55); cam.cx = W / 2; cam.cy = H * 0.5;
+  let sx = 0, sy = 0;
+  if (shake > 0) { sx = (Math.random() - .5) * shake; sy = (Math.random() - .5) * shake; shake *= 0.88; if (shake < 0.3) shake = 0; }
+
+  ctx.save();
+  ctx.translate(cam.cx + sx, cam.cy + sy); ctx.rotate(-cam.roll); ctx.translate(-cam.cx, -cam.cy);
+  const hy = cam.cy + cam.f * Math.tan(cam.pitch);
+  const big = Math.max(W, H) * 2;
+  const g = ctx.createLinearGradient(0, hy - H, 0, hy);
+  g.addColorStop(0, rgb(th.skyTop)); g.addColorStop(1, rgb(th.skyHz));
+  ctx.fillStyle = g; ctx.fillRect(-big, hy - big, big * 3, big);
+  if (sc.stars.length) {
+    ctx.fillStyle = time === 'night' ? 'rgba(255,255,255,.8)' : 'rgba(255,240,220,.35)';
+    for (const p of sc.stars) {
+      const c = toCam(cam.x + p[0] * 5e4, cam.y + p[1] * 5e4, cam.z + p[2] * 5e4); if (c[2] < 10) continue;
+      const r = p[3] * (time === 'night' ? 1.4 : 0.9); ctx.fillRect(cam.cx + cam.f * c[0] / c[2], cam.cy - cam.f * c[1] / c[2], r, r);
+    }
+  }
+  if (time === 'dusk') {
+    const sg = ctx.createRadialGradient(W * 0.72, hy - 18, 4, W * 0.72, hy - 18, H * 0.5);
+    sg.addColorStop(0, 'rgba(255,230,170,.95)'); sg.addColorStop(0.08, 'rgba(255,190,120,.6)'); sg.addColorStop(1, 'rgba(255,160,100,0)');
+    ctx.fillStyle = sg; ctx.fillRect(-big, hy - big, big * 3, big);
+  }
+  // Mt. Fuji on the far horizon
+  {
+    const F = { x: cam.x - 26000, z: cam.z + 60000 }, k = th.fuji;
+    const body = time === 'night' ? [20, 26, 48] : time === 'dusk' ? [82, 62, 100] : mixc([86, 110, 150], th.haze, k);
+    polyW([[F.x - 22000, 0, F.z], [F.x - 2600, 3550, F.z], [F.x - 900, 3776, F.z], [F.x + 900, 3776, F.z], [F.x + 2600, 3550, F.z], [F.x + 22000, 0, F.z]], rgb(body));
+    const snow = time === 'night' ? [70, 80, 110] : time === 'dusk' ? [230, 180, 170] : mixc([250, 252, 255], th.haze, k * 0.5);
+    polyW([[F.x - 7245, 2700, F.z], [F.x - 5000, 2950, F.z], [F.x - 3800, 2780, F.z], [F.x - 2000, 3100, F.z], [F.x, 2900, F.z], [F.x + 2000, 3150, F.z], [F.x + 3800, 2800, F.z], [F.x + 5200, 3000, F.z], [F.x + 7245, 2700, F.z], [F.x + 2600, 3550, F.z], [F.x + 900, 3776, F.z], [F.x - 900, 3776, F.z], [F.x - 2600, 3550, F.z]], rgb(snow));
+  }
+  // sea, land
+  ctx.fillStyle = rgb(th.sea); ctx.fillRect(-big, hy, big * 3, big);
+  const landC = rgb(th.land);
+  polyW([[-40000, 0, WD.shore], [40000, 0, WD.shore], [40000, 0, -60000], [-40000, 0, -60000]], landC);
+  polyW([[-40000, 0, st.length + 6000], [40000, 0, st.length + 6000], [40000, 0, 60000], [-40000, 0, 60000]], rgb(mixc(th.land, th.haze, 0.5)));
+  const od = WD.odaiba, wp = WD.westPier;
+  rectG(od.x0, od.x1, od.z0, od.z1, landC); rectG(wp.x0, wp.x1, wp.z0, wp.z1, landC);
+  drawRoads(th);
+  const pk = rgb(th.park);
+  rectG(WD.palace.x0, WD.palace.x1, WD.palace.z0, WD.palace.z1, rgb(mixc(th.sea, th.park, 0.4)));
+  rectG(WD.palace.x0 + 22, WD.palace.x1 - 22, WD.palace.z0 + 22, WD.palace.z1 - 22, pk);
+  for (const p of WD.parks) rectG(p.x0, p.x1, p.z0, p.z1, pk);
+  // cast shadows (sun behind the city, shadows fall toward the viewer); one path so overlaps don't double-darken
+  if (time !== 'night') {
+    const sdx = time === 'dusk' ? 0.8 : 0.32, sdz = time === 'dusk' ? -1.15 : -0.48;
+    ctx.beginPath();
+    for (const b of Wd.buildings) {
+      const mx = (b.x0 + b.x1) / 2, mz = (b.z0 + b.z1) / 2, dz = (mx - cam.x) * cam.syw + (mz - cam.z) * cam.cyw;
+      if (dz < -200 || dz > 2600) continue;
+      const lat = (mx - cam.x) * cam.cyw - (mz - cam.z) * cam.syw;
+      if (Math.abs(lat) > dz + 400) continue;
+      const ox = b.h * sdx, oz = b.h * sdz;
+      const pts = [[b.x0, b.z1], [b.x0, b.z0], [b.x0 + ox, b.z0 + oz], [b.x1 + ox, b.z0 + oz], [b.x1 + ox, b.z1 + oz], [b.x1, b.z1]].map(p => toCam(p[0], 0.1, p[1]));
+      let c = pts; for (const p of pts) if (p[2] < NEAR) { c = clipNear(pts); break; }
+      if (c.length < 3) continue;
+      c.forEach((p, i) => { const X = cam.cx + cam.f * p[0] / p[2], Y = cam.cy - cam.f * p[1] / p[2]; i ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y); });
+      ctx.closePath();
+    }
+    ctx.fillStyle = time === 'dusk' ? 'rgba(30,20,40,.32)' : 'rgba(30,40,56,.26)'; ctx.fill('nonzero');
+  }
+  // Haneda island
+  const L = st.length, hw = st.width / 2, white = time === 'night' ? 'rgb(150,156,160)' : 'rgb(238,240,234)';
+  const dk = time === 'night' ? 0.3 : time === 'dusk' ? 0.62 : 1;
+  polyW([[-520, 0, -450], [520, 0, -450], [520, 0, L + 400], [-520, 0, L + 400]], rgb(scl([180, 178, 166], dk)));
+  polyW([[-440, 0, -380], [440, 0, -380], [440, 0, L + 330], [-440, 0, L + 330]], rgb(scl([112, 138, 84], dk)));
+  // haze band
+  const hz = ctx.createLinearGradient(0, hy - 2, 0, hy + H * 0.12);
+  hz.addColorStop(0, rgb(th.haze, 0.95)); hz.addColorStop(1, rgb(th.haze, 0));
+  ctx.fillStyle = hz; ctx.fillRect(-big, hy - 2, big * 3, H * 0.12 + 2);
+  if (sc.street.length) {
+    const near = [];
+    for (const p of sc.street) { const dx = p[0] - cam.x, dz = p[2] - cam.z; if (dx * dx + dz * dz < 9e6) near.push(p); }
+    dots(near, 'rgba(255,210,130,.75)', 0.9, true, 3000);
+  }
+
+  // runway
+  polyW([[-hw - 6, 0, -60], [hw + 6, 0, -60], [hw + 6, 0, L + 60], [-hw - 6, 0, L + 60]], 'rgb(150,148,136)');
+  rectG(-hw, hw, 0, L, time === 'night' ? 'rgb(32,35,40)' : 'rgb(52,56,61)');
+  const kw = (st.width - 12) / 16;
+  for (let i = 0; i < 16; i++) { if (i === 7 || i === 8) continue; const x0 = -hw + 6 + i * kw; rectG(x0 + 0.6, x0 + kw - 0.6, 6, 42, white); }
+  for (let z = 70; z < L - 40; z += 50) rectG(-0.45, 0.45, z, z + 30, white);
+  rectG(-hw + 0.8, -hw + 1.6, 0, L, white); rectG(hw - 1.6, hw - 0.8, 0, L, white);
+  for (const z of [st.aimZ - 150, st.aimZ + 150, st.aimZ + 300]) if (z > 60 && z < L - 100) {
+    rectG(-hw * 0.62, -hw * 0.62 + 6, z, z + 22, white); rectG(hw * 0.62 - 6, hw * 0.62, z, z + 22, white);
+  }
+  rectG(-hw * 0.62 - 3, -hw * 0.62 + 7, st.aimZ - 30, st.aimZ + 30, white);
+  rectG(hw * 0.62 - 7, hw * 0.62 + 3, st.aimZ - 30, st.aimZ + 30, white);
+  const lights = [], appr = [], red = [];
+  for (let z = 0; z <= L; z += 60) { lights.push([-hw - 2, 0.4, z]); lights.push([hw + 2, 0.4, z]); }
+  for (let z = -900; z < 0; z += 30) { appr.push([0, 0.6, z]); if (z === -300) for (let x = -18; x <= 18; x += 4) appr.push([x, 0.6, z]); }
+  for (let x = -hw; x <= hw; x += 4) red.push([x, 0.4, L + 2]);
+  const lit = time !== 'day';
+  dots(lights, lit ? 'rgb(255,235,180)' : 'rgba(255,248,225,.9)', 0.55, lit);
+  dots(appr, lit ? 'rgb(255,255,235)' : 'rgba(255,255,240,.85)', 0.6, lit);
+  dots(red, 'rgb(255,70,60)', 0.5, lit);
+  const pp = SIM.papi(s);
+  if (pp) {
+    const W4 = [], R4 = [];
+    pp.forEach((wht, i) => (wht ? W4 : R4).push([-hw - 14 - i * 9, 1, st.aimZ]));
+    dots(W4, 'rgb(255,255,255)', 0.9, true); dots(R4, 'rgb(255,60,50)', 0.9, true);
+  }
+  if (opt.guide && s.phase === 'air' && SIM.finalLeg(s)) {
+    const base = Math.floor(s.z / 250) + 1;
+    for (let k = 3; k >= 0; k--) {
+      const zz = (base + k) * 250; if (zz > st.aimZ - 60) continue;
+      const hh = SIM.glideH(st, zz) + 3;
+      polyW([[-18, hh - 9, zz], [18, hh - 9, zz], [18, hh + 9, zz], [-18, hh + 9, zz]], null, 'rgba(255,106,26,' + (0.85 - k * 0.15) + ')', 2.5);
+    }
+  }
+  const pr = SIM.predict(s);
+  if (opt.guide && pr && pr.t < 40) {
+    const inside = pr.z > 0 && pr.z < L && Math.abs(pr.x) < hw, sz = 9;
+    polyW([[pr.x, 0.2, pr.z - sz * 1.6], [pr.x + sz, 0.2, pr.z], [pr.x, 0.2, pr.z + sz * 1.6], [pr.x - sz, 0.2, pr.z]],
+      inside ? 'rgba(255,106,26,.85)' : 'rgba(255,90,79,.9)', 'rgba(255,255,255,.9)', 1.5);
+  }
+  const sh = SIM.clamp(1 - s.h / 120, 0, 1);
+  if (sh > 0) {
+    const a = s.psi, ca = Math.cos(a), sa = Math.sin(a);
+    const P = (lx, lz) => [s.x + lx * ca + lz * sa, 0.15, s.z - lx * sa + lz * ca];
+    polyW([P(-17, -2), P(17, -2), P(17, 4), P(-17, 4)], `rgba(10,20,10,${0.32 * sh})`);
+    polyW([P(-2, -18), P(2, -18), P(2, 20), P(-2, 20)], `rgba(10,20,10,${0.32 * sh})`);
+  }
+
+  // ---- sorted solids ----
+  const items = [];
+  const depthOf = (x, z) => (x - cam.x) * cam.syw + (z - cam.z) * cam.cyw;
+  const latOf = (x, z) => (x - cam.x) * cam.cyw - (z - cam.z) * cam.syw;
+  const vis = (x, z, rad) => { const d = depthOf(x, z), l = latOf(x, z); return d > -rad && d < FAR + rad && Math.abs(l) < d * 0.95 + rad + 60 ? d : null; };
+  for (const b of Wd.buildings) {
+    const mx = (b.x0 + b.x1) / 2, mz = (b.z0 + b.z1) / 2;
+    const d = vis(mx, mz, 70); if (d == null) continue;
+    if (d > 2300 && b.h < 45) continue;
+    items.push({ d, k: 0, b });
+  }
+  const T = SIM.WD.tower, Tr = SIM.WD.tree, Bd = SIM.WD.bridge;
+  { const d = vis(T.x, T.z, 60); if (d != null) items.push({ d, k: 1 }); }
+  { const d = vis(Tr.x, Tr.z, 60); if (d != null || depthOf(Tr.x, Tr.z) > 0) items.push({ d: depthOf(Tr.x, Tr.z), k: 2 }); }
+  let bmin = 1e9;
+  for (let x = Bd.x0; x < Bd.x1; x += 97.5) {
+    const d = vis(x + 48, Bd.z, 80); if (d == null) continue;
+    bmin = Math.min(bmin, d); items.push({ d, k: 3, x0: x, x1: x + 97.5 });
+  }
+  for (const tx of Bd.tx) { const d = vis(tx, Bd.z, 40); if (d != null) { items.push({ d: d - 0.5, k: 4, tx }); bmin = Math.min(bmin, d); } }
+  if (bmin < 1e9) items.push({ d: bmin - 1, k: 5 });
+  if (!s.result || attract) Wd.rings.forEach((R, i) => {
+    if (i < s.ring || i > s.ring + 2) return;
+    const d = depthOf(R.x, R.z); if (d > 0) items.push({ d: d - 2, k: 6, R, kind: i === s.ring ? 0 : 1 });
+  });
+  items.sort((a, b) => b.d - a.d);
+  const flick = Math.sin(performance.now() / 280) > -0.3;
+  const roofRed = [];
+  for (const it of items) {
+    const fog = fogAt(it.d, th);
+    if (it.k === 0) {
+      const b = it.b, np = b.parts.length;
+      for (let pi = 0; pi < np; pi++) {
+        const p = b.parts[pi], faces = box(p.x0, p.x1, p.z0, p.z1, p.y0, p.y1, b.col, fog, it.d, b, pi === np - 1);
+        if (time === 'night') windows(p, b.id + pi * 13, faces, it.d);
+      }
+      if (b.h >= 100 && time !== 'day' && flick) dots([[(b.x0 + b.x1) / 2, b.h + 1, (b.z0 + b.z1) / 2]], 'rgb(255,60,50)', 1.2, true);
+    } else if (it.k === 1) drawLandmark(T, TOWER, time, fog * 0.8);
+    else if (it.k === 2) drawLandmark(Tr, TREE, time, fog * 0.7);
+    else if (it.k === 3) box(it.x0, it.x1, Bd.z - 12, Bd.z + 12, Bd.d0, Bd.d1, time === 'night' ? [120, 126, 140] : [228, 230, 226], fog);
+    else if (it.k === 4) { box(it.tx - 7, it.tx + 7, Bd.z - 14, Bd.z + 14, 0, Bd.th, time === 'night' ? [200, 206, 220] : [236, 238, 234], fog); }
+    else if (it.k === 5) {
+      const cc = time === 'night' ? 'rgba(230,236,255,.9)' : rgb(mixc([200, 204, 206], HZ, fog));
+      const c1 = bridgeCable(Bd, -12), c2 = bridgeCable(Bd, 12);
+      lineW(c1, cc, 0.9); lineW(c2, cc, 0.9);
+      if (time === 'night') { const lp = c1.concat(c2).filter((_, i) => i % 1 === 0); dots(lp, 'rgba(255,255,255,.95)', 1.2, true); dots(lp.map(p => [p[0], 48, p[2]]), 'rgba(140,200,255,.9)', 1, true); }
+    } else if (it.k === 6) drawRing(it.R, it.kind);
+  }
+
+  for (let i = parts.length - 1; i >= 0; i--) {
+    const p = parts[i]; p.x += p.vx / 60; p.y += p.vy / 60; p.z += p.vz / 60; p.size += 0.08; p.life -= 1 / 70;
+    if (p.life <= 0) { parts.splice(i, 1); continue; }
+    const c = toCam(p.x, p.y, p.z); if (c[2] < 2) continue;
+    ctx.fillStyle = `rgba(235,235,230,${p.life * 0.5})`; ctx.beginPath();
+    ctx.arc(cam.cx + cam.f * c[0] / c[2], cam.cy - cam.f * c[1] / c[2], cam.f * p.size / c[2], 0, 6.2832); ctx.fill();
+  }
+  drawPlane(s);
+  ctx.restore();
+}
+
+function drawPlane(s) {
+  const c = toCam(s.x, s.h + 3, s.z); if (c[2] < 2) return;
+  const px = cam.cx + cam.f * c[0] / c[2], py = cam.cy - cam.f * c[1] / c[2], k = cam.f / c[2];
+  ctx.save(); ctx.translate(px, py); ctx.scale(k, k);
+  ctx.rotate(s.bank * SIM.D2R);
+  const nose = SIM.clamp((s.pitch * SIM.D2R - cam.pitch) * 1.2, -0.3, 0.4);
+  const yawRel = SIM.clamp(s.psi - cam.yaw, -0.3, 0.3) * 6;
+  const crashed = s.result && !s.result.ok;
+  if (crashed) ctx.rotate(Math.sin(performance.now() / 90) * 0.06);
+  const hull = '#f2f3ef', shade = '#c7ccce', orange = '#ff6a1a';
+  ctx.fillStyle = '#2b2f33';
+  for (const gx of [-3.2, 3.2]) { ctx.fillRect(gx - 0.18, 1.2, 0.36, 1.4); ctx.fillRect(gx - 0.75, 2.3, 1.5, 0.75); }
+  ctx.fillStyle = shade;
+  ctx.beginPath(); ctx.moveTo(0, 0.1 - nose * 2); ctx.lineTo(17, -1.5 - nose * 3); ctx.lineTo(17, -1.0 - nose * 2); ctx.lineTo(0, 0.9 + nose);
+  ctx.lineTo(-17, -1.0 - nose * 2); ctx.lineTo(-17, -1.5 - nose * 3); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = orange; ctx.fillRect(16.4, -1.65 - nose * 3, 0.6, 0.8); ctx.fillRect(-17, -1.65 - nose * 3, 0.6, 0.8);
+  for (const ex of [-6.4, 6.4]) {
+    ctx.fillStyle = hull; ctx.beginPath(); ctx.arc(ex, 1.1, 1.15, 0, 6.2832); ctx.fill();
+    ctx.fillStyle = '#3b4146'; ctx.beginPath(); ctx.arc(ex, 1.1, 0.72, 0, 6.2832); ctx.fill();
+  }
+  ctx.fillStyle = hull;
+  ctx.beginPath(); ctx.moveTo(-6, -0.9 - nose * 4); ctx.lineTo(6, -0.9 - nose * 4); ctx.lineTo(6, -0.5 - nose * 4); ctx.lineTo(-6, -0.5 - nose * 4); ctx.closePath(); ctx.fill();
+  const fg = ctx.createRadialGradient(-0.6, -0.7, 0.2, 0, 0, 2.1);
+  fg.addColorStop(0, '#ffffff'); fg.addColorStop(1, '#c9ced0');
+  ctx.fillStyle = fg; ctx.beginPath(); ctx.ellipse(yawRel * 0.1, 0, 2.05, 2.0, 0, 0, 6.2832); ctx.fill();
+  ctx.fillStyle = '#3b4146'; ctx.beginPath(); ctx.ellipse(yawRel * 0.1, 0.1, 0.55, 0.5, 0, 0, 6.2832); ctx.fill();
+  ctx.fillStyle = orange;
+  ctx.beginPath(); ctx.moveTo(-0.35, -1.7); ctx.lineTo(0.35, -1.7); ctx.lineTo(0.18 + yawRel * 0.2, -7.6); ctx.lineTo(-0.18 + yawRel * 0.2, -7.6); ctx.closePath(); ctx.fill();
+  if (s.st.time !== 'day' && s.phase === 'air') {
+    ctx.fillStyle = 'rgba(255,240,200,.9)';
+    for (const lx of [-3.6, 3.6]) { ctx.beginPath(); ctx.arc(lx, 0.6, 0.35, 0, 6.2832); ctx.fill(); }
+    ctx.fillStyle = '#ff3b30'; ctx.beginPath(); ctx.arc(-17, -1.3 - nose * 3, 0.45, 0, 6.2832); ctx.fill();
+    ctx.fillStyle = '#39e27a'; ctx.beginPath(); ctx.arc(17, -1.3 - nose * 3, 0.45, 0, 6.2832); ctx.fill();
+  }
+  ctx.restore();
+  if (crashed) {
+    ctx.save(); ctx.translate(px, py - 10);
+    const r = Math.max(36, k * 9);
+    ctx.fillStyle = '#ffc83d'; ctx.strokeStyle = '#0c1720'; ctx.lineWidth = 3;
+    ctx.beginPath(); for (let i = 0; i < 20; i++) { const a = i / 20 * 6.2832, rr = i % 2 ? r * 0.55 : r; ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); }
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#0c1720'; ctx.font = `400 ${Math.round(r * 0.42)}px "Dela Gothic One",sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(['BUILDING', 'TOWER', 'TREE', 'BRIDGE'].includes(s.result.code) ? 'ガシャン！' : s.result.code === 'SEA' ? 'ザブン！' : 'ドスン！', 0, 2); ctx.restore();
+  }
+}
+
+/* ================= HUD ================= */
+function rr(x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+const C_HUD = '#eef7fb', C_MUTE = '#a9bcc4', C_WARN = '#ffc83d', C_BAD = '#ff5a4f', C_GOOD = '#5fdc9b', C_OR = '#ff6a1a';
+let flash = null;
+function hudBox(x, y, w, h) { ctx.fillStyle = 'rgba(12,23,32,.58)'; rr(x, y, w, h, 10); ctx.fill(); }
+function txt(t, x, y, font, color, align = 'left', base = 'alphabetic') { ctx.font = font; ctx.fillStyle = color; ctx.textAlign = align; ctx.textBaseline = base; ctx.fillText(t, x, y); }
+function warnIcon(x, y, s, col) { ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(x, y - s); ctx.lineTo(x + s * 1.1, y + s * 0.8); ctx.lineTo(x - s * 1.1, y + s * 0.8); ctx.closePath(); ctx.fill(); txt('!', x, y + s * 0.55, `700 ${s * 1.3}px ${'IBM Plex Mono'}`, '#0c1720', 'center'); }
+function toScreen(x, y, z) { // world → screen including camera roll
+  const c = toCam(x, y, z);
+  const zz = Math.abs(c[2]) < 0.01 ? 0.01 : c[2];
+  let sx = cam.f * c[0] / zz, sy = -cam.f * c[1] / zz;
+  if (zz < 0) { sx = -sx * 50; sy = -sy * 50; }
+  const cr = Math.cos(-cam.roll), sr = Math.sin(-cam.roll);
+  return [cam.cx + sx * cr - sy * sr, cam.cy + sx * sr + sy * cr, zz];
+}
+function pullUp(s) {
+  if (s.phase !== 'air') return false;
+  for (const t of [0.8, 1.6, 2.6]) {
+    const x = s.x + s.vx * t, z = s.z + s.vz * t, h = s.h + s.vy * t;
+    if (SIM.hitTest(s.W, x, h, z)) return true;
+    if (h < 0 && SIM.surface(s.st, x, z) !== 'airport') return true;
+  }
+  return false;
+}
+
+function drawHUD(s, mode) {
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  const u = SIM.clamp(Math.min(W, H) / 520, 0.72, 1.25);
+  const st = s.st, Wd = s.W, mono = n => `600 ${Math.round(n * u)}px "IBM Plex Mono",monospace`, disp = n => `400 ${Math.round(n * u)}px "Dela Gothic One",sans-serif`, body = n => `700 ${Math.round(n * u)}px "Zen Kaku Gothic New",sans-serif`;
+  const top = INS.t + 10, L = INS.l + 10, R = W - INS.r - 10;
+  const fin = SIM.finalLeg(s), N = Wd.rings.length;
+  txt(`${st.code}  ${st.name}`, W / 2, top + 16 * u, body(14), C_HUD, 'center');
+  const pY = top + 32 * u;
+  if (!fin) {
+    hudBox(W / 2 - 80 * u, pY - 12 * u, 160 * u, 26 * u);
+    txt('RING', W / 2 - 72 * u, pY + 5 * u, mono(10), C_MUTE);
+    for (let i = 0; i < N; i++) {
+      const h = s.hits[i];
+      ctx.fillStyle = h ? (h.ok ? C_OR : '#55646b') : i === s.ring ? C_HUD : 'rgba(238,247,251,.25)';
+      ctx.beginPath(); ctx.arc(W / 2 - 30 * u + i * (100 * u / Math.max(1, N - 1)), pY + 1 * u, (i === s.ring ? 5.5 : 4.5) * u, 0, 6.2832); ctx.fill();
+    }
+  } else {
+    const pp = SIM.papi(s);
+    hudBox(W / 2 - 66 * u, pY - 12 * u, 132 * u, 26 * u);
+    txt('PAPI', W / 2 - 58 * u, pY + 5 * u, mono(10), C_MUTE);
+    for (let i = 0; i < 4; i++) {
+      const on = pp ? pp[3 - i] : null;
+      ctx.fillStyle = on == null ? '#55646b' : on ? '#ffffff' : '#ff3c32';
+      ctx.beginPath(); ctx.arc(W / 2 - 4 * u + i * 17 * u, pY + 1 * u, 5.5 * u, 0, 6.2832); ctx.fill();
+    }
+  }
+  txt(`${Math.max(0, SIM.AC.TLIMIT - s.t).toFixed(0)}s`, L + 52, top + 26, mono(15), s.t > SIM.AC.TLIMIT - 20 ? C_WARN : C_HUD);
+  // wind compass (relative to heading)
+  const wx = s.w.x, wz = s.w.z, ws = Math.hypot(wx, wz);
+  const cx = R - 34 * u, cy = top + 34 * u, rad = 26 * u;
+  hudBox(cx - rad - 8 * u, cy - rad - 6 * u, rad * 2 + 16 * u, rad * 2 + 30 * u);
+  ctx.strokeStyle = 'rgba(238,247,251,.35)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(cx, cy, rad, 0, 6.2832); ctx.stroke();
+  ctx.fillStyle = 'rgba(238,247,251,.55)'; ctx.fillRect(cx - 2.5 * u, cy - rad * 0.7, 5 * u, rad * 1.4);
+  if (ws > 0.3) {
+    const ang = Math.atan2(wx, -wz) - s.psi;
+    ctx.save(); ctx.translate(cx, cy); ctx.rotate(ang);
+    ctx.strokeStyle = C_OR; ctx.fillStyle = C_OR; ctx.lineWidth = 3 * u;
+    ctx.beginPath(); ctx.moveTo(0, rad * 0.75); ctx.lineTo(0, -rad * 0.55); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, -rad * 0.85); ctx.lineTo(7 * u, -rad * 0.45); ctx.lineTo(-7 * u, -rad * 0.45); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+  txt(ws > 0.3 ? `風 ${ws.toFixed(0)}m/s` : '無風', cx, cy + rad + 17 * u, mono(11), C_HUD, 'center');
+
+  // minimap (top-left)
+  const mw = 92 * u, mh = 150 * u, mx = L, my = top + 40;
+  {
+    hudBox(mx, my, mw, mh);
+    const x0 = -1700, x1 = 1700, z0 = -9200, z1 = st.length + 300;
+    const sxm = mw / (x1 - x0), szm = (mh - 12 * u) / (z1 - z0), sc2 = Math.min(sxm, szm);
+    const MX = x => mx + mw / 2 + x * sc2, MZ = z => my + mh - 6 * u - (z - z0) * sc2;
+    ctx.save(); rr(mx, my, mw, mh, 10); ctx.clip();
+    ctx.fillStyle = 'rgba(120,140,150,.22)'; ctx.fillRect(mx, my, mw, MZ(SIM.WD.shore) - my);
+    ctx.fillStyle = 'rgba(238,247,251,.55)'; ctx.fillRect(MX(-st.width), MZ(st.length), Math.max(2, st.width * 2 * sc2), (st.length) * sc2);
+    ctx.strokeStyle = 'rgba(255,106,26,.5)'; ctx.lineWidth = 1.2; ctx.setLineDash([3, 3]); ctx.beginPath();
+    ctx.moveTo(MX(st.start.x), MZ(st.start.z)); Wd.rings.forEach(r => ctx.lineTo(MX(r.x), MZ(r.z))); ctx.lineTo(MX(0), MZ(0)); ctx.stroke(); ctx.setLineDash([]);
+    Wd.rings.forEach((r, i) => { const h = s.hits[i]; ctx.fillStyle = h ? (h.ok ? C_OR : '#55646b') : i === s.ring ? C_HUD : 'rgba(255,106,26,.6)'; ctx.fillRect(MX(r.x) - 2, MZ(r.z) - 2, 4, 4); });
+    ctx.fillStyle = '#ff3c32'; ctx.beginPath(); ctx.arc(MX(SIM.WD.tower.x), MZ(SIM.WD.tower.z), 2.2, 0, 6.2832); ctx.fill();
+    ctx.fillStyle = '#b8c8ff'; ctx.beginPath(); ctx.arc(MX(SIM.WD.tree.x), MZ(SIM.WD.tree.z), 2.2, 0, 6.2832); ctx.fill();
+    ctx.strokeStyle = 'rgba(238,247,251,.7)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(MX(SIM.WD.bridge.x0), MZ(SIM.WD.bridge.z)); ctx.lineTo(MX(SIM.WD.bridge.x1), MZ(SIM.WD.bridge.z)); ctx.stroke();
+    ctx.save(); ctx.translate(MX(s.x), MZ(s.z)); ctx.rotate(s.psi); ctx.fillStyle = C_HUD;
+    ctx.beginPath(); ctx.moveTo(0, -6 * u); ctx.lineTo(4 * u, 4 * u); ctx.lineTo(-4 * u, 4 * u); ctx.closePath(); ctx.fill(); ctx.restore();
+    ctx.restore();
+    txt('MAP', mx + 7 * u, my + 13 * u, mono(9), C_MUTE);
+  }
+
+  // side readouts
+  const bw = 112 * u, bh = 74 * u;
+  let lx = Math.max(L, W * 0.5 - Math.min(W * 0.36, 330 * u) - bw / 2);
+  const rx = Math.min(R - bw, W * 0.5 + Math.min(W * 0.36, 330 * u) - bw / 2);
+  let by = H * 0.30;
+  if (lx < mx + mw + 6) by = Math.max(by, my + mh + 10);
+  const kt = s.v * 1.944;
+  const spdCol = s.phase === 'air' && (s.v < SIM.AC.VWARN || s.v > 85) ? C_BAD : C_HUD;
+  hudBox(lx, by, bw, bh);
+  txt('SPD', lx + 10 * u, by + 17 * u, mono(10), C_MUTE);
+  txt(s.v.toFixed(0), lx + bw - 32 * u, by + 46 * u, disp(28), spdCol, 'right');
+  txt('m/s', lx + bw - 8 * u, by + 46 * u, mono(10), C_MUTE, 'right');
+  txt(`${kt.toFixed(0)} kt`, lx + bw - 8 * u, by + 64 * u, mono(11), C_MUTE, 'right');
+  const sink = -s.vy;
+  const vsCol = s.phase === 'air' && s.h < 40 ? (sink > 4 ? C_BAD : sink > 1.5 ? C_WARN : C_GOOD) : C_HUD;
+  hudBox(rx, by, bw, bh + 20 * u);
+  txt('ALT', rx + 10 * u, by + 17 * u, mono(10), C_MUTE);
+  txt(Math.max(0, s.h).toFixed(s.h < 20 ? 1 : 0), rx + bw - 22 * u, by + 46 * u, disp(28), C_HUD, 'right');
+  txt('m', rx + bw - 8 * u, by + 46 * u, mono(10), C_MUTE, 'right');
+  txt('V/S', rx + 10 * u, by + 68 * u, mono(10), C_MUTE);
+  txt(`${sink >= 0 ? '↓' : '↑'}${Math.abs(sink).toFixed(1)}`, rx + bw - 8 * u, by + 70 * u, mono(15), vsCol, 'right');
+  txt('m/s', rx + bw - 8 * u, by + 86 * u, mono(9), C_MUTE, 'right');
+  if (!Inp.touch) {
+    const ty = by + bh + 10 * u;
+    hudBox(lx, ty, bw, 30 * u);
+    txt('THR', lx + 10 * u, ty + 19 * u, mono(10), C_MUTE);
+    ctx.fillStyle = 'rgba(238,247,251,.15)'; ctx.fillRect(lx + 42 * u, ty + 11 * u, bw - 52 * u, 8 * u);
+    ctx.fillStyle = C_OR; ctx.fillRect(lx + 42 * u, ty + 11 * u, (bw - 52 * u) * s.thr, 8 * u);
+    ctx.fillStyle = C_HUD; ctx.fillRect(lx + 42 * u + (bw - 52 * u) * Inp.thr - 1, ty + 8 * u, 2, 14 * u);
+  }
+  // distance line
+  if (s.phase === 'air') {
+    if (!fin) {
+      const Rn = Wd.rings[s.ring], d = Math.hypot(Rn.x - s.x, Rn.z - s.z), dh = Rn.h - s.h;
+      txt(`次のリング ${d >= 1000 ? (d / 1000).toFixed(1) + 'km' : d.toFixed(0) + 'm'}  高度差 ${dh >= 0 ? '+' : ''}${dh.toFixed(0)}m`, W / 2, pY + 34 * u, mono(12), C_HUD, 'center');
+    } else {
+      const d = st.aimZ - s.z;
+      txt(d > 0 ? `羽田 目標点まで ${d >= 1000 ? (d / 1000).toFixed(1) + 'km' : d.toFixed(0) + 'm'}` : '目標点通過', W / 2, pY + 34 * u, mono(12), C_HUD, 'center');
+    }
+  } else if (s.phase === 'roll') {
+    txt(`残り滑走路 ${(st.length - s.z).toFixed(0)}m`, W / 2, pY + 34 * u, mono(12), (st.length - s.z) < 300 ? C_WARN : C_HUD, 'center');
+  }
+  // next ring marker
+  if (!fin && s.phase === 'air' && Save.d.opt.guide && mode === 'play') {
+    const Rn = Wd.rings[s.ring], p = toScreen(Rn.x, Rn.h, Rn.z);
+    const m = 40 * u, on = p[2] > 0 && p[0] > m && p[0] < W - m && p[1] > m + 60 * u && p[1] < H - m;
+    if (on) {
+      const r = Math.max(14 * u, cam.f * Rn.r / p[2]) + 8 * u, k = r * 0.35;
+      ctx.strokeStyle = C_OR; ctx.lineWidth = 2.5 * u; ctx.beginPath();
+      for (const [ax, ay] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+        ctx.moveTo(p[0] + ax * r, p[1] + ay * (r - k)); ctx.lineTo(p[0] + ax * r, p[1] + ay * r); ctx.lineTo(p[0] + ax * (r - k), p[1] + ay * r);
+      }
+      ctx.stroke();
+      txt(`${s.ring + 1}/${N}`, p[0], p[1] - r - 6 * u, mono(11), C_OR, 'center');
+    } else {
+      let dx = p[0] - W / 2, dy = p[1] - H / 2; const l = Math.hypot(dx, dy) || 1; dx /= l; dy /= l;
+      const ex = W / 2 + dx * (W / 2 - 50 * u), ey = H / 2 + dy * (H / 2 - 70 * u);
+      ctx.save(); ctx.translate(ex, ey); ctx.rotate(Math.atan2(dy, dx));
+      ctx.fillStyle = C_OR; ctx.strokeStyle = '#0c1720'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(22 * u, 0); ctx.lineTo(-10 * u, -15 * u); ctx.lineTo(-4 * u, 0); ctx.lineTo(-10 * u, 15 * u); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.restore();
+    }
+  }
+  // warnings
+  const warns = [];
+  if (s.phase === 'air') {
+    if (pullUp(s)) warns.push(['PULL UP  ぶつかる！', C_BAD]);
+    if (s.t - s.stallT < 0.05) warns.push(['失速注意  STALL', C_BAD]);
+    if (fin && sink > 5 && s.h < 80) warns.push(['降下率大  SINK RATE', C_BAD]);
+    const pr = SIM.predict(s);
+    if (pr && s.h < 90 && (Math.abs(pr.x) > st.width / 2 || pr.z < 0)) warns.push([pr.z < 0 ? '滑走路手前に落ちる' : '滑走路外を予測', C_WARN]);
+    if (s.t < 5 && Math.abs(st.wind.x) > 0.5) warns.push([`横風 ${st.wind.x > 0 ? '左から' : '右から'} ${Math.abs(st.wind.x)}m/s`, C_WARN]);
+  } else if (s.phase === 'roll' && st.length - s.z < 300 && s.v > 15) warns.push(['ブレーキ！', C_WARN]);
+  let wy = pY + 50 * u;
+  for (const [t, c] of warns.slice(0, 2)) {
+    ctx.font = body(15); const tw = ctx.measureText(t).width + 44 * u;
+    ctx.fillStyle = 'rgba(12,23,32,.78)'; rr(W / 2 - tw / 2, wy, tw, 30 * u, 8); ctx.fill();
+    ctx.strokeStyle = c; ctx.lineWidth = 2; ctx.stroke();
+    warnIcon(W / 2 - tw / 2 + 17 * u, wy + 15 * u, 8 * u, c);
+    txt(t, W / 2 + 10 * u, wy + 21 * u, body(15), c, 'center');
+    wy += 36 * u;
+  }
+  if (flash && flash.t > 0) {
+    flash.t -= 1 / 60;
+    ctx.globalAlpha = Math.min(1, flash.t * 2);
+    txt(flash.big, W / 2, H * 0.64, disp(34), flash.col, 'center');
+    if (flash.sub) txt(flash.sub, W / 2, H * 0.64 + 28 * u, mono(14), C_HUD, 'center');
+    ctx.globalAlpha = 1;
+  }
+  const hint = hintFor(s);
+  if (hint && mode === 'play') {
+    ctx.font = body(14); const tw = Math.min(W - 40, ctx.measureText(hint).width + 28);
+    const hy = H - INS.b - (Inp.touch ? 26 : 22) * u - 20;
+    const hx = Inp.touch ? Math.min(W / 2, (W - 180) / 2 + 10) : W / 2;
+    ctx.fillStyle = 'rgba(12,23,32,.68)'; rr(hx - tw / 2, hy - 20 * u, tw, 30 * u, 8); ctx.fill();
+    txt(hint, hx, hy, body(14), C_HUD, 'center');
+  }
+}
+function hintFor(s) {
+  if (s.result) return null;
+  const T = Inp.touch, st = s.st, fin = SIM.finalLeg(s);
+  if (s.phase === 'roll') return T ? '丸ボタン長押しでブレーキ・左ドラッグで操向' : 'Space 長押しでブレーキ・← → で操向';
+  if (!fin) {
+    if (s.t < 8) return T ? '左ドラッグで機首と傾き。オレンジのリングをくぐれ' : '↑↓ 機首・←→ 傾きで旋回・Q/E スロットル。リングをくぐれ';
+    const R = s.W.rings[s.ring];
+    if (R.h < 45) return '橋桁の下をくぐる。高度 40m 以下で！';
+    if (st.id === 1 && s.ring === 0) return '画面端の矢印が次のリングの方向';
+    return null;
+  }
+  if (s.h < 18) return T ? '今！丸ボタン長押しかドラッグで機首を少し上げてフレア' : '今！ Space 長押しか ↑ で機首を少し上げてフレア';
+  if (s.h < 45) return '高度10m前後でフレア。V/S を 1.5m/s 以下に';
+  return '羽田へ最終進入。PAPI は白2つ・赤2つ、橙の◆を滑走路に';
+}
+
+/* ================= GAME ================= */
+const $ = id => document.getElementById(id);
+const screens = { title: $('scrTitle'), select: $('scrSelect'), result: $('scrResult'), pause: $('scrPause') };
+let mode = 'title', sim = null, stageIdx = 0, acc = 0, last = 0, resultTimer = 0, attract = true, attractIdx = 0;
+function show(name) { for (const k in screens) screens[k].hidden = k !== name; }
+
+function startAttract() {
+  attract = true; const st = SIM.STAGES[attractIdx % SIM.STAGES.length]; attractIdx++;
+  buildScene(st); sim = SIM.create(st); parts.length = 0; flash = null; cam.yaw = sim.psi;
+}
+function startStage(i) {
+  Snd.init();
+  Snd.beep(660, 0.12, 'triangle', 0.1); setTimeout(() => Snd.beep(990, 0.16, 'triangle', 0.1), 110);
+  stageIdx = i; attract = false; const st = SIM.STAGES[i];
+  buildScene(st); sim = SIM.create(st); Inp.thr = sim.thrCmd; parts.length = 0; flash = null; shake = 0; resultTimer = 0;
+  cam.yaw = sim.psi; cam.pitch = -7 * SIM.D2R; cam.roll = 0;
+  mode = 'play'; show(null); setPlayUI(true); acc = 0;
+}
+function setPlayUI(on) {
+  $('pauseBtn').hidden = !on;
+  $('touchUI').hidden = !(on && Inp.touch);
+  $('stickZone').hidden = !(on && Inp.touch);
+}
+function quipFor(sink) { return sink < 0.8 ? ['バター着陸！', C_GOOD] : sink < 1.5 ? ['ナイス接地', C_GOOD] : sink < 2.6 ? ['まずまず', C_WARN] : ['ドスン', C_BAD]; }
+
+function handleEvents(s) {
+  while (s.events.length) {
+    const e = s.events.shift();
+    if (attract) continue;
+    if (e.type === 'ring') {
+      if (e.ok) {
+        flash = { big: e.q === 1 ? 'ど真ん中！' : 'ナイス！', sub: `RING ${e.idx + 1}/${e.n}`, col: e.q === 1 ? C_OR : C_GOOD, t: 1.1 };
+        Snd.beep(880, 0.1, 'triangle', 0.09); setTimeout(() => Snd.beep(1320, 0.14, 'triangle', 0.09), 80);
+      } else { flash = { big: 'リングを逃した', sub: `RING ${e.idx + 1}/${e.n}`, col: C_WARN, t: 1.1 }; Snd.beep(300, 0.2, 'square', 0.06, 200); }
+      if (e.idx === e.n - 1) setTimeout(() => { if (!sim.result && !attract) flash = { big: '羽田へ着陸せよ', sub: 'PAPI 白2・赤2', col: C_HUD, t: 1.8 }; }, 1100);
+    } else if (e.type === 'touchdown') {
+      const q = quipFor(e.sink); flash = { big: q[0], sub: `接地 ↓${e.sink.toFixed(1)} m/s`, col: q[1], t: 1.6 };
+      shake = Math.min(14, e.sink * 3); spawnSmoke(s, 6); Snd.thump(0.35 + e.sink * 0.08, 0.3, 900); Snd.beep(1300, 0.25, 'sine', 0.06, 500);
+      if (navigator.vibrate) try { navigator.vibrate(30 + e.sink * 15); } catch (er) {}
+    } else if (e.type === 'bounce') {
+      flash = { big: '跳ねた！', sub: `↓${e.sink.toFixed(1)} m/s`, col: C_WARN, t: 1.2 }; shake = 10; spawnSmoke(s, 4); Snd.thump(0.6, 0.3, 600);
+    } else if (e.type === 'crash') {
+      shake = 22; spawnSmoke(s, 10); Snd.thump(0.9, 0.6, 300); Snd.jingle(false); resultTimer = 1.1;
+      if (navigator.vibrate) try { navigator.vibrate([80, 40, 120]); } catch (er) {}
+    } else if (e.type === 'stop') { Snd.jingle(true); resultTimer = 0.7; }
+  }
+}
+
+let warnBeepT = 0;
+function frame(now) {
+  const dt = Math.min(0.1, (now - (last || now)) / 1000); last = now;
+  if (mode === 'play' || (mode !== 'pause' && attract)) {
+    acc += dt;
+    while (acc >= SIM.DT) {
+      acc -= SIM.DT;
+      const inp = attract ? SIM.autopilot(sim) : Inp.read(SIM.DT);
+      SIM.step(sim, inp);
+    }
+    if (attract && sim.result) startAttract();
+  }
+  handleEvents(sim);
+  render(sim, { guide: attract ? false : Save.d.opt.guide });
+  if (!attract && (mode === 'play' || mode === 'pause')) drawHUD(sim, mode);
+  Snd.update(sim, mode === 'play');
+  if (mode === 'play' && !sim.result && sim.phase === 'air' && (sim.t - sim.stallT < 0.05 || pullUp(sim))) {
+    warnBeepT -= dt; if (warnBeepT <= 0) { Snd.beep(880, 0.12, 'square', 0.05); warnBeepT = 0.45; }
+  }
+  if (mode === 'play' && sim.result && resultTimer > 0) { resultTimer -= dt; if (resultTimer <= 0) showResult(); }
+  if (Inp.touch && mode === 'play') {
+    $('thrFill').style.height = (sim.thr * 100) + '%';
+    $('thrKnob').style.bottom = `calc(${Inp.thr * 100}% - 3px)`;
+    $('actBtn').textContent = sim.phase === 'roll' ? 'BRAKE' : 'FLARE';
+  }
+  requestAnimationFrame(frame);
+}
+
+const LANDING_FAILS = new Set(['UNDERSHOOT', 'MISSED', 'OFFSIDE', 'HARD', 'STALL', 'WING', 'TAIL', 'FAST', 'BOUNCE', 'VEER', 'OVERRUN']);
+function showResult() {
+  mode = 'result'; setPlayUI(false);
+  const s = sim, r = s.result, st = s.st, d = Save.d, N = s.W.rings.length, got = s.hits.filter(h => h.ok).length;
+  $('resStage').textContent = `${st.code} · ${st.name} → 羽田`;
+  let newBest = false;
+  if (r.ok) {
+    const b = d.best[st.id];
+    if (!b || r.total > b.score) { d.best[st.id] = { score: r.total, rank: r.rank }; newBest = true; }
+    d.streak++; d.bestStreak = Math.max(d.bestStreak, d.streak); if (r.rank === 'SSS') d.perfect++;
+  } else d.streak = 0;
+  Save.write();
+  $('resRank').textContent = r.ok ? r.rank : LANDING_FAILS.has(r.code) ? '着陸失敗' : '墜落';
+  $('resRank').className = 'rank' + (r.ok ? '' : ' fail');
+  $('resScore').textContent = r.ok ? r.total.toLocaleString() : '—';
+  $('resQuip').textContent = r.ok ? (r.rank === 'SSS' ? 'PERFECT FLIGHT' : s.td ? quipFor(s.td.sink)[0] : '') : '';
+  $('resBest').hidden = !newBest;
+  $('resWhy').hidden = r.ok;
+  if (!r.ok) { $('resWhyT').textContent = r.title; $('resWhyP').textContent = r.hint; }
+  const bars = $('resBars'); bars.innerHTML = '';
+  if (r.ok) for (const p of r.parts) {
+    const el = document.createElement('div'); el.className = 'bar';
+    el.innerHTML = `<span>${p.label}</span><span class="t"><i style="width:${(p.pts / p.max * 100).toFixed(1)}%"></i></span><span class="n">${p.pts.toLocaleString()} / ${p.max.toLocaleString()}</span>`;
+    bars.appendChild(el);
+  }
+  const data = $('resData'); data.innerHTML = '';
+  const td = s.td;
+  const items = [['リング通過', `${got} / ${N}`, got === N]].concat(td ? [
+    ['降下率', td.sink.toFixed(1) + ' m/s', td.sink <= 1.5],
+    ['接地点（目標から）', (td.z - st.aimZ >= 0 ? '+' : '') + (td.z - st.aimZ).toFixed(0) + ' m', Math.abs(td.z - st.aimZ) <= 60],
+    ['横ずれ', Math.abs(td.x).toFixed(1) + ' m', Math.abs(td.x) <= 3],
+    ['接地速度', td.v.toFixed(0) + ' m/s', td.v >= 60 && td.v <= 75],
+    ['バンク', Math.abs(td.bank).toFixed(1) + '°', Math.abs(td.bank) <= 3],
+    ['機首角', td.pitch.toFixed(1) + '°', td.pitch >= 1 && td.pitch <= 7],
+    ['バウンド', s.bounces + ' 回', s.bounces === 0]
+  ] : [['飛行時間', s.t.toFixed(1) + ' s', false], ['最終高度', Math.max(0, s.h).toFixed(0) + ' m', false]]);
+  for (const [k, v, good] of items) { const el = document.createElement('div'); el.innerHTML = `<span>${k}</span><b class="${good ? 'ok' : 'ng'}">${v}</b>`; data.appendChild(el); }
+  $('btnNext').hidden = stageIdx >= SIM.STAGES.length - 1;
+  show('result');
+  setTimeout(() => $('btnRetry').focus({ preventScroll: true }), 30);
+}
+
+function windText(st) {
+  const x = st.wind.x, z = st.wind.z;
+  if (!x && !z) return '無風';
+  const p = [];
+  if (x) p.push(`${x > 0 ? '左' : '右'}から横風 ${Math.abs(x)}m/s`);
+  if (st.gust >= 2) p.push(`突風 ±${st.gust}`);
+  return p.join(' · ');
+}
+const TIME_JP = { day: '昼', dusk: '夕暮れ', night: '夜' };
+function renderCards() {
+  const wrap = $('cards'); wrap.innerHTML = '';
+  SIM.STAGES.forEach((st, i) => {
+    const b = Save.d.best[st.id];
+    const el = document.createElement('button'); el.className = 'card'; el.type = 'button';
+    el.innerHTML = `<div class="strip"><span>${st.code}</span><small>${TIME_JP[st.time]}</small></div>
+      <div class="body"><h3>${st.name}</h3><p>${st.desc}</p>
+      <div class="chips"><span class="chip">リング ${st.rings.length}</span><span class="chip">${windText(st)}</span><span class="chip">羽田 ${st.length}m</span></div>
+      <div class="best"><span>${b ? 'ベスト ' + b.score.toLocaleString() : '未クリア'}</span><b>${b ? b.rank : '—'}</b></div></div>`;
+    el.addEventListener('click', () => startStage(i));
+    wrap.appendChild(el);
+  });
+  const d = Save.d;
+  $('stats').textContent = `PERFECT ${d.perfect} · 連続成功 ${d.streak}（最高 ${d.bestStreak}）`;
+}
+function toSelect() { mode = 'select'; setPlayUI(false); if (!attract) startAttract(); renderCards(); show('select'); setTimeout(() => { const c = document.querySelector('.card'); c && c.focus({ preventScroll: true }); }, 30); }
+function pause() { if (mode !== 'play' || sim.result) return; mode = 'pause'; setPlayUI(false); show('pause'); }
+function resume() { if (mode !== 'pause') return; mode = 'play'; show(null); setPlayUI(true); last = performance.now(); Inp.keys.clear(); }
+
+$('goSelect').onclick = () => { Snd.init(); toSelect(); };
+$('toggleHelp').onclick = () => { $('help').hidden = !$('help').hidden; };
+$('backTitle').onclick = () => { mode = 'title'; show('title'); };
+$('btnRetry').onclick = () => startStage(stageIdx);
+$('btnNext').onclick = () => startStage(Math.min(SIM.STAGES.length - 1, stageIdx + 1));
+$('btnSel').onclick = toSelect;
+$('btnResume').onclick = resume;
+$('btnPRetry').onclick = () => startStage(stageIdx);
+$('btnPSel').onclick = toSelect;
+$('pauseBtn').onclick = pause;
+for (const [id, key] of [['optGuide', 'guide'], ['optInvert', 'invert'], ['optSound', 'sound']]) {
+  $(id).checked = Save.d.opt[key];
+  $(id).onchange = e => { Save.d.opt[key] = e.target.checked; Save.write(); };
+}
+
+const GAME_KEYS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyQ', 'KeyE', 'PageUp', 'PageDown']);
+window.addEventListener('keydown', e => {
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  if (mode === 'play') {
+    if (GAME_KEYS.has(e.code)) e.preventDefault();
+    Inp.keys.add(e.code);
+    if (e.code === 'KeyR') startStage(stageIdx);
+    if (e.code === 'Escape') pause();
+    if (Inp.touch && GAME_KEYS.has(e.code)) { Inp.touch = false; setPlayUI(true); }
+  } else if (mode === 'pause') {
+    if (e.code === 'Escape') resume();
+    if (e.code === 'KeyR') startStage(stageIdx);
+  } else if (mode === 'result') {
+    if (e.code === 'KeyR') { e.preventDefault(); startStage(stageIdx); }
+    if (e.code === 'KeyN' && stageIdx < SIM.STAGES.length - 1) startStage(stageIdx + 1);
+    if (e.code === 'Escape') toSelect();
+  } else if (mode === 'title') {
+    if (e.code === 'Enter') { Snd.init(); toSelect(); }
+  } else if (mode === 'select') {
+    if (/^Digit[1-3]$/.test(e.code)) startStage(+e.code.slice(5) - 1);
+    if (e.code === 'Escape') { mode = 'title'; show('title'); }
+  }
+});
+window.addEventListener('keyup', e => Inp.keys.delete(e.code));
+window.addEventListener('blur', () => { Inp.keys.clear(); Inp.act = false; Inp.stick = null; });
+
+for (const ev of ['pointerdown', 'touchend', 'keydown', 'click']) window.addEventListener(ev, () => Snd.init(), true);
+$('optSound').addEventListener('change', e => { if (e.target.checked) { Snd.init(); Snd.beep(880, 0.15, 'triangle', 0.12); } });
+window.addEventListener('pointerdown', e => {
+  if (e.pointerType === 'touch' && !Inp.touch) { Inp.touch = true; if (mode === 'play') setPlayUI(true); }
+}, true);
+if (matchMedia('(pointer:coarse)').matches) Inp.touch = true;
+
+const sz = $('stickZone');
+let stickId = null;
+sz.addEventListener('pointerdown', e => {
+  e.preventDefault(); stickId = e.pointerId; sz.setPointerCapture(e.pointerId);
+  Inp.stick = { ox: e.clientX, oy: e.clientY, nx: 0, ny: 0 };
+});
+sz.addEventListener('pointermove', e => {
+  if (e.pointerId !== stickId || !Inp.stick) return;
+  const R = 70; Inp.stick.nx = SIM.clamp((e.clientX - Inp.stick.ox) / R, -1, 1); Inp.stick.ny = SIM.clamp((e.clientY - Inp.stick.oy) / R, -1, 1);
+});
+const endStick = e => { if (e.pointerId === stickId) { stickId = null; Inp.stick = null; } };
+sz.addEventListener('pointerup', endStick); sz.addEventListener('pointercancel', endStick);
+const _render = render;
+render = function (s, opt) {
+  _render(s, opt);
+  if (Inp.stick && mode === 'play') {
+    const st = Inp.stick;
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.strokeStyle = 'rgba(238,243,241,.5)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(st.ox, st.oy, 70, 0, 6.2832); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,106,26,.7)'; ctx.beginPath(); ctx.arc(st.ox + st.nx * 70, st.oy + st.ny * 70, 22, 0, 6.2832); ctx.fill();
+  }
+};
+const tt = $('thrTrack');
+const setThr = e => { const r = tt.getBoundingClientRect(); Inp.thr = SIM.clamp(1 - (e.clientY - r.top) / r.height, 0, 1); };
+tt.addEventListener('pointerdown', e => { e.preventDefault(); tt.setPointerCapture(e.pointerId); setThr(e); });
+tt.addEventListener('pointermove', e => { if (tt.hasPointerCapture(e.pointerId)) setThr(e); });
+const ab = $('actBtn');
+ab.addEventListener('pointerdown', e => { e.preventDefault(); ab.setPointerCapture(e.pointerId); Inp.act = true; ab.classList.add('held'); });
+const endAct = () => { Inp.act = false; ab.classList.remove('held'); };
+ab.addEventListener('pointerup', endAct); ab.addEventListener('pointercancel', endAct);
+document.addEventListener('touchmove', e => { if (mode === 'play') e.preventDefault(); }, { passive: false });
+document.addEventListener('gesturestart', e => e.preventDefault());
+
+resize(); startAttract(); show('title');
+(document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(() => requestAnimationFrame(frame));
+</script>

@@ -13,7 +13,7 @@
  *
  * サイト上の「管理」画面からも追加・削除できます（その場合はこのブラウザだけに保存されます）。
  */
-window.GAMES_VERSION = "15";
+window.GAMES_VERSION = "16";
 
 /* 管理画面のパスワード（SHA-256 ハッシュ。パスワードそのものは書かない）
  * 変更するには: "mini-game-arcade:" + 新しいパスワード を SHA-256 にかけた値に置き換える */
@@ -307,5 +307,23 @@ window.GAMES = [
     emoji: "🧗",
     color: "#4a5d3a",
     accent: "#ff9f43"
+  },
+  {
+    id: "tokyo-sky-king",
+    title: "TOKYO SKY KING",
+    description: "ビルの谷間をすり抜けて羽田に降りろ！新宿・東京タワー・スカイツリーを飛ぶ着陸ゲーム。",
+    path: "games/tokyo-sky-king/index.html",
+    emoji: "🗼",
+    color: "#1b2f5c",
+    accent: "#ff8a3d"
+  },
+  {
+    id: "bottle-spin-king",
+    title: "BOTTLE SPIN KING",
+    description: "スワイプして瓶を回せ！狙ったマスに倒すソロと、2〜6人で遊べるパーティーモード。",
+    path: "games/bottle-spin-king/index.html",
+    emoji: "🍾",
+    color: "#2b7a4b",
+    accent: "#ffd23f"
   }
 ];
