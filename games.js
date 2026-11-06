@@ -13,7 +13,7 @@
  *
  * サイト上の「管理」画面からも追加・削除できます（その場合はこのブラウザだけに保存されます）。
  */
-window.GAMES_VERSION = "14";
+window.GAMES_VERSION = "15";
 
 /* 管理画面のパスワード（SHA-256 ハッシュ。パスワードそのものは書かない）
  * 変更するには: "mini-game-arcade:" + 新しいパスワード を SHA-256 にかけた値に置き換える */
@@ -289,5 +289,23 @@ window.GAMES = [
     emoji: "🏐",
     color: "#1f6f8b",
     accent: "#ff7a3d"
+  },
+  {
+    id: "popcorn-panic-king",
+    title: "Popcorn Panic King",
+    description: "ポップコーン屋を切り盛りしろ！バターからキュウリ味まで、お客さんの好みに合わせて作って売りまくれ。",
+    path: "games/popcorn-panic-king/index.html",
+    emoji: "🍿",
+    color: "#c0392b",
+    accent: "#ffe066"
+  },
+  {
+    id: "boulder-king",
+    title: "BOULDER KING",
+    description: "タップでホールドに手を伸ばし、重心とスタミナを管理しながら頂上をつかめ！ボルダリングゲーム。",
+    path: "games/boulder-king/index.html",
+    emoji: "🧗",
+    color: "#4a5d3a",
+    accent: "#ff9f43"
   }
 ];

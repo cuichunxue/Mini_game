@@ -1,0 +1,854 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>Popcorn Panic King</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Maru+Gothic:wght@500;700;900&display=swap">
+<style>
+[hidden]{display:none!important}
+/* Layout: slim marquee header, a 16:9 pan stage with a control deck under it, and paper-ticket screens that swap in for menus. */
+:root{
+  --night:#1b1533; --night2:#2a2050; --curtain:#d8283f; --butter:#ffd23f; --kernel:#fff1c9;
+  --paper:#fbfaf6; --ink:#261b3d; --ink2:#5b5073; --mint:#2fb985; --chili:#ff6b3d; --sky:#58a8f0; --line:rgba(255,255,255,.16);
+  --f-display:'Dela Gothic One','Hiragino Sans','Yu Gothic',sans-serif;
+  --f-body:'Zen Maru Gothic','Hiragino Maru Gothic ProN','Yu Gothic',sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--night);color:#fff;font-family:var(--f-body);font-weight:500;font-size:15px;line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:10px 28px;
+  background-image:radial-gradient(circle at 20% -10%,#3b2a73 0,transparent 55%),radial-gradient(circle at 90% 0,#5a1f3d 0,transparent 45%);background-attachment:fixed}
+#app{max-width:1200px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+button{font:inherit;color:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+button:focus-visible,input:focus-visible{outline:3px solid var(--sky);outline-offset:2px}
+.bar{display:flex;align-items:center;gap:10px;justify-content:space-between;flex-wrap:wrap}
+.logo{font-family:var(--f-display);font-size:15px;letter-spacing:.04em;color:var(--butter);cursor:pointer;background:none;border:0;padding:4px 0;text-align:left}
+.chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.chip{background:rgba(255,255,255,.09);border:1px solid var(--line);border-radius:999px;padding:3px 12px;font-weight:900;font-variant-numeric:tabular-nums;font-size:13px;white-space:nowrap}
+.iconbtn{background:rgba(255,255,255,.09);border:1px solid var(--line);border-radius:999px;width:34px;height:34px;font-size:16px}
+.frame{position:relative;border-radius:10px;overflow:hidden;border:3px solid #000;box-shadow:0 0 0 3px var(--curtain),0 10px 30px #0008;background:#000;aspect-ratio:16/9;width:100%}
+#cv{width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+#deck{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;margin-top:12px}
+#deck .heat{display:flex;flex-direction:column;gap:2px;min-width:0}
+#deck .heat label{display:flex;justify-content:space-between;font-weight:900;font-size:13px}
+#deck input[type=range]{width:100%;height:36px;accent-color:var(--chili)}
+.pad,.acts{display:flex;gap:8px}
+.key{background:var(--night2);border:2px solid var(--line);border-bottom-width:5px;border-radius:12px;min-width:56px;min-height:52px;padding:6px 14px;font-weight:900;user-select:none;touch-action:manipulation}
+.key:active,.key.on{transform:translateY(3px);border-bottom-width:2px}
+.key.main{background:var(--butter);color:var(--ink);border-color:#c79a00}
+.key.hot{background:var(--curtain);border-color:#8f1224}
+@media (max-width:640px){#deck{grid-template-columns:1fr 1fr}#deck .heat{grid-column:1/-1;order:-1}.acts{flex-wrap:wrap;justify-content:flex-end}}
+.screen{background:var(--paper);color:var(--ink);border-radius:8px;padding:22px 20px 24px;position:relative;box-shadow:0 12px 34px #0007;overflow:hidden}
+.screen::before{content:"";position:absolute;inset:0 0 auto;height:10px;background:repeating-linear-gradient(90deg,var(--curtain) 0 22px,#fff 22px 44px)}
+.screen>*:first-child{margin-top:8px}
+h1,h2,h3{font-family:var(--f-display);font-weight:400;line-height:1.2;margin:0;text-wrap:balance}
+h2{font-size:24px;margin-bottom:6px}h3{font-size:16px;margin:18px 0 8px;color:var(--curtain)}
+p{margin:6px 0}.mut{color:var(--ink2);font-size:13px}
+.hero{text-align:center;padding:14px 0 6px}
+.hero h1{font-size:clamp(34px,9vw,68px);color:var(--curtain);text-shadow:3px 3px 0 var(--butter),6px 6px 0 var(--ink);letter-spacing:.02em;margin:10px 0 22px}
+.btns{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin:16px 0}
+.btn{background:var(--butter);color:var(--ink);border:2px solid var(--ink);border-bottom-width:5px;border-radius:12px;padding:10px 20px;font-weight:900;min-height:48px;touch-action:manipulation}
+.btn:active:not(:disabled){transform:translateY(3px);border-bottom-width:2px}
+.btn.big{background:var(--curtain);color:#fff;font-size:18px;padding:12px 30px}
+.btn.ghost{background:#fff}.btn.sm{min-height:36px;padding:4px 12px;font-size:13px}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:18px 0 0}
+.stats div{border:2px dashed #cfc7e2;border-radius:8px;padding:8px 10px}
+.stats dt{font-size:12px;color:var(--ink2)}.stats dd{margin:0;font-family:var(--f-display);font-size:20px;font-variant-numeric:tabular-nums}
+.grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+.card{border:2px solid var(--ink);border-radius:10px;padding:10px 12px;background:#fff;text-align:left;color:var(--ink);min-width:0}
+button.card{cursor:pointer;min-height:84px}
+.card.sel{background:#fff3b8;box-shadow:0 0 0 3px var(--curtain)}
+.card.lock{opacity:.45;cursor:not-allowed;border-style:dashed}
+.card b{display:block}.card small{color:var(--ink2);display:block;line-height:1.35}
+.dot{display:inline-block;width:14px;height:14px;border-radius:50%;border:2px solid var(--ink);vertical-align:-2px;margin-right:6px}
+.cols{display:flex;gap:8px;flex-wrap:wrap}
+.swatch{width:46px;height:46px;border-radius:50%;border:3px solid var(--ink);padding:0}
+.swatch.sel{box-shadow:0 0 0 4px var(--curtain)}.swatch.lock{opacity:.3;border-style:dashed}
+.stg{display:grid;grid-template-columns:44px 1fr auto;gap:10px;align-items:center;text-align:left}
+.stg .no{font-family:var(--f-display);font-size:26px;color:var(--curtain);text-align:center}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.meter{height:14px;border-radius:7px;background:#e6e1f0;overflow:hidden;min-width:60px;flex:1}
+.meter i{display:block;height:100%;background:var(--mint);transition:width .5s}
+.line{display:grid;grid-template-columns:7.5em 1fr 4.5em;gap:8px;align-items:center;margin:5px 0;font-variant-numeric:tabular-nums}
+.line span:last-child{text-align:right;font-weight:900}
+.rank{font-family:var(--f-display);font-size:78px;line-height:1;color:var(--curtain);text-shadow:3px 3px 0 var(--butter)}
+.bigq{display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin:6px 0 10px}
+.tbl{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.tbl td,.tbl th{padding:5px 6px;border-bottom:1px solid #e3ddef;text-align:left}.tbl td:last-child,.tbl th:last-child{text-align:right}
+.price{display:flex;align-items:center;gap:12px;justify-content:center;margin:12px 0}
+.price output{font-family:var(--f-display);font-size:48px;min-width:4.6em;text-align:center;color:var(--curtain);font-variant-numeric:tabular-nums}
+.price button{width:54px;height:54px;border-radius:50%;font-size:26px;background:var(--butter);border:2px solid var(--ink);border-bottom-width:5px;color:var(--ink);font-weight:900}
+input.slide{width:100%;accent-color:var(--curtain);height:32px}
+.sale{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:8px;margin:10px 0}
+.cust{border:2px solid var(--ink);border-radius:10px;padding:6px 8px;background:#fff;text-align:center;opacity:.25;transition:.25s;font-size:12px}
+.cust.show{opacity:1}.cust.yes{background:#d9f7e8}.cust.no{background:#fde0e0}
+.cust .em{font-size:28px;line-height:1.1;display:block}
+.rev{border-left:5px solid var(--butter);background:#fff;padding:6px 10px;margin:6px 0;border-radius:0 8px 8px 0}
+.star{color:#e8a200;letter-spacing:1px}
+.banner{position:fixed;left:50%;top:max(14px,env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:30;background:var(--curtain);color:#fff;border:3px solid #fff;border-radius:12px;padding:10px 18px;font-weight:900;box-shadow:0 8px 24px #0009;max-width:min(92vw,560px);text-align:center}
+.pill{display:inline-block;padding:2px 10px;border-radius:999px;background:var(--ink);color:#fff;font-size:12px;font-weight:900;margin:0 4px 4px 0}
+.pill.ok{background:var(--mint)}.pill.ng{background:var(--curtain)}
+.tog{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #e3ddef}
+#stageWrap .frame{width:min(100%,max(480px,calc((100dvh - 175px)*1.7778)));margin-inline:auto}
+#btnRot{display:none}
+@media (orientation:portrait) and (max-width:820px){#btnRot{display:inline-block}}
+#stageWrap.rot{position:fixed;z-index:20;top:0;left:0;width:100dvh;height:100vw;transform-origin:0 0;transform:translateX(100vw) rotate(90deg);background:var(--night);padding:8px 12px;overflow:hidden;display:flex;flex-direction:column;gap:6px}
+#stageWrap.rot .frame{width:min(100%,calc((100vw - 96px)*1.7778));margin:0 auto}
+#stageWrap.rot #deck{margin-top:0;grid-template-columns:auto 1fr auto}
+#stageWrap.rot #deck .heat{grid-column:auto;order:0}
+#stageWrap.rot .acts{flex-wrap:nowrap}
+#stageWrap.rot .key{min-height:44px;min-width:46px;padding:4px 10px}
+@media (orientation:landscape) and (max-height:560px){
+  .bar{display:none}
+  #stageWrap:not([hidden]):not(.rot){display:grid;grid-template-columns:minmax(0,1fr) 210px;gap:10px;align-items:start}
+  #stageWrap:not(.rot) .frame{width:100%}
+  #stageWrap:not(.rot) #deck{margin-top:0;grid-template-columns:1fr}
+  #stageWrap:not(.rot) .pad,#stageWrap:not(.rot) .acts{justify-content:center;flex-wrap:wrap}
+}
+.cust.show.yes{animation:hop .45s}
+@keyframes hop{0%{transform:scale(.8)}60%{transform:scale(1.12)}100%{transform:scale(1)}}
+.presets{display:flex;gap:6px}.presets .key{min-height:34px;min-width:0;padding:2px 14px;font-size:13px;border-bottom-width:3px}
+.tipcard{background:#fff3b8;border:2px solid var(--ink);border-radius:10px;padding:8px 12px;margin:10px 0}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* portrait phones: compact control deck so every button fits on one screen under the pan */
+@media (orientation:portrait) and (max-width:560px){
+  body{padding-block:8px 12px}
+  #app{gap:8px}
+  #stageWrap:not(.rot) #deck{grid-template-columns:auto minmax(0,1fr);grid-template-areas:"heat heat" "pad acts";gap:6px 8px;margin-top:6px;align-items:start}
+  #stageWrap:not(.rot) #deck .heat{grid-area:heat;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:8px}
+  #stageWrap:not(.rot) #deck .heat label{grid-column:1/-1}
+  #stageWrap:not(.rot) #deck input[type=range]{height:28px}
+  #stageWrap:not(.rot) .pad{grid-area:pad}
+  #stageWrap:not(.rot) .acts{grid-area:acts;flex-wrap:wrap;justify-content:flex-end;gap:6px}
+  #stageWrap:not(.rot) .key{min-height:44px;min-width:44px;padding:4px 9px;font-size:13px;border-bottom-width:4px}
+  #stageWrap:not(.rot) .presets .key{min-height:30px;padding:2px 9px;font-size:12px}
+}
+</style>
+
+<div id="app">
+  <header class="bar">
+    <button class="logo" data-act="title" aria-label="Title">POPCORN PANIC KING</button>
+    <div class="chips"><span class="chip" id="chipCoins"></span><span class="chip" id="chipRep"></span><span class="chip" id="chipStage"></span>
+      <button class="iconbtn" data-act="sndtog" id="btnSnd" aria-label="Sound">🔊</button><button class="iconbtn" data-act="settings" aria-label="Settings">⚙</button></div>
+  </header>
+  <section id="stageWrap" hidden>
+    <div class="frame"><canvas id="cv" width="960" height="540" aria-label="Popcorn pan"></canvas></div>
+    <div id="deck">
+      <div class="pad"><button class="key" id="btnL" aria-label="Left">◀</button><button class="key" id="btnR" aria-label="Right">▶</button></div>
+      <div class="heat"><label for="heat"><span id="heatLbl"></span><output id="heatOut">50%</output></label><input type="range" id="heat" min="0" max="100" step="1" value="50"><div class="presets"><button class="key" id="btnH1" data-heat="30"></button><button class="key" id="btnH2" data-heat="55"></button><button class="key" id="btnH3" data-heat="80"></button></div></div>
+      <div class="acts"><button class="key" id="btnRot" aria-label="Rotate"></button><button class="key main" id="btnToss"></button><button class="key hot" id="btnCollect"></button><button class="key" id="btnAuto"></button><button class="key" id="btnDone"></button><button class="key" id="btnPause" aria-label="Pause">⏸</button></div>
+    </div>
+  </section>
+  <section id="screen" class="screen"></section>
+</div>
+<div id="banner" class="banner" hidden></div>
+
+<script>
+(()=>{'use strict';
+/* ============================ utils ============================ */
+const $=s=>document.querySelector(s);
+const clamp=(v,a,b)=>v<a?a:v>b?b:v;
+const rnd=(a,b)=>a+Math.random()*(b-a);
+const lerp=(a,b,t)=>a+(b-a)*t;
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const yen=n=>(n<0?'-':'')+'¥'+Math.abs(Math.round(n)).toLocaleString('en-US');
+const rgb=h=>{const n=parseInt(h.slice(1),16);return[n>>16&255,n>>8&255,n&255]};
+const mixc=(a,b,t)=>{const x=rgb(a),y=rgb(b);return'rgb('+x.map((v,i)=>Math.round(lerp(v,y[i],t))).join(',')+')'};
+let LANG='ja';const tt=(ja,en)=>LANG==='ja'?ja:(en===undefined?ja:en);
+const L=a=>LANG==='ja'?a[0]:a[1];
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ============================ save.js ============================ */
+const COARSE=typeof matchMedia!=='undefined'&&matchMedia('(pointer:coarse)').matches;
+const autoOn=()=>save.settings.autoCollect===null||save.settings.autoCollect===undefined?COARSE:!!save.settings.autoCollect;
+const SAVE_KEY='popcorn-panic-king-save';
+const defSave=()=>({version:5,coins:0,reputation:3.0,highestStage:1,bestScore:0,bestCombo:0,totalProfit:0,
+  unlockedFlavors:['butter'],unlockedColors:['yellow'],savedRecipes:[],upgrades:{},achievements:[],tutorialDone:false,
+  settings:{language:'ja',sound:true,vibration:true,screenShake:true,autoCollect:null}});
+let save=defSave();
+function migrate(d){const b=defSave();const o=Object.assign(b,d||{});o.settings=Object.assign(b.settings,(d&&d.settings)||{});
+  if(!Array.isArray(o.unlockedFlavors)||!o.unlockedFlavors.length)o.unlockedFlavors=['butter'];
+  if(!Array.isArray(o.unlockedColors)||!o.unlockedColors.length)o.unlockedColors=['yellow'];o.version=5;return o}
+function loadSave(){try{const r=localStorage.getItem(SAVE_KEY);if(r)save=migrate(JSON.parse(r))}catch(e){}LANG=save.settings.language==='en'?'en':'ja'}
+function writeSave(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(save))}catch(e){}}
+
+/* ============================ flavors.js / colors.js / customers.js ============================ */
+const FLAVORS={
+  butter:{n:['バター','Butter'],cost:20,col:'yellow',note:['万人向け','Crowd pleaser']},
+  caramel:{n:['キャラメル','Caramel'],cost:45,col:'brown',note:['甘い・高価格向け','Sweet, premium']},
+  cheese:{n:['チーズ','Cheese'],cost:35,col:'orange',note:['濃厚','Rich']},
+  strawberry:{n:['いちご','Strawberry'],cost:50,col:'pink',note:['子ども・見た目重視','Kids & looks']},
+  matcha:{n:['抹茶','Matcha'],cost:60,col:'green',note:['高級志向','Upscale']},
+  rainbow:{n:['レインボー','Rainbow'],cost:80,col:'multi',note:['特殊人気','Special hit']},
+  alien:{n:['宇宙人調味料','Alien Seasoning'],cost:25,hidden:true},
+  cucumber:{n:['キュウリ味','Cucumber'],cost:10,hidden:true}
+};
+const SELF=['butter','caramel','cheese','strawberry','matcha','rainbow'];
+const COLORS={yellow:{n:['黄','Yellow'],hex:'#F4CA54'},brown:{n:['茶','Brown'],hex:'#9B6232'},orange:{n:['橙','Orange'],hex:'#F28A2E'},
+  pink:{n:['桃','Pink'],hex:'#F58BB0'},green:{n:['緑','Green'],hex:'#7CC46B'},blue:{n:['青','Blue'],hex:'#5AA9F0'}};
+const COLORIDS=Object.keys(COLORS);
+const CUST={
+  kid:{n:['子ども','Kid'],em:'🧒',likes:['strawberry'],sens:1.3,budget:350,why:['いちご・カラフル','Strawberry, colorful']},
+  office:{n:['会社員','Office worker'],em:'🧑‍💼',likes:['butter','cheese'],sens:1.0,budget:600,why:['バター・チーズ','Butter, cheese']},
+  critic:{n:['グルメ評論家','Food critic'],em:'🧐',likes:['caramel','matcha'],sens:0.6,budget:900,why:['キャラメル・抹茶','Caramel, matcha']},
+  vip:{n:['VIP','VIP'],em:'🤴',likes:[],sens:0.5,budget:1000,original:true,why:['オリジナルブレンド','Original blends']},
+  alien:{n:['宇宙人','Alien'],em:'👽',likes:['rainbow'],sens:1.0,budget:700,why:['レインボー・奇抜な色','Rainbow, wild colors']}
+};
+const mkCust=t=>({type:t,priceSensitivity:CUST[t].sens,budget:Math.round(CUST[t].budget*rnd(.85,1.15)/10)*10,qty:1});
+function calcT(type,fl){const ct=CUST[type];
+  if(ct.original)return fl.length>=3?100:fl.length===2?80:50;
+  let s=0;for(const f of fl){if(ct.likes.includes(f))s+=1;else if(f==='alien')s+=type==='alien'?1:.35;else if(f==='cucumber')s+=.55;else if(f==='rainbow'&&type==='kid')s+=.5}
+  return Math.round(25+75*Math.min(1,s/Math.max(1,fl.length)))}
+function calcV(type,fr,n){const f=id=>fr[id]||0;let v;
+  switch(type){
+    case'kid':v=40+20*(n-1)+35*f('pink');break;
+    case'office':v=45+55*(f('yellow')+f('orange'));break;
+    case'critic':v=55+45*(f('brown')+f('green'))-8*Math.max(0,n-2);break;
+    case'vip':v=n>=3?100:55+15*(n-1);break;
+    default:v=35+65*(f('blue')+f('green'))+(n>=3?25:0)}
+  if((save.upgrades.coater||0)>0)v*=1.08;return Math.round(clamp(v,0,100))}
+const equalFrac=cs=>{const o={};cs.forEach(c=>o[c]=(o[c]||0)+1/cs.length);return o};
+const costPerCup=fl=>15+Math.round(fl.reduce((s,f)=>s+FLAVORS[f].cost,0)/Math.max(1,fl.length));
+function* combos(a,k,start=0,cur=[]){if(cur.length===k){yield cur.slice();return}for(let i=start;i<a.length;i++){cur.push(a[i]);yield*combos(a,k,i+1,cur);cur.pop()}}
+function recommend(st,custs){
+  const fl=SELF.filter(f=>save.unlockedFlavors.includes(f)),co=save.unlockedColors;
+  const cnt={};custs.forEach(c=>cnt[c.type]=(cnt[c.type]||0)+1);
+  let best=null,bs=-1e9;
+  for(let a=Math.max(1,st.minF||1);a<=Math.min(3,fl.length);a++)for(const fs of combos(fl,a))
+    for(let b=Math.max(1,st.minC||1);b<=Math.min(3,co.length);b++)for(const cs of combos(co,b)){
+      let s=0;const fr=equalFrac(cs);for(const t in cnt)s+=cnt[t]*(.3*calcT(t,fs)+.2*calcV(t,fr,cs.length));
+      s=s/custs.length-.12*costPerCup(fs);if(s>bs){bs=s;best={f:fs,c:cs}}}
+  return best||{f:['butter'],c:['yellow']}}
+
+/* ============================ stages.js / upgrades.js ============================ */
+const mk=(id,n,task,o)=>Object.assign({id,n,task,kernels:55,customers:10,gravity:980,heatMul:1,boss:null,minF:1,minC:1,deco:'window',sky:['#3b2a73','#7a4a86'],floor:'#7a4b33'},o);
+const STAGES=[null,
+  mk(1,['自宅キッチン','Home Kitchen'],['基本調理','Cooking basics'],{kernels:50,customers:10,mix:{office:4,kid:3},target:900}),
+  mk(2,['学校祭','School Festival'],['味と色の選択','Flavor & color'],{customers:10,mix:{kid:4,office:2,critic:1},target:1300,deco:'bunting',sky:['#2c4f8f','#d36a8a']}),
+  mk(3,['商店街','Shopping Street'],['価格と口コミ','Price & reviews'],{customers:11,mix:{office:3,kid:2,critic:2,alien:1},target:1700,deco:'bunting',sky:['#6b3a2c','#e0903f']}),
+  mk(4,['映画館','Cinema'],['大量注文','Mass orders'],{kernels:70,customers:16,mix:{office:4,kid:4,critic:2,alien:1},target:2300,deco:'spot',sky:['#1d1a3a','#4a2150']}),
+  mk(5,['ニワトリ市場','Chicken Market'],['チキンボス','Chicken boss'],{customers:10,mix:{office:3,kid:2,critic:2},target:1700,boss:'chicken',sky:['#3e6a45','#c9b25a']}),
+  mk(6,['宇宙屋台','Space Stall'],['特殊味・低重力','Odd flavors, low gravity'],{customers:12,mix:{alien:5,kid:2,office:2,critic:1},target:2000,gravity:560,deco:'stars',sky:['#0a0830','#2a1a6a']}),
+  mk(7,['火山キッチン','Volcano Kitchen'],['高火力・焦げ','High heat, burning'],{customers:12,mix:{office:3,kid:3,critic:2,alien:1},target:2100,heatMul:1.35,deco:'lava',sky:['#3a0d0d','#a3340d']}),
+  mk(8,['高級レストラン','Fine Dining'],['VIP・品質評価','VIPs & quality'],{customers:12,mix:{vip:3,critic:4,office:2},target:2800,boss:'golden',deco:'spot',sky:['#2a1424','#6b3a3a']}),
+  mk(9,['世界大会','World Cup'],['複数味・複数色','Blends & colors'],{kernels:80,customers:14,mix:{office:2,kid:2,critic:2,vip:2,alien:2},target:3200,minF:2,minC:2,deco:'spot',sky:['#13335a','#2f7a9a']}),
+  mk(10,['黄金ポップコーン城','Golden Popcorn Castle'],['最終ボス','Final boss'],{kernels:80,customers:16,mix:{office:2,kid:2,critic:3,vip:4,alien:2},target:3800,boss:'emperor',deco:'lava',sky:['#4a3300','#c99a1a']})];
+const UNLOCK={1:{f:['caramel','cheese'],c:['brown','orange']},2:{f:['strawberry','matcha'],c:['pink','green']},3:{f:['rainbow'],c:['blue']}};
+const BOSSES={chicken:['CHICKEN THIEF','調理中に粒を奪いに来る。連鎖POPで撃退せよ！','Steals kernels mid-cook. Repel it with POP chains!'],
+  golden:['GOLDEN CORN','火力を3段階で合わせて黄金コーンをPOPさせよう。','Match the heat in 3 steps to pop the golden corn.'],
+  emperor:['POPCORN EMPEROR','連鎖でシールドを破壊し、最後に黄金POPを決めろ！売上も評価に含まれる。','Break shields with chains, then land the golden POP. Sales count too.']};
+const UPG={
+  pan:{n:['高級フライパン','Premium Pan'],d:['熱ムラ減少','Less hot-spotting'],max:1,cost:600},
+  thermo:{n:['温度計','Thermometer'],d:['温度を可視化','Shows temperatures'],max:1,cost:400},
+  bigpan:{n:['大型フライパン','Big Pan'],d:['鍋が広くなり粒数+20','Wider pan, +20 kernels'],max:1,cost:900},
+  net:{n:['自動回収ネット','Auto Net'],d:['ロスト率低下（1Lv=50%救出）','Rescues lost kernels'],max:2,cost:700},
+  mixer:{n:['フレーバーミキサー','Flavor Mixer'],d:['味付けが均一になりやすい','Easier even coating'],max:2,cost:800},
+  coater:{n:['カラーコーティング機','Color Coater'],d:['色ムラ減少・見た目UP','Better color, less chaos'],max:1,cost:600},
+  pack:{n:['高級パッケージ','Premium Package'],d:['価格許容度上昇','Customers accept higher prices'],max:2,cost:1000},
+  sign:{n:['広告看板','Billboard'],d:['来客数+2','+2 customers per level'],max:3,cost:800}};
+const upLv=k=>save.upgrades[k]||0;
+const equipFee=()=>Object.values(save.upgrades).reduce((s,v)=>s+v,0)*5;
+
+/* ============================ events.js ============================ */
+const EVENTS=[
+  {id:'chicken',ph:'cook',n:['ニワトリ強奪','Chicken Heist'],w:['🐔 ニワトリが突っ込んでくる！振り上げで追い払え！','🐔 A chicken is charging! Toss to shoo it!']},
+  {id:'ufo',ph:'cook',n:['UFO吸引','UFO Abduction'],w:['🛸 UFOのビーム予告！光の下から離れて！','🛸 UFO beam incoming! Stay out of the light!']},
+  {id:'volcano',ph:'cook',n:['ポップコーン火山','Popcorn Volcano'],w:['🌋 フライパンが噴火しそう！火力に注意！','🌋 The pan is about to erupt! Watch the heat!']},
+  {id:'golden',ph:'cook',n:['黄金キング','Golden King'],w:['👑 黄金の粒が降ってくる！','👑 A golden kernel is dropping in!']},
+  {id:'gravity',ph:'cook',n:['重力反転','Gravity Flip'],w:['🙃 重力が反転する！先に回収しよう！','🙃 Gravity is flipping! Collect first!']},
+  {id:'rainbow',ph:'coat',n:['レインボー暴走','Rainbow Rampage'],w:['🌈 色が暴走する！','🌈 Colors are going wild!']},
+  {id:'alien',ph:'coat',n:['宇宙人調味料','Alien Seasoning'],w:['👽 宇宙人が謎の調味料を投入！','👽 An alien adds mystery seasoning!']},
+  {id:'cucumber',ph:'coat',n:['キュウリ味の奇跡','Cucumber Miracle'],w:['🥒 キュウリの気配…！','🥒 Something cucumber-y is coming…!']},
+  {id:'spicy',ph:'sale',n:['激辛事故','Spicy Accident'],w:['🌶 激辛事故の予感…お客様が大混乱！','🌶 Spicy accident! Customers are in chaos!']},
+  {id:'vip',ph:'sale',n:['VIP突然来店','Surprise VIP'],w:['🚘 黒塗りの車が止まった…VIP来店！','🚘 A black car pulls up… VIPs arrive!']}];
+const EV_RATE=0.35;
+let lastEvent=null;
+function rollEvent(st,rng=Math.random){
+  if(rng()>=EV_RATE)return null;
+  const pool=EVENTS.filter(e=>e.id!==lastEvent);const e=pool[Math.floor(rng()*pool.length)];lastEvent=e.id;return e}
+
+/* ============================ audio.js ============================ */
+let AC=null;
+function audioInit(){if(!AC){const Ctor=typeof AudioContext!=='undefined'?AudioContext:(typeof webkitAudioContext!=='undefined'?webkitAudioContext:null);if(!Ctor)return;try{AC=new Ctor()}catch(e){return}bgmStart()}
+  if(AC.state==='suspended'){try{AC.resume()}catch(e){}}}
+let bgmT=null;
+function bgmStart(){if(bgmT)return;const notes=[262,330,392,330,294,370,440,370,262,330,392,523,440,392,330,294];let i=0;
+  bgmT=setInterval(()=>{if(!AC||!save.settings.sound||!C||(G.phase!=='cook'&&G.phase!=='coat')||C.paused||$('#stageWrap').hidden)return;
+    const m=C.heat>70?1.25:1,n=notes[i%notes.length]*m;tone(n,.2,'triangle',.03);if(i%4===0)tone(n/2,.4,'sine',.04);if(i%2===1)tone(1800,.03,'square',.008);i++},230)}
+function tone(f,d,type='square',v=.06,slide=0){if(!AC||!save.settings.sound)return;try{if(AC.state==='suspended')AC.resume();const o=AC.createOscillator(),g=AC.createGain();o.type=type;o.frequency.value=f;if(slide)o.frequency.exponentialRampToValueAtTime(Math.max(30,f+slide),AC.currentTime+d);
+  g.gain.value=v;g.gain.exponentialRampToValueAtTime(.0001,AC.currentTime+d);o.connect(g);g.connect(AC.destination);o.start();o.stop(AC.currentTime+d)}catch(e){}}
+const sfx={click(){tone(520,.05,'square',.04)},pop(c){tone(260+Math.min(c,30)*28,.09,'square',.05,-120)},collect(){tone(660,.1,'triangle',.07,300)},burn(){tone(120,.25,'sawtooth',.05,-60)},
+  warn(){tone(520,.12,'square',.07);setTimeout(()=>tone(520,.12,'square',.07),180)},ok(){tone(523,.12,'triangle');setTimeout(()=>tone(784,.2,'triangle'),110)},toss(){tone(200,.12,'sine',.07,260)},coin(){tone(990,.08,'square',.04);}};
+const vib=ms=>{if(save.settings.vibration&&navigator.vibrate)try{navigator.vibrate(ms)}catch(e){}};
+
+/* ============================ physics.js / pan.js / heat.js / kernels.js / combo.js ============================ */
+const VW=960,VH=540,PHYS={rest:.65,wall:.40,popMin:220,popMax:420};
+const comboMult=c=>c>=30?5:c>=20?3:c>=10?2:c>=5?1.5:1;
+const fxP=[];for(let i=0;i<360;i++)fxP.push({a:0,x:0,y:0,vx:0,vy:0,t:0,c:'#fff',s:3});
+const fxT=[];for(let i=0;i<40;i++)fxT.push({a:0,x:0,y:0,t:0,txt:'',c:'#fff',z:20});
+function spark(x,y,c,n,sp){for(let i=0;i<fxP.length&&n>0;i++){const p=fxP[i];if(p.a)continue;p.a=1;p.x=x;p.y=y;const an=rnd(0,6.283),s=rnd(.3,1)*sp;p.vx=Math.cos(an)*s;p.vy=Math.sin(an)*s-sp*.3;p.t=rnd(.3,.7);p.c=c;p.s=rnd(2,5);n--}}
+function popup(x,y,txt,c='#fff',z=20){for(const p of fxT){if(p.a)continue;p.a=1;p.x=x;p.y=y;p.t=.9;p.txt=txt;p.c=c;p.z=z;return}}
+function fxStep(dt){for(const p of fxP)if(p.a){p.t-=dt;if(p.t<=0){p.a=0;continue}p.vy+=500*dt;p.x+=p.vx*dt;p.y+=p.vy*dt}
+  for(const p of fxT)if(p.a){p.t-=dt;p.y-=40*dt;if(p.t<=0)p.a=0}}
+
+let kid=0;
+function newKernel(x,y,gold){const dud=Math.random()<.05;
+  return{id:kid++,x,y,vx:0,vy:0,radius:5,temperature:25,heatExposure:0,moisture:dud?rnd(.05,.3):rnd(.55,1),popThreshold:gold?150:rnd(165,185),burnExposure:0,fluffiness:0,coating:0,
+    flavorIds:[],color:'#F4CA54',state:'RAW',touch:0,touch2:0,shock:0,golden:!!gold,colorId:'yellow'}}
+
+function newCook(st){
+  const bigpan=upLv('bigpan'),W=bigpan?260:200,N=Math.min(100,st.kernels+(bigpan?20:0));
+  const C={phase:'cook',st,t:0,time:75,over:false,paused:false,heat:50,panTemp:140,heatMul:st.heatMul,gravity:st.gravity,unev:upLv('pan')?.25:.7,
+    pan:{x:VW/2,y:410,ry:410,w:W,vx:0,vy:0,tilt:0,cd:0},in:{l:0,r:0,px:null},kernels:[],bank:[],total:N,popEver:0,burnt:0,lostPopped:0,lostRaw:0,rescued:0,
+    score:0,combo:0,lastPop:-9,maxCombo:0,warn:null,ev:null,volcano:0,grav:0,ufo:null,chicken:null,boss:null,lastToss:-9,shake:0,idle:0,flash:0,goldBonus:0,goldCount:0,eruptT:0,tipN:0,auto:false,autoT:1.6,zx:COARSE?80:40,burnAlert:0,lastBurnWarn:-9,uni:0};
+  for(let i=0;i<N;i++)C.kernels.push(newKernel(VW/2+rnd(-W/2+10,W/2-10),C.pan.y-10-rnd(0,50)));
+  if(st.boss==='chicken')C.boss={type:'chicken',hp:55,max:55,next:8,warn:0,x:-80,stolen:0,defeated:false};
+  if(st.boss==='golden')C.boss={type:'golden',steps:[[0,35],[45,65],[80,100]],i:0,prog:0,need:3.5,defeated:false};
+  if(st.boss==='emperor')C.boss={type:'emperor',shield:3,thr:[5,8,12],steps:[[55,75]],i:0,prog:0,need:4,defeated:false};
+  return C}
+
+function setEvent(C,ev,ph){if(!ev||ev.ph!==ph)return;C.ev={e:ev,stage:ph==='cook'?'wait':'warn',at:rnd(18,50),w:2,t:0,shoo:false,success:false};
+  if(ph!=='cook'){C.warn={txt:L(ev.w),t:2};sfx.warn()}}
+
+function panSegs(P){const c=Math.cos(P.tilt),s=Math.sin(P.tilt),h=P.w/2,nx=s,ny=-c,lh=46;
+  const A=[P.x-c*h,P.y-s*h],B=[P.x+c*h,P.y+s*h];
+  return{A,B,A2:[A[0]+nx*lh-c*10,A[1]+ny*lh-s*10],B2:[B[0]+nx*lh+c*10,B[1]+ny*lh+s*10]}}
+function hitSeg(k,a,b,pvx,pvy,rest,scatter){
+  const abx=b[0]-a[0],aby=b[1]-a[1],l2=abx*abx+aby*aby;let t=((k.x-a[0])*abx+(k.y-a[1])*aby)/l2;t=t<0?0:t>1?1:t;
+  const cx=a[0]+abx*t,cy=a[1]+aby*t;let dx=k.x-cx,dy=k.y-cy,d=Math.hypot(dx,dy);if(d>=k.radius)return false;
+  let nx,ny;if(d<1e-4){const l=Math.sqrt(l2);nx=aby/l;ny=-abx/l}else{nx=dx/d;ny=dy/d}
+  k.x=cx+nx*k.radius;k.y=cy+ny*k.radius;
+  const rvx=k.vx-pvx,rvy=k.vy-pvy,vn=rvx*nx+rvy*ny;
+  if(vn<0){const e=-vn<45?0:rest,tx=rvx-vn*nx,ty=rvy-vn*ny,f=.08,nv=-vn*e;
+    k.vx=pvx+tx*(1-f)+nv*nx;k.vy=pvy+ty*(1-f)+nv*ny;
+    if(scatter&&Math.abs(pvx)>300){k.vx+=rnd(-1,1)*Math.abs(pvx)*.25;k.vy-=rnd(0,1)*Math.abs(pvx)*.1}}
+  return true}
+function pairHit(a,b){const dx=b.x-a.x,dy=b.y-a.y,rr=a.radius+b.radius,d2=dx*dx+dy*dy;if(d2>=rr*rr||d2<1e-8)return;
+  const d=Math.sqrt(d2),nx=dx/d,ny=dy/d,ov=(rr-d)*.5;a.x-=nx*ov;a.y-=ny*ov;b.x+=nx*ov;b.y+=ny*ov;
+  const rv=(b.vx-a.vx)*nx+(b.vy-a.vy)*ny;if(rv<0){const j=-(1.3)*rv*.5;a.vx-=j*nx;a.vy-=j*ny;b.vx+=j*nx;b.vy+=j*ny}
+  if(a.touch>0&&b.touch<=0)b.touch2=.12;else if(b.touch>0&&a.touch<=0)a.touch2=.12}
+function kernelCollide(list){const cs=24,g=new Map();
+  for(const k of list){const cx=clamp(Math.floor(k.x/cs),0,40),cy=clamp(Math.floor(k.y/cs)+10,0,80),key=cx*100+cy;let c=g.get(key);if(!c){c={cx,cy,a:[]};g.set(key,c)}c.a.push(k)}
+  const N=[[0,0],[1,0],[0,1],[1,1],[1,-1]];
+  for(const c of g.values())for(const[dx,dy]of N){const o=dx===0&&dy===0?c:g.get((c.cx+dx)*100+c.cy+dy);if(!o)continue;
+    if(o===c){for(let i=0;i<c.a.length;i++)for(let j=i+1;j<c.a.length;j++)pairHit(c.a[i],c.a[j])}
+    else for(const a of c.a)for(const b of o.a)pairHit(a,b)}}
+
+function popKernel(C,k){
+  k.state='POPPED';k.radius=k.golden?8:7;k.fluffiness=clamp(.5*k.moisture+.5*(1-Math.abs(C.heat-55)/60),.2,1);if(k.golden)k.fluffiness=1;
+  const an=-Math.PI/2+rnd(-.6,.6),sp=rnd(PHYS.popMin,PHYS.popMax)*(C.volcano>0?1.25:1);k.vx+=Math.cos(an)*sp;k.vy=Math.sin(an)*sp;
+  if(C.t-C.lastPop<=.35)C.combo++;else C.combo=1;C.lastPop=C.t;C.maxCombo=Math.max(C.maxCombo,C.combo);
+  const m=comboMult(C.combo);C.score+=Math.round(10*m)+(k.golden?500:0);C.popEver+=k.golden?3:1;if(k.golden){C.goldCount++;popup(k.x,k.y-24,tt('黄金POP！','GOLDEN POP!'),'#ffd23f',34)}
+  for(const o of C.kernels){if(o===k||!(o.state==='RAW'||o.state==='HEATING'||o.state==='READY'))continue;
+    const dx=o.x-k.x,dy=o.y-k.y,d=Math.hypot(dx,dy);if(d<45){const add=Math.max(0,Math.min(25,45-o.shock));o.temperature+=add;o.shock+=add;if(d>1){o.vx+=dx/d*22;o.vy+=dy/d*22}}}
+  spark(k.x,k.y,'#fff1c9',7,200);if(C.combo>=5)popup(k.x,k.y-20,'x'+C.combo,'#ffd23f',16+Math.min(C.combo,30)/2);else if(Math.random()<.4)popup(k.x,k.y-14,'POP','#fff',14);
+  sfx.pop(C.combo);vib(8);C.shake=Math.min(8,C.shake+(C.combo>=5?2:.6));
+  const b=C.boss;if(b){if(b.type==='chicken'&&!b.defeated){b.hp-=.9*m;if(b.hp<=0){b.defeated=true;popup(VW/2,120,tt('ニワトリ撃退！','CHICKEN DEFEATED!'),'#ffd23f',34);C.score+=1500;sfx.ok()}}}}
+
+function loseKernel(C,k,why){
+  if(k.state==='POPPED'||k.state==='COATED'){if(Math.random()<.5*upLv('net')){k.state='COLLECTED';C.bank.push(k);C.rescued++;C.score+=3;popup(clamp(k.x,40,VW-40),VH-30,tt('ネット救出','NET SAVE'),'#7cc46b',14)}else{k.state='LOST';C.lostPopped++}if(C.phase==='coat')C.lostCoat=(C.lostCoat||0)+1}
+  else if(k.state!=='BURNT'){k.state='LOST';C.lostRaw++}else k.state='LOST'}
+
+function collectNow(C){const P=C.pan;let n=0;
+  for(const k of C.kernels)if(k.state==='POPPED'&&Math.abs(k.x-P.x)<P.w/2+C.zx&&k.y>P.y-220&&k.y<P.y+70){k.state='COLLECTED';C.bank.push(k);n++;C.score+=5;spark(k.x,k.y,'#7cc46b',3,120)}
+  if(n){C.kernels=C.kernels.filter(k=>k.state!=='COLLECTED');sfx.collect();popup(P.x,P.y-90,'+'+n,'#7cc46b',20)}
+  return n}
+function toss(C){const P=C.pan;if(P.cd>0||C.over)return;P.vy=-260;P.cd=.28;C.lastToss=C.t;sfx.toss()}
+
+function stepEvents(C,dt){const e=C.ev;if(!e||C.phase!=='cook')return;
+  if(e.stage==='wait'){if(C.t>=e.at-2){e.stage='warn';e.w=2;e.warnAt=C.t;C.warn={txt:L(e.e.w),t:2};sfx.warn();
+      if(e.e.id==='chicken')C.chicken={x:Math.random()<.5?-80:VW+80,sx:0,t:0};
+      if(e.e.id==='ufo')e.x=clamp(C.pan.x+rnd(-170,170),80,VW-80)}}
+  else if(e.stage==='warn'){e.w-=dt;if(C.chicken){C.chicken.t+=dt;if(C.chicken.sx===0)C.chicken.sx=C.chicken.x}
+    if(e.w<=0){e.shoo=C.lastToss>=e.warnAt;e.stage='active';fireEvent(C,e)}}
+  else if(e.stage==='active'){e.t+=dt;
+    if(e.e.id==='ufo'){const ok=e.x;for(const k of C.kernels){if(k.state==='BURNT'||k.state==='LOST')continue;if(Math.abs(k.x-ok)<48&&k.y<C.pan.y+40){k.vy-=2600*dt;k.vx*=.96;if(k.y<22){loseKernel(C,k,'ufo');popup(k.x,30,'UFO!','#9fe',16)}}}if(e.t>4)e.stage='done'}
+    if(e.e.id==='volcano'){C.eruptT-=dt;if(C.eruptT<=0){C.eruptT=.45;const ks=C.kernels.filter(k=>k.touch>0);if(ks.length){const k=pick(ks);k.vy=-520;k.vx+=rnd(-120,120)}}}
+    if(e.e.id==='chicken'){e.t2=(e.t2||0)+dt;if(e.t>1.4)e.stage='done'}}}
+function fireEvent(C,e){const id=e.e.id;
+  if(id==='chicken'){if(e.shoo){e.success=true;popup(C.pan.x,C.pan.y-110,tt('追い払った！','SHOO!'),'#ffd23f',30);sfx.ok();C.score+=300}
+    else{const n=Math.min(4,C.bank.length);for(let i=0;i<n;i++)C.bank.pop();e.stolen=n;popup(C.pan.x,C.pan.y-110,n?tt('粒を奪われた！-'+n,'STOLEN! -'+n):tt('空振り','MISSED'),'#ff6b3d',26);sfx.burn()}}
+  else if(id==='volcano')C.volcano=9;
+  else if(id==='golden'){const k=newKernel(C.pan.x,40,true);k.temperature=140;C.kernels.push(k);C.total+=2;popup(C.pan.x,60,'👑','#fff',30)}
+  else if(id==='gravity')C.grav=4}
+
+function stepBoss(C,dt){const b=C.boss;if(!b||b.defeated||C.phase!=='cook')return;
+  if(b.type==='chicken'){b.next-=dt;
+    if(b.warn>0){b.warn-=dt;b.x=lerp(b.x,C.pan.x,Math.min(1,dt*2.2));
+      if(b.warn<=0){if(C.combo>=5){b.hp-=12;popup(C.pan.x,C.pan.y-110,tt('連鎖で撃退！','CHAIN REPEL!'),'#ffd23f',28);sfx.ok()}
+        else{const ks=C.kernels.filter(k=>k.state==='POPPED'&&Math.abs(k.x-C.pan.x)<C.pan.w).slice(0,4);ks.forEach(k=>{loseKernel(C,k,'boss');});b.stolen+=ks.length;popup(C.pan.x,C.pan.y-110,tt('粒を盗まれた！','STOLEN!'),'#ff6b3d',26);sfx.burn()}
+        b.next=9;b.x=-80;if(b.hp<=0){b.defeated=true}}}
+    else if(b.next<=0){b.warn=2;b.x=Math.random()<.5?-80:VW+80;C.warn={txt:tt('🐔 CHICKEN THIEF襲来！連鎖(5以上)で撃退！','🐔 CHICKEN THIEF! Hold a 5+ chain to repel!'),t:2};sfx.warn()}}
+  else{const stepsDone=()=>{b.defeated=true;C.score+=3000;C.goldBonus=1;const k=newKernel(VW/2,60,true);k.temperature=150;C.kernels.push(k);C.total+=2;popup(VW/2,120,tt('黄金POP！ボス撃破！','GOLDEN POP! BOSS DOWN!'),'#ffd23f',36);sfx.ok();spark(VW/2,90,'#ffd23f',60,420)};
+    if(b.type==='emperor'&&b.shield>0){const need=b.thr[3-b.shield];if(C.combo>=need){b.shield--;popup(VW/2,130,tt('シールド破壊！','SHIELD BREAK!'),'#ffd23f',28);sfx.ok();spark(VW/2,90,'#58a8f0',40,300)}return}
+    const s=b.steps[b.i],h=C.heat;if(h>=s[0]&&h<=s[1])b.prog+=dt;else b.prog=Math.max(0,b.prog-dt*2);
+    if(b.prog>=b.need){b.i++;b.prog=0;sfx.ok();if(b.i>=b.steps.length)stepsDone();else popup(VW/2,130,tt('STEP '+b.i+' OK','STEP '+b.i+' OK'),'#7cc46b',26)}}}
+
+function stepCook(C,dt){
+  if(C.over)return;C.t+=dt;const P=C.pan,coat=C.phase==='coat';
+  if(C.warn){C.warn.t-=dt;if(C.warn.t<=0)C.warn=null}
+  // coat-phase events fire after their warning
+  if(coat&&C.ev&&C.ev.stage==='warn'){C.ev.w-=dt;if(C.ev.w<=0){C.ev.stage='done';C.ev.fired=true}}
+  // pan motion
+  let tvx=C.in.px!=null?clamp((C.in.px-P.x)*12,-950,950):(C.in.r-C.in.l)*560;
+  P.vx+=(tvx-P.vx)*Math.min(1,dt*14);P.x+=P.vx*dt;const lo=P.w/2+8,hi=VW-P.w/2-8;if(P.x<lo){P.x=lo;P.vx=0}if(P.x>hi){P.x=hi;P.vx=0}
+  P.vy+=(-700*(P.y-P.ry)-32*P.vy)*dt;P.y+=P.vy*dt;P.cd=Math.max(0,P.cd-dt);
+  P.tilt+=(clamp(P.vx/2400,-.26,.26)-P.tilt)*Math.min(1,dt*12);
+  // temperature
+  const target=140+1.8*C.heat;C.panTemp+=(target-C.panTemp)*Math.min(1,dt/1.5);
+  const hp=clamp((C.panTemp-140)/1.8,0,100),rate=.0065*hp*hp*C.heatMul*(C.volcano>0?1.8:1);
+  C.volcano=Math.max(0,C.volcano-dt);C.grav=Math.max(0,C.grav-dt);
+  const g=C.grav>0?-620:C.gravity;
+  // physics (fixed 60Hz, 2 substeps)
+  const list=C.kernels,h=dt/2;
+  for(let s=0;s<2;s++){const S=panSegs(P);
+    for(const k of list){if(k.state==='LOST')continue;k.vy+=g*h;k.x+=k.vx*h;k.y+=k.vy*h;
+      if(k.x<k.radius){k.x=k.radius;k.vx=Math.abs(k.vx)*PHYS.wall}else if(k.x>VW-k.radius){k.x=VW-k.radius;k.vx=-Math.abs(k.vx)*PHYS.wall}
+      if(k.y<k.radius){k.y=k.radius;k.vy=Math.abs(k.vy)*PHYS.wall}
+      if(hitSeg(k,S.A,S.B,P.vx,P.vy,PHYS.rest,true))k.touch=.06;
+      hitSeg(k,S.A,S.A2,P.vx,P.vy,.5,false);hitSeg(k,S.B,S.B2,P.vx,P.vy,.5,false)}
+    kernelCollide(list)}
+  // heat, pop, burn, coat
+  const mixer=1+.5*upLv('mixer');
+  for(const k of list){if(k.state==='LOST')continue;k.touch=Math.max(0,k.touch-dt);k.touch2=Math.max(0,k.touch2-dt);
+    if(k.y>VH+30){loseKernel(C,k,'fall');continue}
+    if(k.state==='BURNT')continue;
+    const mc=k.touch>0?1:k.touch2>0?.4:0;
+    if(mc>0){if(k.temperature<C.panTemp){const ev=1+C.unev*.6*(1-2*Math.abs(k.x-P.x)/P.w);const add=rate*mc*ev*dt;k.temperature=Math.min(C.panTemp,k.temperature+add);k.heatExposure+=add}}
+    else k.temperature=Math.max(20,k.temperature-10*dt);
+    const un=k.state==='RAW'||k.state==='HEATING'||k.state==='READY';
+    if(un){if(k.temperature>45&&k.state==='RAW')k.state='HEATING';if(k.state==='HEATING'&&k.temperature>=k.popThreshold-25)k.state='READY';
+      if(k.temperature>=k.popThreshold&&k.moisture>=.35){popKernel(C,k)}}
+    if(k.temperature>250){k.burnExposure+=(k.temperature-250)/150*dt;if(k.burnExposure>=1){k.state='BURNT';C.burnt+=k.golden?3:1;spark(k.x,k.y,'#444',6,120);popup(k.x,k.y-12,tt('焦げ','BURNT'),'#999',13);sfx.burn()}}
+    else k.burnExposure=Math.max(0,k.burnExposure-.04*dt);
+    if(coat&&k.state!=='BURNT'&&k.touch<=0&&k.y<P.y-8){k.coating=Math.min(1,k.coating+.55*mixer*dt);if(k.coating>.3)k.state='COATED'}}
+    C.kernels=list.filter(k=>k.state!=='LOST'&&k.state!=='COLLECTED');
+  if(C.combo>0&&C.t-C.lastPop>.35&&C.phase==='cook')C.combo=0;
+  C.shake=Math.max(0,C.shake-dt*14);
+  if(!coat){stepEvents(C,dt);stepBoss(C,dt)}
+  if(C.auto&&C.phase==='cook'){C.autoT-=dt;if(C.autoT<=0){C.autoT=1.6;collectNow(C)}}
+  let ba=0;for(const k of C.kernels)if(k.state!=='BURNT'&&k.burnExposure>.4)ba++;C.burnAlert=ba;
+  if(ba&&C.t-C.lastBurnWarn>2.5){C.lastBurnWarn=C.t;sfx.warn()}
+  fxStep(dt);
+  C.time-=dt;if(C.time<=0){C.time=0;C.over=true}
+  if(!coat){const act=C.kernels.some(k=>k.state==='RAW'||k.state==='HEATING'||k.state==='READY');
+    const bossOpen=C.boss&&!C.boss.defeated;
+    if(!act&&!bossOpen){C.idle+=dt;if(C.idle>3)C.over=true}else C.idle=0}
+  else{if(!C.kernels.length)C.over=true}}
+
+/* ============================ coating.js / quality.js ============================ */
+function startCoat(C,R){
+  const P=C.pan;C.phase='coat';C.time=15;C.over=false;C.t=0;C.combo=0;C.heat=0;C.in={l:0,r:0,px:null};C.ev=null;C.warn=null;C.chicken=null;C.ufo=null;C.volcano=0;C.grav=0;C.boss=null;C.lostCoat=0;C.idle=0;C.lastBurnWarn=-9;C.burnAlert=0;C.uni=0;
+  P.x=VW/2;P.vx=0;P.vy=0;P.y=P.ry;P.tilt=0;const bank=C.bank.slice(0,100);C.bank=[];C.kernels=[];
+  const cols=R.recipe.colors.slice(),chaos=R.rainbow?(upLv('coater')?.2:.55):0;
+  bank.forEach((k,i)=>{k.state='POPPED';k.radius=k.golden?8:7;k.coating=0;k.burnExposure=0;k.temperature=60;k.touch=0;k.touch2=0;k.vx=rnd(-30,30);k.vy=0;
+    k.x=P.x+rnd(-P.w/2+14,P.w/2-14);k.y=P.y-12-rnd(0,50);
+    k.colorId=Math.random()<chaos?pick(COLORIDS):cols[i%cols.length];k.color=COLORS[k.colorId].hex;
+    k.flavorIds=[R.recipe.flavors[i%R.recipe.flavors.length]];C.kernels.push(k)});
+  C.coatTotal=C.kernels.reduce((s,k)=>s+(k.golden?3:1),0);return C}
+function coatStats(C){const ks=C.kernels.filter(k=>k.state!=='BURNT');const n=ks.length||1;
+  const mean=ks.reduce((s,k)=>s+k.coating,0)/n,sd=Math.sqrt(ks.reduce((s,k)=>s+(k.coating-mean)**2,0)/n);
+  const fr={};let cn=0;ks.forEach(k=>{fr[k.colorId]=(fr[k.colorId]||0)+1;cn++});for(const c in fr)fr[c]/=cn||1;
+  const sel=Object.keys(fr).filter(c=>fr[c]>=.08).length||1;
+  return{mean,sd,uniform:ks.length?clamp(mean/.85,0,1)*clamp(1-sd/.45,0,1):0,colorFrac:fr,nColors:sel,
+    final:ks.reduce((s,k)=>s+(k.golden?3:1),0),burntCoat:C.kernels.length-ks.length,fluff:ks.length?ks.reduce((s,k)=>s+k.fluffiness,0)/ks.length:0}}
+const KPC=6;
+function rankOf(q){return q>=90?'S':q>=80?'A':q>=65?'B':q>=50?'C':'D'}
+const RANKN={S:['伝説級','Legendary'],A:['絶品','Superb'],B:['おいしい','Tasty'],C:['普通','So-so'],D:['失敗作','Flop']};
+function calcQuality(m){ // m: total,popEver,burnt,final,fluff,uniform,maxCombo
+  if(m.popEver<=0||m.final<=0)return{Q:0,parts:{P:0,B:0,F:0,R:0,C:0,K:0},pts:[0,0,0,0,0,0]};
+  const P=Math.min(1,m.popEver/m.total/.9),B=clamp(1-m.burnt/m.total*4,0,1),F=clamp(m.fluff,0,1),R=clamp(m.final/m.popEver,0,1),Cc=clamp(m.uniform,0,1),K=Math.min(1,m.maxCombo/20);
+  const pts=[25*P,20*B,15*F,15*R,15*Cc,10*K];return{Q:Math.round(pts.reduce((a,b)=>a+b,0)*10)/10,parts:{P,B,F,R,C:Cc,K},pts}}
+function buildProduct(R){
+  const c=R.cook,s=R.coatStats,flavors=R.recipe.flavors.concat(R.extra||[]);
+  const q=calcQuality({total:c.total,popEver:c.popEver,burnt:c.burnt+(s?s.burntCoat:0),final:s?s.final:0,fluff:s?s.fluff:0,uniform:s?s.uniform:0,maxCombo:c.maxCombo});
+  const final=s?s.final:0,cups=final>=3?Math.max(1,Math.floor(final/KPC)):0;
+  return{Q:q.Q,quality:q.Q,parts:q.parts,pts:q.pts,rank:rankOf(q.Q),cups,flavors,colorFrac:s?s.colorFrac:{yellow:1},nColors:s?s.nColors:1,costPer:costPerCup(flavors),burntRate:(c.burnt+(s?s.burntCoat:0))/c.total,final}}
+const fairPrice=Q=>Math.round((100+5*Q)/10)*10;
+function attractFor(type,P){const T=calcT(type,P.flavors),V=calcV(type,P.colorFrac,P.nColors);return{T,V,A:.5*P.Q+.3*T+.2*V}}
+
+/* ============================ pricing.js / economy.js / reviews.js / reputation.js ============================ */
+function purchaseProbability(customer,product,price,reputation){
+  const fair=100+5*product.quality,attr=product.attractiveness,k=.45*(1-.2*upLv('pack'));
+  const score=.50+.35*((attr-60)/40)-k*((price-fair)/fair)*customer.priceSensitivity+.10*(reputation-3);
+  const bf=price>customer.budget?.35:1;return Math.max(.02,Math.min(.98,score*bf))}
+function expectedDemand(R,price){let s=0;for(const c of R.customers){const a=attractFor(c.type,R.product);s+=purchaseProbability(c,{quality:R.product.Q,attractiveness:a.A},price,save.reputation)*(c.qty||1)}return s}
+const REV={q90:['人生最高のポップコーン！','Best popcorn of my life!'],burnt:['ちょっと焦げ臭い…','A bit burnt…'],t90:['まさに私の好きな味！','Exactly my favorite flavor!'],v90:['見た目がかわいすぎる！','So cute to look at!'],
+  pricey:['おいしいけど高い！','Tasty but pricey!'],odd:['こんな味、初めて！','Never tasted this before!'],chicken:['ニワトリも認めた味！','Even the chicken approved!'],
+  g:[['残念…','Disappointing…'],['うーん…','Hmm…'],['ふつうにおいしい','Pretty good'],['おいしかった！','Delicious!'],['最高！また来る！','Amazing! Coming back!']],spicy:['からっ！でも…クセになる！','Spicy! …strangely addictive!']};
+function makeReview(c,P,price,R,at,rating){const m=[];
+  if(P.burntRate>=.12)m.push(REV.burnt);if(price>fairPrice(P.Q)*1.25)m.push(REV.pricey);
+  if(R.event&&R.event.id==='chicken'&&R.chickenOK)m.push(REV.chicken);
+  if((P.flavors.some(f=>f==='rainbow'||f==='alien'||f==='cucumber'))&&at.T>=75)m.push(REV.odd);
+  if(P.Q>=90)m.push(REV.q90);if(at.T>=90)m.push(REV.t90);if(at.V>=90)m.push(REV.v90);if(R.event&&R.event.id==='spicy')m.push(REV.spicy);
+  return L(m.length?pick(m):REV.g[rating-1])}
+function computeSale(R,price,rng=Math.random){
+  const P=R.product;let cups=P.cups,revenue=0,sold=0,rsum=0,buyers=0;const rows=[],reviews=[];
+  for(const c of R.customers){const at=attractFor(c.type,P);
+    let p=purchaseProbability(c,{quality:P.Q,attractiveness:at.A},price,save.reputation);
+    if(R.event&&R.event.id==='spicy')p=clamp(p*.5+rng()*.5,.05,.95);
+    let bought=false,rating=0,txt='';
+    if(cups>0&&rng()<p){const q=Math.min(c.qty||1,cups);cups-=q;sold+=q;revenue+=q*price;bought=true;buyers++;
+      const fair=fairPrice(P.Q);rating=Math.round(clamp(1+4*at.A/100-1.2*Math.max(0,(price-fair)/fair)*c.priceSensitivity+.4*Math.max(0,(fair-price)/fair)+(rng()-.5)*.6,1,5));
+      rsum+=rating;txt=makeReview(c,P,price,R,at,rating);reviews.push({c,rating,txt})}
+    rows.push({c,p,bought,rating})}
+  const material=P.cups*P.costPer,fee=sold*5,equip=equipFee(),profit=revenue-material-fee-equip;
+  const sat=buyers?rsum/buyers:0;
+  return{rows,reviews,revenue,sold,material,fee,equip,profit,sat,buyers,unsold:cups}}
+function updateReputation(sat,buyers){const target=buyers?sat:2;save.reputation=Math.round(clamp(.75*save.reputation+.25*target,1,5)*100)/100}
+
+/* ============================ game.js (flow) ============================ */
+const G={mode:'stage',stageId:1,stage:STAGES[1],round:null,sel:{f:['butter'],c:['yellow']},phase:'title',endlessRound:0,endlessProfit:0};
+let C=null;
+const scr=$('#screen');
+let ROT=false;
+function setRot(v){ROT=v;const w=$('#stageWrap');w.classList.toggle('rot',v);$('#btnRot').textContent=v?tt('戻す','EXIT'):tt('拡大','FULL');}
+function showScreen(h){if(ROT)setRot(false);scr.innerHTML=h;scr.hidden=false;$('#stageWrap').hidden=true;scrollTo(0,0)}
+function hudChips(){const sb=$('#btnSnd');if(sb)sb.textContent=save.settings.sound?'🔊':'🔇';$('#chipCoins').textContent='🪙 '+save.coins.toLocaleString('en-US');
+  $('#chipRep').textContent=tt('評判 ','Rep ')+save.reputation.toFixed(1)+' ★';
+  $('#chipStage').textContent=G.phase==='title'?'':(G.mode==='endless'?tt('エンドレス R','Endless R')+G.endlessRound:'Stage '+G.stageId)}
+const stars=n=>'<span class="star">'+'★'.repeat(n)+'<span style="opacity:.25">'+'★'.repeat(5-n)+'</span></span>';
+
+function showTitle(){G.phase='title';hudChips();
+  showScreen(`<div class="hero"><div class="mut">${tt('物理料理 × 経営 × コメディ','Physics cooking × business × comedy')}</div>
+  <h1>POPCORN<br>PANIC KING</h1>
+  <p>${tt('ポップコーンを作って、味を付けて、色を選んで、値段を決めて売る。お客様の反応は予測不能！','Pop it, flavor it, color it, price it. Customers are unpredictable!')}</p>
+  <div class="btns"><button class="btn big" data-act="stages">${tt('ステージモード','Stage Mode')}</button><button class="btn" data-act="endless">${tt('エンドレス','Endless')}</button>
+  <button class="btn ghost" data-act="help">${tt('遊び方','How to play')}</button><button class="btn ghost" data-act="settings">${tt('設定','Settings')}</button></div>
+  <dl class="stats"><div><dt>${tt('ハイスコア','Best score')}</dt><dd>${save.bestScore.toLocaleString('en-US')}</dd></div><div><dt>${tt('最大コンボ','Best combo')}</dt><dd>${save.bestCombo}</dd></div>
+  <div><dt>${tt('累計利益','Total profit')}</dt><dd>${yen(save.totalProfit)}</dd></div><div><dt>${tt('到達ステージ','Highest stage')}</dt><dd>${save.highestStage}/10</dd></div></dl></div>`)}
+
+function showHelp(){showScreen(`<h2>${tt('遊び方','How to play')}</h2>
+ <p>${tt('① 注文を確認 → ② 味と色を選ぶ → ③ 火力を調整して調理 → ④ フライパンで粒を受け止めて回収 → ⑤ 振って味付け → ⑥ 品質評価 → ⑦ 値段を決めて販売。','1 Check orders → 2 pick flavors & colors → 3 set the heat → 4 catch and collect popped kernels → 5 shake to coat → 6 quality check → 7 set the price and sell.')}</p>
+ <table class="tbl"><tr><th>${tt('操作','Action')}</th><th>${tt('スマホ','Phone')}</th><th>PC</th></tr>
+ <tr><td>${tt('フライパン移動','Move pan')}</td><td>${tt('左右スワイプ','Swipe left/right')}</td><td>${tt('ドラッグ・← →','Drag, ← →')}</td></tr>
+ <tr><td>${tt('振り上げ','Toss')}</td><td>${tt('上スワイプ／ボタン','Swipe up / button')}</td><td>Space</td></tr>
+ <tr><td>${tt('火力','Heat')}</td><td>${tt('スライダー','Slider')}</td><td>↑ ↓</td></tr>
+ <tr><td>${tt('回収','Collect')}</td><td>${tt('ボタン','Button')}</td><td>Enter</td></tr>
+ <tr><td>${tt('一時停止','Pause')}</td><td>${tt('ボタン','Button')}</td><td>Esc</td></tr></table>
+ <h3>${tt('コツ','Tips')}</h3><p>${tt('ポップ済みの粒は鍋に置きっぱなしだと焦げます。こまめに「回収」して安全な場所へ。連鎖は0.35秒以内に次のPOPが起きれば続きます。火力は高いほど速く弾けますが、焦げやすくなります。','Popped kernels burn if left on the pan, so collect often. A chain continues if the next POP lands within 0.35s. More heat pops faster but burns faster.')}</p>
+ <p>${tt('味付けは、粒を空中に舞わせたときに乗ります。振りすぎると粒が飛び出してしまいます。','Seasoning sticks while kernels are airborne. Shake too hard and they fly out of the pan.')}</p>
+ <div class="btns"><button class="btn" data-act="title">${tt('戻る','Back')}</button></div>`)}
+
+function showSettings(){const s=save.settings;
+  showScreen(`<h2>${tt('設定','Settings')}</h2>
+  <div class="tog"><span>${tt('言語','Language')}</span><span class="row"><button class="btn sm ${LANG==='ja'?'':'ghost'}" data-act="lang" data-v="ja">日本語</button><button class="btn sm ${LANG==='en'?'':'ghost'}" data-act="lang" data-v="en">English</button></span></div>
+  ${[['sound',tt('音量（効果音）','Sound')],['vibration',tt('振動','Vibration')],['screenShake',tt('画面シェイク','Screen shake')],['autoCollect',tt('自動回収（ポップ済みの粒を一定間隔で回収）','Auto-collect popped kernels')]].map(([k,n])=>{const on=k==='autoCollect'?autoOn():s[k];return `<div class="tog"><span>${n}</span><button class="btn sm ${on?'':'ghost'}" data-act="tog" data-v="${k}">${on?'ON':'OFF'}</button></div>`}).join('')}
+  <div class="tog"><span>${tt('セーブデータ','Save data')}</span><button class="btn sm ghost" data-act="reset">${G.resetArm?tt('本当に初期化する','Tap again to erase'):tt('初期化','Erase')}</button></div>
+  <div class="btns"><button class="btn" data-act="title">${tt('戻る','Back')}</button></div>`)}
+
+function showStages(){G.mode='stage';G.phase='stages';hudChips();
+  showScreen(`<h2>${tt('ステージ選択','Choose a stage')}</h2><p class="mut">${tt('目標利益を達成するとクリア。ボス面は撃破も必要です。','Reach the profit goal to clear. Boss stages also need a win.')}</p><div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(260px,1fr))">`+
+  STAGES.slice(1).map(s=>{const open=s.id<=save.highestStage;return `<button class="card stg ${open?'':'lock'}" ${open?`data-act="play" data-v="${s.id}"`:'disabled'}><span class="no">${s.id}</span><span><b>${L(s.n)}</b><small>${L(s.task)}${s.boss?' ／ BOSS':''}</small></span><span class="mut">${open?tt('目標 ','Goal ')+yen(s.target):'🔒'}</span></button>`}).join('')+
+  `</div><div class="btns"><button class="btn" data-act="title">${tt('戻る','Back')}</button></div>`)}
+
+function startRound(){
+  const st=G.stage,ev=st.boss?null:rollEvent(st);
+  G.round={stage:st,event:ev,customers:genCustomers(st),recipe:null};
+  showOrder()}
+function genCustomers(st){const rep=save.reputation,n=st.customers+Math.floor(Math.max(0,rep-3)*2)+2*upLv('sign');
+  const mix=Object.assign({},st.mix);mix.vip=(mix.vip||0)+Math.max(0,rep-3.5)*1.2;
+  const ks=Object.keys(mix),tot=ks.reduce((s,k)=>s+mix[k],0),out=[];
+  for(let i=0;i<n;i++){let r=Math.random()*tot,t=ks[0];for(const k of ks){r-=mix[k];if(r<=0){t=k;break}}out.push(mkCust(t))}return out}
+
+function showOrder(){G.phase='order';hudChips();const R=G.round,st=G.stage,cnt={};R.customers.forEach(c=>cnt[c.type]=(cnt[c.type]||0)+1);
+  showScreen(`<div class="row" style="justify-content:space-between"><div><div class="mut">${G.mode==='endless'?tt('エンドレス ラウンド ','Endless round ')+G.endlessRound:'STAGE '+st.id}</div><h2>${L(st.n)}</h2></div><div class="pill">${L(st.task)}</div></div>
+  ${st.boss?`<div class="card" style="background:#fff3b8;margin:8px 0"><b>BOSS：${BOSSES[st.boss][0]}</b><small>${tt(BOSSES[st.boss][1],BOSSES[st.boss][2])}</small></div>`:''}
+  <h3>${tt('今日のお客様','Today\'s customers')}（${R.customers.length}${tt('人','')}）</h3>
+  <div class="grid">${Object.keys(cnt).map(t=>`<div class="card"><b>${CUST[t].em} ${L(CUST[t].n)} ×${cnt[t]}</b><small>${tt('好み：','Likes: ')}${L(CUST[t].why)}<br>${tt('価格感度：','Price sense: ')}${CUST[t].sens>1.1?tt('高','High'):CUST[t].sens>.8?tt('中','Mid'):tt('低','Low')}</small></div>`).join('')}</div>
+  <p class="mut">${tt('目標利益 ','Profit goal ')}<b>${yen(st.target||0)}</b>${st.minF>1?tt('　／ 条件：2種類以上の味・2色以上','  / needs 2+ flavors and 2+ colors'):''}</p>
+  <div class="btns"><button class="btn big" data-act="select">${tt('味と色を選ぶ','Choose flavor & color')}</button><button class="btn ghost" data-act="${G.mode==='endless'?'title':'stages'}">${tt('やめる','Quit')}</button></div>`)}
+
+function selValid(){const st=G.stage,s=G.sel;return s.f.length>=Math.max(1,st.minF||1)&&s.f.length<=3&&s.c.length>=Math.max(1,st.minC||1)&&s.c.length<=3}
+function previewSVG(cs){const cols=cs.length?cs.map(c=>COLORS[c].hex):['#e8e2d4'];let o='';
+  const rows=[[6,60,56],[5,44,64],[4,28,76]];let i=0;
+  rows.forEach(([n,y,x0])=>{for(let j=0;j<n;j++){const cx=x0+j*34+(i%2)*3,cy=y+((i*7)%5)-2,f=cols[i%cols.length];
+    for(let a=0;a<6;a++){const an=a*1.047+i;o+=`<circle cx="${(cx+Math.cos(an)*8).toFixed(1)}" cy="${(cy+Math.sin(an)*8).toFixed(1)}" r="9" fill="${f}" stroke="rgba(38,27,61,.35)" stroke-width="1"/>`}
+    o+=`<circle cx="${cx}" cy="${cy}" r="10" fill="${f}"/>`;i++}});
+  return `<svg viewBox="0 0 300 126" width="100%" role="img" aria-label="preview"><defs><clipPath id="pvc"><path d="M42 70H258L240 120H60Z"/></clipPath></defs>${o}<path d="M42 70H258L240 120H60Z" fill="#fff" stroke="#261b3d" stroke-width="3"/><g clip-path="url(#pvc)">${Array.from({length:7},(_,k)=>`<rect x="${42+k*34}" y="70" width="17" height="52" fill="#d8283f"/>`).join('')}</g><path d="M42 70H258L240 120H60Z" fill="none" stroke="#261b3d" stroke-width="3"/></svg>`}
+function showSelect(){G.phase='select';hudChips();const R=G.round,s=G.sel,st=G.stage;
+  const fr=equalFrac(s.c),types=[...new Set(R.customers.map(c=>c.type))];
+  const dots=previewSVG(s.c);
+  showScreen(`<h2>${tt('味と色を選ぶ','Flavor & color')}</h2>
+  <div class="row"><button class="btn" data-act="recommend">★ ${tt('おすすめ','Recommended')}</button>${save.savedRecipes.map((r,i)=>`<span class="row" style="gap:2px"><button class="btn sm ghost" data-act="useRecipe" data-v="${i}">${tt('レシピ','Recipe')}${i+1}</button><button class="btn sm ghost" data-act="delRecipe" data-v="${i}" aria-label="delete">×</button></span>`).join('')}</div>
+  <h3>${tt('味（1〜3種類）','Flavors (1–3)')}</h3><div class="grid">${SELF.map(f=>{const open=save.unlockedFlavors.includes(f),on=s.f.includes(f),F=FLAVORS[f];
+    return `<button class="card ${on?'sel':''} ${open?'':'lock'}" ${open?`data-act="tf" data-v="${f}"`:'disabled'} aria-pressed="${on}"><b><span class="dot" style="background:${F.col==='multi'?'conic-gradient(#f58bb0,#f4ca54,#7cc46b,#5aa9f0,#f58bb0)':COLORS[F.col].hex}"></span>${L(F.n)}</b><small>${open?L(F.note)+' ／ '+yen(F.cost)+tt('/杯','/cup'):tt('🔒 クリアで解放','🔒 Unlock by clearing stages')}</small></button>`}).join('')}</div>
+  <h3>${tt('色（最大3色）','Colors (max 3)')}</h3><div class="cols">${COLORIDS.map(c=>{const open=save.unlockedColors.includes(c),on=s.c.includes(c);
+    return `<button class="swatch ${on?'sel':''} ${open?'':'lock'}" style="background:${COLORS[c].hex}" ${open?`data-act="tc" data-v="${c}"`:'disabled'} aria-label="${L(COLORS[c].n)}" aria-pressed="${on}"></button>`}).join('')}</div>
+  <h3>${tt('商品プレビュー','Preview')}</h3><div style="max-width:300px">${dots}</div>
+  <p class="mut">${tt('材料費 ','Ingredients ')}${s.f.length?yen(costPerCup(s.f)):'-'}${tt('/杯（容器込み）',' /cup (incl. container)')}</p>
+  ${s.f.length&&s.c.length?`<h3>${tt('お客様との相性（品質70想定）','Fit with customers (assuming Q70)')}</h3>${types.map(t=>{const T=calcT(t,s.f),V=calcV(t,fr,s.c.length),A=Math.round(.5*70+.3*T+.2*V);return `<div class="line"><span>${CUST[t].em} ${L(CUST[t].n)}</span><div class="meter"><i style="width:${A}%"></i></div><span>${A}</span></div>`}).join('')}`:''}
+  <div class="btns"><button class="btn big" data-act="cook" ${selValid()?'':'disabled'}>${tt('調理開始','Start cooking')}</button><button class="btn ghost" data-act="saveRecipe" ${s.f.length&&s.c.length?'':'disabled'}>${tt('レシピ保存','Save recipe')}</button></div>
+  ${!selValid()&&(st.minF>1)?`<p class="mut">${tt('このステージは2種類以上の味と2色以上が必要です。','This stage needs 2+ flavors and 2+ colors.')}</p>`:''}`)}
+
+/* ---- cooking UI ---- */
+const cv=$('#cv'),ctx=cv.getContext?cv.getContext('2d'):null;
+function setHeat(v){if(!C)return;C.heat=v;$('#heat').value=v;$('#heatOut').textContent=v+'%'}
+function syncAuto(){const b=$('#btnAuto');b.textContent=tt('自動回収 ','AUTO ')+(autoOn()?'ON':'OFF');b.classList.toggle('on',autoOn())}
+function showStage(){syncAuto();scr.hidden=true;$('#stageWrap').hidden=false;$('#heat').value=C.heat;$('#heatOut').textContent=C.heat+'%';
+  $('#heatLbl').textContent=tt('火力','HEAT');$('#btnToss').textContent=tt('振り上げ','TOSS');$('#btnCollect').textContent=tt('回収','COLLECT');$('#btnDone').textContent=tt('完了','DONE');
+  $('#btnH1').textContent=tt('弱 30','LOW 30');$('#btnH2').textContent=tt('中 55','MID 55');$('#btnH3').textContent=tt('強 80','HIGH 80');$('#heat').disabled=false;$('#btnRot').textContent=ROT?tt('戻す','EXIT'):tt('拡大','FULL');scrollTo(0,0)}
+function startCook(){audioInit();const R=G.round;R.recipe={flavors:G.sel.f.slice(),colors:G.sel.c.slice()};
+  C=newCook(G.stage);C.auto=autoOn();setEvent(C,R.event,'cook');G.phase='cook';hudChips();showStage();R.chickenOK=false}
+function endCook(){const R=G.round;
+  // auto-collect popped kernels still near the pan
+  collectNow(C);
+  R.event&&R.event.id==='chicken'&&C.ev&&(R.chickenOK=!!C.ev.success);
+  const pk=C.kernels.filter(k=>k.state==='POPPED').length;C.lostPopped+=pk;
+  R.cook={total:C.total,popEver:C.popEver,burnt:C.burnt,maxCombo:C.maxCombo,score:C.score,bank:C.bank.length,lostPopped:C.lostPopped,lostRaw:C.lostRaw,
+    bossDefeated:C.boss?C.boss.defeated:null,bossType:C.boss?C.boss.type:null,stolen:C.boss?C.boss.stolen||0:0};
+  R.cook.burnt=C.burnt;R.cook.goldBonus=C.goldBonus;
+  if(!C.bank.length){R.coatStats=null;R.extra=[];finishEval();return}
+  startCoat(C,R);const ev=R.event;R.rainbow=false;R.extra=[];
+  if(ev&&ev.ph==='coat'){setEvent(C,ev,'coat');R.coatEv=ev}
+  G.phase='coat';showStage();$('#heat').value=0;$('#heatOut').textContent='0%'}
+function endCoat(){const R=G.round;const ev=R.coatEv;
+  R.coatStats=coatStats(C);R.cook.score=C.score;finishEval()}
+function applyCoatEvent(C,R){const ev=R.coatEv;if(!ev||!C.ev||!C.ev.fired||R._applied)return;R._applied=true;
+  if(ev.id==='rainbow'){R.rainbow=true;const ch=upLv('coater')?.2:.55;for(const k of C.kernels){if(Math.random()<ch){k.colorId=pick(COLORIDS);k.color=COLORS[k.colorId].hex}}popup(VW/2,160,tt('色が暴走！','COLOR RAMPAGE!'),'#f58bb0',30)}
+  if(ev.id==='alien'){R.extra=['alien'];popup(VW/2,160,tt('謎の調味料！','MYSTERY SEASONING!'),'#7cc46b',30)}
+  if(ev.id==='cucumber'){R.extra=['cucumber'];popup(VW/2,160,tt('キュウリ！','CUCUMBER!'),'#7cc46b',30)}
+  sfx.ok()}
+function finishEval(){const R=G.round;G.phase='eval';R.product=buildProduct(R);R.cook.score=R.cook.score||0;showEval()}
+
+const TIPS=[['POP率：火力を上げるか、時間を使い切ろう','Pop rate: raise the heat or use the full time'],['焦げ：こまめに回収し、火力を下げよう','Burning: collect often and lower the heat'],['ふっくら度：火力50〜60%でじっくり弾けさせよう','Fluffiness: pop slowly at 50–60% heat'],['回収率：自動回収やカゴの下への移動を早めに','Recovery: use auto-collect and catch kernels earlier'],['均一度：粒を空中に舞わせてまんべんなく','Coating: lift kernels into the air evenly'],['連鎖：0.35秒以内に次のPOPをつなげよう（火力高め）','Chain: link POPs within 0.35s (more heat)']];
+function showEval(){hudChips();const R=G.round,P=R.product,names=[['POP成功率','Pop rate',25],['焦げの少なさ','No burning',20],['ふっくら度','Fluffiness',15],['回収率','Recovery',15],['味付け均一度','Even coating',15],['連鎖技術','Chain skill',10]];
+  const wi=P.pts.map((v,i)=>v/names[i][2]).reduce((m,v,i,a)=>v<a[m]?i:m,0);const tipE=P.Q>=95?'':L(TIPS[wi]);const types=[...new Set(R.customers.map(c=>c.type))];const bossTxt=R.cook.bossType?(R.cook.bossDefeated?`<span class="pill ok">BOSS ${tt('撃破','DOWN')}</span>`:`<span class="pill ng">BOSS ${tt('未撃破','ALIVE')}</span>`):'';
+  showScreen(`<h2>${tt('出来栄え','Quality report')}</h2>
+  <div class="bigq"><div class="rank">${P.rank}</div><div><div style="font-family:var(--f-display);font-size:30px">${Math.round(P.Q)}<small style="font-size:14px"> / 100</small></div><div>${L(RANKN[P.rank])}</div><div class="mut">${tt('完成 ','Made ')}<b>${P.cups}</b>${tt('杯','cups')} ／ ${tt('最大コンボ ','Best combo ')}${R.cook.maxCombo} ／ ${tt('スコア ','Score ')}${R.cook.score.toLocaleString('en-US')}</div>${bossTxt}</div></div>
+  ${names.map((n,i)=>{const mx=n[2],v=P.pts[i];return `<div class="line"><span>${tt(n[0],n[1])}</span><div class="meter"><i style="width:${v/mx*100}%"></i></div><span>${v.toFixed(1)}/${mx}</span></div>`}).join('')}
+  ${tipE?`<div class="tipcard"><b>${tt('次のコツ','Next tip')}</b><br>${tipE}</div>`:''}<p class="mut">${tt('POP '+R.cook.popEver+'／'+R.cook.total+'粒　焦げ '+R.cook.burnt+'　ロスト '+(R.cook.lostPopped+R.cook.lostRaw),'POP '+R.cook.popEver+'/'+R.cook.total+'  burnt '+R.cook.burnt+'  lost '+(R.cook.lostPopped+R.cook.lostRaw))}</p>
+  <h3>${tt('商品魅力度（品質・味・見た目）','Appeal (quality, taste, looks)')}</h3>
+  ${types.map(t=>{const a=attractFor(t,P);return `<div class="line"><span>${CUST[t].em} ${L(CUST[t].n)}</span><div class="meter"><i style="width:${a.A}%"></i></div><span>${Math.round(a.A)}</span></div><div class="mut" style="margin:-3px 0 4px 7.5em">${tt('味','Taste')} ${a.T} ／ ${tt('見た目','Looks')} ${a.V}</div>`}).join('')}
+  <div class="btns"><button class="btn big" data-act="price">${tt('価格を決める','Set the price')}</button></div>`)}
+
+function bestPrice(R){let b=550,bp=-1e9;for(let p=100;p<=1000;p+=50){const d=expectedDemand(R,p),so=Math.min(R.product.cups,d),pf=so*p-so*5;if(pf>bp){bp=pf;b=p}}return b}
+function showPrice(){G.phase='price';hudChips();const R=G.round,P=R.product;if(R.price==null)R.price=clamp(Math.round(fairPrice(P.Q)/50)*50,100,1000);
+  const pr=R.price,fair=fairPrice(P.Q),dem=expectedDemand(R,pr),sold=Math.min(P.cups,dem),profit=sold*pr-P.cups*P.costPer-sold*5-equipFee();
+  showScreen(`<h2>${tt('価格設定','Set the price')}</h2>
+  <p class="mut">${tt('参考価格 ','Fair price ')}<b>${yen(fair)}</b>${tt('（品質から算出）',' (from quality)')} ／ ${tt('製造 ','Made ')}${P.cups}${tt('杯 ／ 材料費 ','cups / cost ')}${yen(P.costPer)}${tt('/杯','/cup')}</p>
+  <div class="price"><button data-act="pdn" aria-label="down">−</button><output id="pv">${yen(pr)}</output><button data-act="pup" aria-label="up">+</button></div>
+  <input class="slide" id="pslide" type="range" min="100" max="1000" step="50" value="${pr}" aria-label="price">
+  <table class="tbl" style="margin-top:12px"><tr><td>${tt('予想需要','Expected demand')}</td><td><b>${dem.toFixed(1)}</b>${tt('杯','')}</td></tr>
+  <tr><td>${tt('予想販売数（製造数が上限）','Expected sales (capped by supply)')}</td><td><b>${sold.toFixed(1)}</b> / ${P.cups}</td></tr>
+  <tr><td>${tt('予想利益','Expected profit')}</td><td><b>${yen(profit)}</b></td></tr></table>
+  <p class="mut">${dem>P.cups?tt('需要が製造数を上回っています。少し高くしても売れそう。','Demand beats supply. You can charge a bit more.'):tt('在庫が余りそう。値下げも検討を。','You may end up with leftovers. Consider a lower price.')}</p>
+  <div class="btns"><button class="btn big" data-act="sell">${tt('販売開始','Open for business')}</button><button class="btn ghost" data-act="bestprice">${tt('おすすめ価格','Suggest a price')}</button></div>`)}
+
+function banner(txt,ms){const b=$('#banner');b.textContent=txt;b.hidden=false;sfx.warn();return new Promise(r=>setTimeout(()=>{b.hidden=true;r()},ms))}
+let saleTimer=null;
+async function startSale(){const R=G.round;G.phase='sale';
+  if(R.event&&R.event.ph==='sale'){await banner(L(R.event.w),2000);
+    if(R.event.id==='vip'){for(let i=0;i<3;i++){const v=mkCust('vip');v.budget=1000;v.qty=2;R.customers.unshift(v)}}}
+  const S=computeSale(R,R.price);R.sale=S;
+  showScreen(`<h2>${tt('販売中…','Selling…')}</h2><div class="sale" id="sale">${S.rows.map(r=>`<div class="cust"><span class="em">${CUST[r.c.type].em}</span>${L(CUST[r.c.type].n)}<br><span class="mut">…</span></div>`).join('')}</div><div id="saleOut"></div>`);
+  const els=[...document.querySelectorAll('#sale .cust')];let i=0;
+  const step=()=>{if(i>=els.length){clearInterval(saleTimer);finishSale();return}
+    const r=S.rows[i],el=els[i];el.classList.add('show',r.bought?'yes':'no');el.querySelector('.em').textContent=r.bought?(r.rating>=4?'😍':r.rating===3?'🙂':'😕'):'🤔';el.querySelector('.mut').innerHTML=r.bought?stars(r.rating)+'<br><b>+'+yen(R.price*(r.c.qty||1))+'</b>':tt('購入せず','Pass');if(r.bought)sfx.coin();i++};
+  clearInterval(saleTimer);saleTimer=setInterval(step,Math.max(120,Math.min(450,9000/els.length)))}
+function finishSale(){const R=G.round,S=R.sale,st=G.stage;
+  updateReputation(S.sat,S.buyers);
+  const gain=Math.max(0,Math.round(S.profit));save.coins+=gain;save.totalProfit+=Math.round(S.profit);
+  const score=R.cook.score+Math.max(0,Math.round(S.profit/10));R.finalScore=score;
+  save.bestScore=Math.max(save.bestScore,score);save.bestCombo=Math.max(save.bestCombo,R.cook.maxCombo);
+  let cleared=null;
+  if(G.mode==='stage'){const bossOK=!st.boss||R.cook.bossDefeated;cleared=S.profit>=st.target&&bossOK;R.cleared=cleared;R.bossOK=bossOK;
+    if(cleared){const u=UNLOCK[st.id];if(u){u.f.forEach(f=>{if(!save.unlockedFlavors.includes(f))save.unlockedFlavors.push(f)});u.c.forEach(c=>{if(!save.unlockedColors.includes(c))save.unlockedColors.push(c)});R.unlocked=u}
+      save.highestStage=Math.max(save.highestStage,Math.min(10,st.id+1));if(st.id===10&&!save.achievements.includes('king'))save.achievements.push('king')}}
+  else{G.endlessRound;G.endlessProfit+=Math.round(S.profit)}
+  save.tutorialDone=true;writeSave();hudChips();
+  $('#saleOut').innerHTML=`<h3>${tt('本日の結果','Today\'s results')}</h3>
+  <table class="tbl"><tr><td>${tt('売上','Revenue')}（${S.sold}${tt('杯','cups')}）</td><td>${yen(S.revenue)}</td></tr><tr><td>${tt('材料費','Ingredients')}</td><td>-${yen(S.material)}</td></tr><tr><td>${tt('販売費','Selling cost')}</td><td>-${yen(S.fee)}</td></tr><tr><td>${tt('設備使用費','Equipment')}</td><td>-${yen(S.equip)}</td></tr>
+  <tr><th>${tt('利益','Profit')}</th><th style="color:${S.profit>=0?'var(--mint)':'var(--curtain)'}">${yen(S.profit)}</th></tr></table>
+  ${S.buyers&&S.sat>=4.3?`<div class="rank" style="font-size:38px;margin:6px 0">${tt('大評判！','HIT!')}</div>`:''}<div class="row" style="margin:10px 0"><span>${tt('満足度','Satisfaction')}</span>${S.buyers?stars(Math.round(S.sat)):'—'}<span class="mut">${tt('評判 ','Reputation ')}${save.reputation.toFixed(1)} ★ ／ ${tt('売れ残り ','Unsold ')}${S.unsold}</span></div>
+  ${S.reviews.slice(0,6).map(v=>`<div class="rev"><b>${CUST[v.c.type].em}</b> ${stars(v.rating)} ${esc(v.txt)}</div>`).join('')||`<p class="mut">${tt('口コミはありません。','No reviews this time.')}</p>`}
+  ${cleared===null?'':cleared?`<p><span class="pill ok">${tt('ステージクリア！','STAGE CLEAR!')}</span>${R.unlocked?tt('新しい味と色が解放されました。','New flavors and colors unlocked.'):''}</p>`:`<p><span class="pill ng">${tt('未達成','Not cleared')}</span>${S.profit<st.target?tt('目標利益 '+yen(st.target),'Goal '+yen(st.target)):''} ${!R.bossOK?tt('ボスを倒せていません。','The boss is still standing.'):''}</p>`}
+  <div class="btns"><button class="btn big" data-act="shop">${tt('強化・次へ','Upgrades & next')}</button></div>`}
+
+function showShop(){G.phase='shop';hudChips();const R=G.round;
+  const recK=Object.keys(UPG).find(k=>upLv(k)<UPG[k].max&&save.coins>=UPG[k].cost*(upLv(k)+1));
+  const cards=Object.keys(UPG).map(k=>{const u=UPG[k],lv=upLv(k),maxed=lv>=u.max,cost=u.cost*(lv+1);
+    return `<button class="card ${maxed?'lock':''}" ${maxed?'disabled':`data-act="buy" data-v="${k}"`}><b>${L(u.n)} <span class="mut">Lv${lv}/${u.max}</span> ${k===recK?'<span class="pill ok">'+tt('おすすめ','PICK')+'</span>':''}</b><small>${L(u.d)}</small><b style="margin-top:4px">${maxed?'MAX':'🪙 '+cost.toLocaleString('en-US')}</b></button>`}).join('');
+  let next;
+  if(G.mode==='endless')next=`<button class="btn big" data-act="nextEndless">${tt('次のラウンド','Next round')}</button><button class="btn ghost" data-act="title">${tt('タイトルへ','Title')}</button>`;
+  else if(R.cleared&&G.stageId<10)next=`<button class="btn big" data-act="nextStage">${tt('次のステージへ','Next stage')}</button><button class="btn ghost" data-act="stages">${tt('ステージ選択','Stages')}</button>`;
+  else if(R.cleared)next=`<button class="btn big" data-act="ending">${tt('エンディングへ','Ending')}</button>`;
+  else next=`<button class="btn big" data-act="retry">${tt('もう一度挑戦','Retry')}</button><button class="btn ghost" data-act="stages">${tt('ステージ選択','Stages')}</button>`;
+  showScreen(`<h2>${tt('設備強化','Upgrades')}</h2><p>🪙 <b>${save.coins.toLocaleString('en-US')}</b> ${tt('（課金要素はありません）','(no real-money purchases)')}</p><div class="grid">${cards}</div><div class="btns">${next}</div>`)}
+
+function showEnding(){showScreen(`<div class="hero"><div class="rank">KING</div><h2 style="margin-top:14px">${tt('あなたは世界一のポップコーン王です！','You are the Popcorn King of the world!')}</h2>
+  <p>${tt('累計利益 ','Total profit ')}${yen(save.totalProfit)}</p><div class="btns"><button class="btn big" data-act="endless">${tt('エンドレスで遊ぶ','Play Endless')}</button><button class="btn ghost" data-act="title">${tt('タイトルへ','Title')}</button></div></div>`)}
+
+function setupEndless(){G.mode='endless';G.endlessRound++;const pool=STAGES.slice(1).filter(s=>!s.boss&&s.id<=Math.max(3,save.highestStage));const b=pick(pool);
+  G.stage=Object.assign({},b,{target:0,boss:null,customers:b.customers+Math.floor(G.endlessRound/2)});G.stageId=b.id}
+
+/* ---- sensible defaults for selection ---- */
+function applyRecommend(){const r=recommend(G.stage,G.round.customers);G.sel={f:r.f,c:r.c}}
+
+/* ---- tutorial tips ---- */
+function tipText(C){if(save.tutorialDone||C.phase!=='cook')return'';const t=C.t;
+  if(t<9)return tt('① 火力スライダーで加熱！ 50〜60%が安定','① Use the heat slider. 50–60% is steady');
+  if(t<20)return tt('② ← → で動かして、飛び出した粒を受け止めよう','② Move with ← → to catch flying kernels');
+  if(t<32)return tt('③ ポップ済みの粒は「回収」で安全に（焦げ防止）','③ Press COLLECT to bank popped kernels (they burn otherwise)');
+  if(t<44)return tt('④ 0.35秒以内に次のPOPでコンボ継続！','④ Chain POPs within 0.35s to keep the combo');
+  return''}
+function tipCoat(C){if(C.phase!=='coat')return'';const u=C.uni;
+  if(C.lostCoat>=4&&C.t>3)return tt('振りすぎ！粒が飛び出しています','Too hard! Kernels are flying out');
+  if(!save.tutorialDone&&C.t<=10)return tt('粒を空中に舞わせて味付け！振りすぎ注意','Toss kernels into the air to season them. Don\'t overdo it!');
+  if(u&&typeof u==='object'&&C.t>5&&u.mean<.5)return tt('もっと振って粒を舞わせよう','Toss more to lift the kernels');return''}
+
+/* ============================ draw (Canvas 2D) ============================ */
+const FONT='"Dela Gothic One","Zen Maru Gothic",sans-serif';
+function puff(x,y,r,fill,seed){ctx.fillStyle=fill;for(let i=0;i<6;i++){const a=i*1.047+seed;ctx.beginPath();ctx.arc(x+Math.cos(a)*r*.55,y+Math.sin(a)*r*.55,r*.58,0,6.283);ctx.fill()}ctx.beginPath();ctx.arc(x,y,r*.72,0,6.283);ctx.fill()}
+function drawKernel(k,t){const r=k.radius;
+  switch(k.state){
+    case'RAW':ctx.fillStyle='#e0aa3c';ctx.beginPath();ctx.arc(k.x,k.y,r,0,6.283);ctx.fill();ctx.fillStyle='#a9751c';ctx.beginPath();ctx.arc(k.x+1,k.y+1,1.6,0,6.283);ctx.fill();break;
+    case'HEATING':{const f=clamp((k.temperature-45)/130,0,1);ctx.fillStyle=mixc('#e0aa3c','#ff7b2c',f);ctx.beginPath();ctx.arc(k.x,k.y,r+f*1.2,0,6.283);ctx.fill();ctx.strokeStyle='rgba(255,140,40,.7)';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(k.x,k.y,r+2+f*2,0,6.283);ctx.stroke();break}
+    case'READY':{const j=Math.sin(t*60+k.id)*1.4;ctx.fillStyle='#ff5a2a';ctx.beginPath();for(let i=0;i<8;i++){const a=i*.785+t*8,rr=i%2?r*.8:r*1.45;ctx.lineTo(k.x+j+Math.cos(a)*rr,k.y+Math.sin(a)*rr)}ctx.closePath();ctx.fill();ctx.fillStyle='#ffd23f';ctx.beginPath();ctx.arc(k.x+j,k.y,r*.45,0,6.283);ctx.fill();break}
+    case'BURNT':ctx.fillStyle='#2b2220';ctx.beginPath();ctx.arc(k.x,k.y,r,0,6.283);ctx.fill();ctx.strokeStyle='#8a7a70';ctx.lineWidth=1.6;ctx.beginPath();ctx.moveTo(k.x-3,k.y-3);ctx.lineTo(k.x+3,k.y+3);ctx.moveTo(k.x+3,k.y-3);ctx.lineTo(k.x-3,k.y+3);ctx.stroke();
+      ctx.fillStyle='rgba(120,120,120,.35)';ctx.beginPath();ctx.arc(k.x+Math.sin(t*3+k.id)*3,k.y-9-(t*14+k.id*3)%10,3,0,6.283);ctx.fill();break;
+    default:{const r=k.radius*1.3,base=k.golden?'#ffd23f':mixc('#fff1c9',k.color,Math.min(1,k.coating)*.9);
+      ctx.fillStyle='rgba(0,0,0,.2)';puff(k.x+1,k.y+1.5,r,'rgba(0,0,0,.18)',k.id);puff(k.x,k.y,r,base,k.id);
+      if(C&&(k.burnExposure>.12||k.temperature>240)){const a=.5+.5*Math.sin(C.t*14);ctx.strokeStyle='rgba(255,60,30,'+(.45+.5*a)+')';ctx.lineWidth=2;ctx.beginPath();ctx.arc(k.x,k.y,r+2+a*1.5,0,6.283);ctx.stroke()}}}}
+function drawBg(){const st=C.st,g=ctx.createLinearGradient(0,0,0,VH);g.addColorStop(0,st.sky[0]);g.addColorStop(1,st.sky[1]);ctx.fillStyle=g;ctx.fillRect(0,0,VW,VH);const t=C.t;
+  switch(st.deco){
+    case'stars':for(let i=0;i<50;i++){ctx.fillStyle='rgba(255,255,255,'+(.4+.4*Math.sin(t*2+i))+')';ctx.fillRect((i*137)%VW,(i*71)%300,2,2)}ctx.fillStyle='#6a4ab0';ctx.beginPath();ctx.arc(780,110,46,0,6.283);ctx.fill();break;
+    case'lava':for(let i=0;i<5;i++){ctx.fillStyle='rgba(255,'+(100+i*25)+',30,.18)';ctx.beginPath();ctx.arc(120+i*190,VH+20,120+Math.sin(t*2+i)*14,0,6.283);ctx.fill()}break;
+    case'bunting':for(let i=0;i<14;i++){ctx.fillStyle=['#ffd23f','#d8283f','#58a8f0','#7cc46b'][i%4];ctx.beginPath();ctx.moveTo(i*72+10,20+Math.sin(i)*6);ctx.lineTo(i*72+46,20+Math.sin(i+1)*6);ctx.lineTo(i*72+28,62);ctx.fill()}break;
+    case'spot':for(let i=0;i<3;i++){ctx.fillStyle='rgba(255,255,220,.07)';ctx.beginPath();ctx.moveTo(160+i*320,0);ctx.lineTo(60+i*320+Math.sin(t+i)*40,VH);ctx.lineTo(260+i*320+Math.sin(t+i)*40,VH);ctx.fill()}break;
+    default:ctx.fillStyle='rgba(255,230,160,.25)';ctx.fillRect(700,70,180,150);ctx.strokeStyle='rgba(255,255,255,.4)';ctx.lineWidth=6;ctx.strokeRect(700,70,180,150);ctx.beginPath();ctx.moveTo(790,70);ctx.lineTo(790,220);ctx.stroke()}
+  ctx.fillStyle=st.floor;ctx.fillRect(0,500,VW,40);ctx.fillStyle='rgba(0,0,0,.25)';ctx.fillRect(0,500,VW,5)}
+function drawPan(){const P=C.pan,c=Math.cos(P.tilt),s=Math.sin(P.tilt),h=P.w/2;
+  const hot=clamp((C.panTemp-140)/180,0,1);
+  // flames
+  const heat=C.heat/100;ctx.save();ctx.translate(P.x,P.y+16);for(let i=0;i<9;i++){const fx=(i-4)*P.w/10,fh=(10+heat*46)*(.7+.3*Math.sin(C.t*18+i*2));ctx.fillStyle=i%2?'rgba(255,200,60,.85)':'rgba(255,100,30,.85)';ctx.beginPath();ctx.moveTo(fx-9,0);ctx.quadraticCurveTo(fx,fh*.5,fx+Math.sin(C.t*12+i)*4,fh);ctx.quadraticCurveTo(fx+3,fh*.5,fx+9,0);ctx.fill()}ctx.restore();
+  ctx.save();ctx.translate(P.x,P.y);ctx.rotate(P.tilt);
+  ctx.fillStyle='#4a4a58';ctx.fillRect(h,-4,100,8);ctx.fillStyle='#2b2b36';ctx.fillRect(h+60,-6,40,12);
+  ctx.fillStyle=mixc('#3b3b48','#b0442a',hot);ctx.beginPath();ctx.moveTo(-h-10,-34);ctx.lineTo(-h,0);ctx.lineTo(-h,10);ctx.lineTo(h,10);ctx.lineTo(h,0);ctx.lineTo(h+10,-34);ctx.lineTo(h-2,-34);ctx.lineTo(h-8,-2);ctx.lineTo(-h+8,-2);ctx.lineTo(-h+2,-34);ctx.closePath();ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,.18)';ctx.fillRect(-h+10,-2,P.w-20,3);ctx.restore()}
+function drawHUD(){
+  ctx.fillStyle='rgba(15,10,30,.62)';ctx.fillRect(0,0,VW,40);ctx.font='22px '+FONT;ctx.textBaseline='middle';
+  ctx.textAlign='left';ctx.fillStyle='#fff';ctx.fillText('SCORE '+C.score.toLocaleString('en-US'),14,21);
+  ctx.textAlign='center';ctx.fillStyle=C.time<10?'#ff6b3d':'#ffd23f';ctx.fillText((C.phase==='cook'?tt('調理','COOK'):tt('味付け','COAT'))+' '+Math.ceil(C.time)+'s',VW/2,21);
+  ctx.textAlign='right';ctx.fillStyle='#fff';ctx.fillText(tt('火力 ','HEAT ')+C.heat+'%',VW-14,21);
+  if(C.phase==='cook'){const m=comboMult(C.combo),big=C.combo>0;ctx.textAlign='right';ctx.font=(big?30:20)+'px '+FONT;ctx.fillStyle=C.combo>=5?'#ffd23f':'#fff';ctx.fillText('COMBO '+C.combo+(C.combo?'  ×'+m:''),VW-14,62);
+    if(C.combo>0){const f=clamp(1-(C.t-C.lastPop)/.35,0,1);ctx.fillStyle='rgba(255,255,255,.2)';ctx.fillRect(VW-174,76,160,6);ctx.fillStyle='#ffd23f';ctx.fillRect(VW-174,76,160*f,6)}}
+  // counters
+  const un=C.kernels.filter(k=>k.state==='RAW'||k.state==='HEATING'||k.state==='READY').length,pp=C.kernels.filter(k=>k.state==='POPPED'||k.state==='COATED').length;
+  ctx.font='15px '+FONT;ctx.textAlign='left';ctx.fillStyle='rgba(15,10,30,.62)';ctx.fillRect(8,VH-34,340,26);ctx.fillStyle='#fff';
+  ctx.fillText(C.phase==='cook'?tt('生 '+un+'  POP '+pp+'  回収 '+C.bank.length+'  焦げ '+C.burnt,'Raw '+un+'  POP '+pp+'  Banked '+C.bank.length+'  Burnt '+C.burnt):tt('粒 '+pp+' ／ 飛び出し '+(C.lostCoat||0),'Kernels '+pp+' / flung '+(C.lostCoat||0)),16,VH-21);
+  if(C.burnAlert>0&&Math.sin(C.t*16)>0){ctx.textAlign='center';ctx.font='24px '+FONT;ctx.fillStyle='#ff4a2a';ctx.lineWidth=4;ctx.strokeStyle='#1b1533';const bt=C.phase==='cook'?tt('焦げそう！回収！','ABOUT TO BURN! COLLECT!'):tt('焦げそう！火力を下げて','BURNING! LOWER THE HEAT');ctx.strokeText('🔥 '+bt,VW/2,VH-98);ctx.fillText('🔥 '+bt,VW/2,VH-98)}
+  if(C.phase==='coat'){if(((C.t*60)|0)%6===0)C.uni=coatStats(C);const u=C.uni;if(u&&typeof u==='object'){const x=VW-262,y=VH-34,v=clamp(u.uniform,0,1);ctx.fillStyle='rgba(15,10,30,.62)';ctx.fillRect(x,y,254,26);ctx.font='15px '+FONT;ctx.textAlign='left';ctx.fillStyle='#fff';ctx.fillText(tt('均一度','EVEN'),x+8,y+14);
+      ctx.fillStyle='rgba(255,255,255,.2)';ctx.fillRect(x+62,y+7,134,12);ctx.fillStyle=v>.75?'#7cc46b':v>.4?'#ffd23f':'#ff6b3d';ctx.fillRect(x+62,y+7,134*v,12);ctx.fillStyle='#fff';ctx.textAlign='right';ctx.fillText(Math.round(v*100)+'%',x+248,y+14)}}
+  // thermometer
+  if(upLv('thermo')){const x=18,y0=70,hh=210;ctx.fillStyle='rgba(15,10,30,.62)';ctx.fillRect(x-8,y0-8,36,hh+16);ctx.fillStyle='#333';ctx.fillRect(x,y0,20,hh);const f=clamp((C.panTemp-20)/320,0,1);ctx.fillStyle=mixc('#58a8f0','#ff3b2a',f);ctx.fillRect(x,y0+hh*(1-f),20,hh*f);
+    const my=y=>y0+hh*(1-(y-20)/320);ctx.fillStyle='#ffd23f';ctx.fillRect(x-4,my(175),28,2);ctx.fillStyle='#ff6b3d';ctx.fillRect(x-4,my(250),28,2);ctx.font='11px '+FONT;ctx.fillStyle='#fff';ctx.textAlign='left';ctx.fillText(Math.round(C.panTemp)+'°',x+26,y0+hh*(1-f))}
+  // boss
+  const b=C.boss;if(b&&C.phase==='cook'){ctx.textAlign='center';ctx.font='18px '+FONT;
+    if(b.type==='chicken'){ctx.fillStyle='rgba(15,10,30,.62)';ctx.fillRect(VW/2-170,48,340,26);ctx.fillStyle='#d8283f';ctx.fillRect(VW/2-165,56,330*clamp(b.hp/b.max,0,1),10);ctx.fillStyle='#fff';ctx.fillText('CHICKEN THIEF',VW/2,90)}
+    else{const s=b.type==='emperor'&&b.shield>0;ctx.fillStyle='rgba(15,10,30,.62)';ctx.fillRect(VW/2-190,48,380,52);ctx.fillStyle='#ffd23f';
+      if(s)ctx.fillText(tt('シールド '+b.shield+' ／ 連鎖 '+b.thr[3-b.shield]+' で破壊','SHIELD '+b.shield+'  — chain '+b.thr[3-b.shield]+' to break'),VW/2,64);
+      else if(!b.defeated){const st=b.steps[b.i];ctx.fillText(tt('目標火力 '+st[0]+'〜'+st[1]+'%  STEP '+(b.i+1)+'/'+b.steps.length,'TARGET HEAT '+st[0]+'–'+st[1]+'%  STEP '+(b.i+1)+'/'+b.steps.length),VW/2,64);
+        ctx.fillStyle='rgba(255,255,255,.25)';ctx.fillRect(VW/2-170,78,340,10);ctx.fillStyle=C.heat>=st[0]&&C.heat<=st[1]?'#7cc46b':'#ff6b3d';ctx.fillRect(VW/2-170,78,340*clamp(b.prog/b.need,0,1),10)}
+      ctx.font='13px '+FONT;ctx.fillStyle='#fff';ctx.fillText(b.type==='golden'?'GOLDEN CORN':'POPCORN EMPEROR',VW/2,94)}}
+  const tip=tipText(C)||tipCoat(C);if(tip){ctx.textAlign='center';ctx.font='17px '+FONT;ctx.fillStyle='rgba(15,10,30,.7)';const w=ctx.measureText(tip).width+30;ctx.fillRect(VW/2-w/2,VH-78,w,30);ctx.fillStyle='#fff';ctx.fillText(tip,VW/2,VH-62)}
+  if(C.warn){const f=Math.sin(C.t*20)>0;ctx.textAlign='center';ctx.font='22px '+FONT;const w=Math.min(VW-40,ctx.measureText(C.warn.txt).width+40);ctx.fillStyle=f?'#d8283f':'#8f1224';ctx.fillRect(VW/2-w/2,112,w,42);ctx.fillStyle='#fff';ctx.fillText('⚠ '+C.warn.txt,VW/2,134)}}
+function draw(){ctx.save();const sh=save.settings.screenShake?C.shake:0;if(sh>0)ctx.translate(rnd(-sh,sh),rnd(-sh,sh));
+  drawBg();
+  const e=C.ev;
+  if(e&&e.e.id==='ufo'&&(e.stage==='warn'||e.stage==='active')){const x=e.x,a=e.stage==='active'?.35:.14+.1*Math.sin(C.t*20);ctx.fillStyle='rgba(150,255,230,'+a+')';ctx.beginPath();ctx.moveTo(x-16,50);ctx.lineTo(x+16,50);ctx.lineTo(x+52,VH);ctx.lineTo(x-52,VH);ctx.fill();ctx.font='46px serif';ctx.textAlign='center';ctx.fillStyle='#fff';ctx.fillText('🛸',x,48)}
+  if(C.volcano>0){ctx.fillStyle='rgba(255,90,20,'+(.12+.06*Math.sin(C.t*10))+')';ctx.fillRect(0,0,VW,VH)}
+  if(C.grav>0){ctx.fillStyle='rgba(120,80,255,.12)';ctx.fillRect(0,0,VW,VH)}
+  drawPan();
+  for(const k of C.kernels)drawKernel(k,C.t);
+  if(C.chicken&&C.ev&&(C.ev.stage==='warn'||C.ev.stage==='active')){const ch=C.chicken,f=C.ev.stage==='active'?1:clamp(ch.t/2,0,1),x=C.ev.stage==='active'&&C.ev.shoo?lerp(C.pan.x,ch.sx,Math.min(1,C.ev.t*1.4)):lerp(ch.sx,C.pan.x,f);ctx.font='54px serif';ctx.textAlign='center';ctx.fillText('🐔',x,C.pan.y-56-Math.abs(Math.sin(C.t*14))*10)}
+  if(C.boss&&C.boss.type==='chicken'&&C.boss.warn>0){ctx.font='54px serif';ctx.textAlign='center';ctx.fillText('🐔',C.boss.x,C.pan.y-64-Math.abs(Math.sin(C.t*14))*10)}
+  if(C.boss&&(C.boss.type==='golden'||C.boss.type==='emperor')&&!C.boss.defeated&&C.phase==='cook'){const b=C.boss;ctx.fillStyle='#ffd23f';puff(VW/2,180,34+Math.sin(C.t*5)*2,'#ffd23f',1);ctx.font='28px serif';ctx.textAlign='center';ctx.fillText(b.type==='emperor'?'👑':'🌽',VW/2,182);
+    if(b.type==='emperor'&&b.shield>0){ctx.strokeStyle='rgba(88,168,240,.9)';ctx.lineWidth=4;for(let i=0;i<b.shield;i++){ctx.beginPath();ctx.arc(VW/2,180,48+i*9,0,6.283);ctx.stroke()}}}
+  for(const p of fxP)if(p.a){ctx.fillStyle=p.c;ctx.globalAlpha=clamp(p.t*3,0,1);ctx.fillRect(p.x,p.y,p.s,p.s)}ctx.globalAlpha=1;
+  ctx.textAlign='center';for(const p of fxT)if(p.a){ctx.globalAlpha=clamp(p.t*2,0,1);ctx.font=p.z+'px '+FONT;ctx.lineWidth=4;ctx.strokeStyle='#1b1533';ctx.strokeText(p.txt,p.x,p.y);ctx.fillStyle=p.c;ctx.fillText(p.txt,p.x,p.y)}ctx.globalAlpha=1;
+  ctx.restore();drawHUD();
+  if(C.paused){ctx.fillStyle='rgba(10,5,25,.7)';ctx.fillRect(0,0,VW,VH);ctx.fillStyle='#ffd23f';ctx.font='64px '+FONT;ctx.textAlign='center';ctx.fillText('PAUSE',VW/2,VH/2-10);ctx.font='20px '+FONT;ctx.fillStyle='#fff';ctx.fillText(tt('Escまたは⏸で再開','Press Esc or ⏸ to resume'),VW/2,VH/2+40)}}
+
+/* ============================ main.js / input.js ============================ */
+let last=0,acc=0;
+function frame(ts){requestAnimationFrame(frame);const dt=Math.min(.1,((ts-last)/1000)||0);last=ts;
+  if(C&&(G.phase==='cook'||G.phase==='coat')&&!C.paused&&!C.over){acc+=dt;let n=0;while(acc>=1/60&&n++<6){stepCook(C,1/60);if(G.phase==='coat')applyCoatEvent(C,G.round);acc-=1/60;if(C.over)break}
+    if(C.over){const ph=G.phase;if(ph==='cook')endCook();else endCoat()}}
+  else acc=0;
+  if(C&&ctx&&!$('#stageWrap').hidden)draw()}
+const playing=()=>C&&(G.phase==='cook'||G.phase==='coat')&&!$('#stageWrap').hidden;
+function setPaused(v){if(!playing())return;C.paused=v;$('#btnPause').textContent=v?'▶':'⏸'}
+addEventListener('keydown',e=>{if(!playing())return;audioInit();const k=e.key;
+  if(k==='ArrowLeft'){C.in.l=1;e.preventDefault()}else if(k==='ArrowRight'){C.in.r=1;e.preventDefault()}
+  else if(k===' '||k==='Spacebar'){toss(C);e.preventDefault()}
+  else if(k==='ArrowUp'||k==='ArrowDown'){if(G.phase==='cook'||true){C.heat=clamp(C.heat+(k==='ArrowUp'?5:-5),0,100);$('#heat').value=C.heat;$('#heatOut').textContent=C.heat+'%'}e.preventDefault()}
+  else if(k==='Enter'){if(G.phase==='cook')collectNow(C);e.preventDefault()}
+  else if(k==='Escape'){setPaused(!C.paused)}});
+addEventListener('keyup',e=>{if(!C)return;if(e.key==='ArrowLeft')C.in.l=0;if(e.key==='ArrowRight')C.in.r=0});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)setPaused(true)});
+let ptr=null;
+const vx=e=>{const r=cv.getBoundingClientRect();return ROT?(e.clientY-r.top)/r.height*VW:(e.clientX-r.left)/r.width*VW};
+const lx=e=>ROT?e.clientY:e.clientX,ly=e=>ROT?-e.clientX:e.clientY;
+cv.addEventListener('pointerdown',e=>{if(!playing()||C.paused)return;audioInit();try{cv.setPointerCapture(e.pointerId)}catch(_){}ptr={sx:lx(e),sy:ly(e),tossed:false};C.in.px=vx(e)});
+cv.addEventListener('pointermove',e=>{if(!ptr||!playing())return;C.in.px=vx(e);const dx=lx(e)-ptr.sx,dy=ptr.sy-ly(e);
+  if(dy>40&&dy>Math.abs(dx)*1.1&&!ptr.tossed){toss(C);ptr.tossed=true}if(dy<10)ptr.tossed=false;if(dy<-20)ptr.sy=ly(e)});
+const pend=()=>{ptr=null;if(C)C.in.px=null};cv.addEventListener('pointerup',pend);cv.addEventListener('pointercancel',pend);
+const hold=(id,key)=>{const b=$(id),on=v=>()=>{if(C){C.in[key]=v;b.classList.toggle('on',!!v)}};b.addEventListener('pointerdown',e=>{audioInit();e.preventDefault();on(1)()});['pointerup','pointerleave','pointercancel'].forEach(ev=>b.addEventListener(ev,on(0)))};
+hold('#btnL','l');hold('#btnR','r');
+$('#btnToss').addEventListener('click',()=>{audioInit();if(playing())toss(C)});
+$('#btnCollect').addEventListener('click',()=>{if(playing()&&G.phase==='cook')collectNow(C)});
+$('#btnDone').addEventListener('click',()=>{if(playing())C.over=true});
+$('#btnRot').addEventListener('click',()=>setRot(!ROT));
+[...document.querySelectorAll('[data-heat]')].forEach(b=>b.addEventListener('click',()=>{audioInit();setHeat(+b.dataset.heat)}));
+$('#btnAuto').addEventListener('click',()=>{save.settings.autoCollect=!autoOn();writeSave();if(C)C.auto=autoOn()&&C.phase==='cook';syncAuto()});
+$('#btnPause').addEventListener('click',()=>{if(playing())setPaused(!C.paused)});
+$('#heat').addEventListener('input',e=>{if(C){C.heat=+e.target.value;$('#heatOut').textContent=C.heat+'%'}});
+
+/* ---- screen actions ---- */
+document.addEventListener('click',e=>{const el=e.target.closest('[data-act]');if(!el||el.disabled)return;audioInit();sfx.click();const a=el.dataset.act,v=el.dataset.v;
+  switch(a){
+    case'sndtog':save.settings.sound=!save.settings.sound;writeSave();hudChips();if(save.settings.sound)sfx.ok();break;
+    case'title':clearInterval(saleTimer);C=null;showTitle();break;
+    case'help':showHelp();break;case'settings':G.resetArm=false;showSettings();break;
+    case'lang':LANG=v;save.settings.language=v;writeSave();hudChips();showSettings();break;
+    case'tog':save.settings[v]=v==='autoCollect'?!autoOn():!save.settings[v];writeSave();showSettings();break;
+    case'reset':if(!G.resetArm){G.resetArm=true;showSettings()}else{G.resetArm=false;save=defSave();LANG='ja';writeSave();showTitle()}break;
+    case'stages':G.mode='stage';showStages();break;
+    case'play':G.stageId=+v;G.stage=STAGES[G.stageId];G.sel=defaultSel();startRound();break;
+    case'endless':G.mode='endless';G.endlessRound=0;G.endlessProfit=0;setupEndless();G.sel=defaultSel();startRound();break;
+    case'select':if(!selValid()||!G.sel.f.length)applyRecommend();showSelect();break;
+    case'recommend':applyRecommend();showSelect();break;
+    case'tf':{const i=G.sel.f.indexOf(v);if(i>=0)G.sel.f.splice(i,1);else if(G.sel.f.length<3)G.sel.f.push(v);showSelect();break}
+    case'tc':{const i=G.sel.c.indexOf(v);if(i>=0)G.sel.c.splice(i,1);else if(G.sel.c.length<3)G.sel.c.push(v);showSelect();break}
+    case'saveRecipe':{const key=JSON.stringify([G.sel.f.slice().sort(),G.sel.c.slice().sort()]);if(!save.savedRecipes.some(r=>JSON.stringify([r.f.slice().sort(),r.c.slice().sort()])===key)&&save.savedRecipes.length<6){save.savedRecipes.push({f:G.sel.f.slice(),c:G.sel.c.slice()});writeSave()}showSelect();break}
+    case'useRecipe':{const r=save.savedRecipes[+v];if(r){G.sel={f:r.f.filter(f=>save.unlockedFlavors.includes(f)),c:r.c.filter(c=>save.unlockedColors.includes(c))}}showSelect();break}
+    case'delRecipe':save.savedRecipes.splice(+v,1);writeSave();showSelect();break;
+    case'cook':if(selValid()&&G.phase==='select')startCook();break;
+    case'price':G.round.price=null;showPrice();break;
+    case'pdn':case'pup':{const R=G.round;R.price=clamp(R.price+(a==='pup'?50:-50),100,1000);showPrice();break}
+    case'bestprice':G.round.price=bestPrice(G.round);showPrice();break;
+    case'sell':if(G.phase==='price')startSale();break;
+    case'shop':showShop();break;
+    case'buy':{const u=UPG[v],lv=upLv(v),cost=u.cost*(lv+1);if(lv<u.max&&save.coins>=cost){save.coins-=cost;save.upgrades[v]=lv+1;writeSave();sfx.ok()}hudChips();showShop();break}
+    case'nextStage':G.stageId=Math.min(10,G.stageId+1);G.stage=STAGES[G.stageId];G.sel=defaultSel();startRound();break;
+    case'retry':G.sel=defaultSel();startRound();break;
+    case'nextEndless':setupEndless();G.sel=defaultSel();startRound();break;
+    case'ending':showEnding();break}});
+document.addEventListener('input',e=>{if(e.target.id==='pslide'){G.round.price=+e.target.value;showPriceKeepFocus()}});
+function showPriceKeepFocus(){showPrice();const s=$('#pslide');if(s)s.focus()}
+function defaultSel(){const f=G.sel.f.filter(x=>save.unlockedFlavors.includes(x)),c=G.sel.c.filter(x=>save.unlockedColors.includes(x));return{f:f.length?f:['butter'],c:c.length?c:['yellow']}}
+
+/* ============================ boot ============================ */
+loadSave();hudChips();
+window.__PPK={G,STAGES,newCook,stepCook,collectNow,toss,startCoat,coatStats,calcQuality,buildProduct,computeSale,purchaseProbability,rollEvent,calcT,calcV,recommend,attractFor,fairPrice,save:()=>save,setSave:s=>{save=s},upLv,applyCoatEvent,comboMult,EVENTS,genCustomers,setEvent,expectedDemand};
+if(typeof requestAnimationFrame!=='undefined'){requestAnimationFrame(frame)}
+showTitle();
+})();
+</script>
