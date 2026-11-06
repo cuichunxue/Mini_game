@@ -191,7 +191,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:48px}
   </form>
 </dialog>
 
-<script src="games.js"></script>
+<script src="games.js?v=2"></script>
 <script>
 (() => {
   "use strict";
@@ -383,6 +383,8 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:48px}
     const g = findGame(id);
     if (!g) { location.hash = ""; toast("ゲームが見つかりません"); return; }
     let src = g.path;
+    // 組み込みゲームはバージョンを付けて、古いキャッシュが使われないようにする
+    if (g.builtin && window.GAMES_VERSION) src += (src.includes("?") ? "&" : "?") + "v=" + encodeURIComponent(window.GAMES_VERSION);
     if (g.fileKey) {
       const html = await idb.get(g.fileKey).catch(() => null);
       if (html == null) { location.hash = ""; toast("ゲームファイルが見つかりません"); return; }
