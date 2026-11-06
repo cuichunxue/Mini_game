@@ -13,7 +13,7 @@
  *
  * サイト上の「管理」画面からも追加・削除できます（その場合はこのブラウザだけに保存されます）。
  */
-window.GAMES_VERSION = "16";
+window.GAMES_VERSION = "17";
 
 /* 管理画面のパスワード（SHA-256 ハッシュ。パスワードそのものは書かない）
  * 変更するには: "mini-game-arcade:" + 新しいパスワード を SHA-256 にかけた値に置き換える */
@@ -325,5 +325,14 @@ window.GAMES = [
     emoji: "🍾",
     color: "#2b7a4b",
     accent: "#ffd23f"
+  },
+  {
+    id: "sky-tree-king",
+    title: "SKY TREE KING",
+    description: "大きな木を登れ、雲を越えろ、月の上まで！枝から枝へジャンプして発見アルバムを埋めよう。",
+    path: "games/sky-tree-king/index.html",
+    emoji: "🌳",
+    color: "#2f7d4a",
+    accent: "#ffe27a"
   }
 ];
