@@ -1,0 +1,1127 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Plane Landing King</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@500;600&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap">
+<style>
+/* Layout: full-bleed chase-cam canvas; HUD painted on canvas; menus are HTML sheets over the live sky. Single dark cockpit look by design. */
+:root{
+  --night:#0c1720;      /* panel ground */
+  --ink:#16252f;        /* raised panel */
+  --paper:#eef3f1;      /* primary text */
+  --mute:#93a7ae;       /* secondary text */
+  --orange:#ff6a1a;     /* aviation orange: KING livery + primary action */
+  --asphalt:#2e3338;    /* runway */
+  --warn:#ffc83d;
+  --bad:#ff5a4f;
+  --good:#5fdc9b;
+  --display:"Dela Gothic One","Hiragino Sans","Yu Gothic",sans-serif;
+  --body:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  color-scheme:dark;
+}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0;background:var(--night);color:var(--paper);overflow:hidden;
+  touch-action:none;overscroll-behavior:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+body{font-family:var(--body);font-size:15px}
+#cv{position:fixed;inset:0;width:100%;height:100%;display:block;background:#7aa9c9}
+#insetProbe{position:fixed;visibility:hidden;pointer-events:none;
+  padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)}
+
+/* touch controls */
+#stickZone{position:fixed;left:0;top:64px;bottom:0;width:55%;touch-action:none}
+#touchUI{position:fixed;right:calc(14px + env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));
+  display:flex;align-items:flex-end;gap:16px;touch-action:none}
+#thrTrack{position:relative;width:54px;height:min(190px,42vh);border-radius:14px;background:rgba(12,23,32,.62);
+  border:1.5px solid rgba(238,243,241,.35);overflow:hidden;touch-action:none}
+#thrFill{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(to top,rgba(255,106,26,.75),rgba(255,106,26,.35))}
+#thrKnob{position:absolute;left:4px;right:4px;height:6px;border-radius:3px;background:var(--paper)}
+#thrTrack span{position:absolute;top:6px;left:0;right:0;text-align:center;font:600 11px var(--mono);letter-spacing:.08em;color:var(--paper)}
+#actBtn{width:86px;height:86px;border-radius:50%;border:2px solid var(--paper);background:rgba(255,106,26,.82);color:#fff;
+  font:400 15px var(--display);letter-spacing:.04em;touch-action:none}
+#actBtn.held{background:var(--orange);transform:scale(.95)}
+#pauseBtn{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));left:calc(10px + env(safe-area-inset-left,0px));
+  width:40px;height:40px;border-radius:10px;border:1.5px solid rgba(238,243,241,.45);background:rgba(12,23,32,.6);color:var(--paper);
+  font:600 14px var(--mono);cursor:pointer}
+
+/* screens */
+.screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;overflow-y:auto;touch-action:pan-y;
+  padding-block:max(20px,env(safe-area-inset-top,0px)) max(20px,env(safe-area-inset-bottom,0px));
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  background:linear-gradient(180deg,rgba(12,23,32,.25),rgba(12,23,32,.78) 70%)}
+.sheet{width:100%;max-width:760px;margin:auto;display:flex;flex-direction:column;gap:18px}
+.eyebrow{font:600 12px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--mute)}
+h1,h2,h3{margin:0;text-wrap:balance}
+.logo{font-family:var(--display);font-weight:400;line-height:.92;letter-spacing:.01em}
+.logo .l1{display:block;font-size:clamp(24px,min(6.4vw,9vh),56px)}
+.logo .l2{display:block;font-size:clamp(52px,min(17vw,22vh),150px);color:var(--orange);text-shadow:0 4px 0 rgba(0,0,0,.25)}
+.piano{height:22px;border-radius:3px;background:
+  repeating-linear-gradient(90deg,var(--paper) 0 14px,transparent 14px 26px) center/calc(100% - 24px) 70% no-repeat,var(--asphalt)}
+.tag{font-size:clamp(17px,2.6vw,21px);font-weight:700}
+.lead{color:var(--mute);max-width:60ch;line-height:1.7;margin:0}
+.row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.btn{appearance:none;border:1.5px solid rgba(238,243,241,.5);background:rgba(22,37,47,.85);color:var(--paper);
+  font:700 15px var(--body);padding:12px 20px;border-radius:12px;cursor:pointer;min-height:46px}
+.btn:hover{border-color:var(--paper)}
+.btn.primary{background:var(--orange);border-color:var(--orange);color:#fff}
+.btn .k{font:600 11px var(--mono);opacity:.8;margin-left:8px;padding:2px 6px;border:1px solid currentColor;border-radius:5px}
+.btn:focus-visible,.card:focus-visible{outline:3px solid var(--warn);outline-offset:2px}
+.panel{background:rgba(22,37,47,.9);border:1px solid rgba(238,243,241,.14);border-radius:16px;padding:16px 18px}
+.keys{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:6px 22px;font-size:14px}
+.keys div{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px dashed rgba(238,243,241,.14)}
+.keys b{font:600 13px var(--mono);color:var(--warn);white-space:nowrap}
+
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.card{appearance:none;text-align:left;cursor:pointer;color:var(--paper);font:inherit;background:rgba(22,37,47,.92);
+  border:1.5px solid rgba(238,243,241,.16);border-radius:16px;padding:0;overflow:hidden;display:flex;flex-direction:column}
+.card:hover{border-color:var(--orange)}
+.card .strip{height:44px;background:var(--asphalt);display:flex;align-items:center;justify-content:space-between;padding:0 14px;
+  font:400 20px var(--display);letter-spacing:.06em}
+.card .strip small{font:600 11px var(--mono);color:var(--mute);letter-spacing:.1em}
+.card .body{padding:12px 14px 14px;display:flex;flex-direction:column;gap:8px;flex:1}
+.card h3{font-size:18px}
+.card p{margin:0;color:var(--mute);font-size:13.5px;line-height:1.6}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font:600 11.5px var(--mono);padding:3px 8px;border-radius:999px;border:1px solid rgba(238,243,241,.25);color:var(--paper)}
+.best{margin-top:auto;display:flex;justify-content:space-between;align-items:baseline;font:600 13px var(--mono);color:var(--mute);
+  padding-top:8px;border-top:1px solid rgba(238,243,241,.12)}
+.best b{font:400 18px var(--display);color:var(--orange)}
+
+/* result */
+.res{display:grid;grid-template-columns:minmax(0,200px) minmax(0,1fr);gap:18px;align-items:start}
+@media (max-width:620px){.res{grid-template-columns:minmax(0,1fr)}}
+.rank{font:400 clamp(52px,min(13vw,18vh),76px)/1 var(--display);white-space:nowrap;color:var(--orange);text-align:center}
+.rank.fail{color:var(--bad);font-size:clamp(44px,10vw,64px)}
+.score{font:600 26px var(--mono);text-align:center;font-variant-numeric:tabular-nums}
+.quip{text-align:center;font-weight:700;color:var(--warn)}
+.newbest{text-align:center;font:600 12px var(--mono);color:var(--good);letter-spacing:.1em}
+.why{border-left:4px solid var(--bad);padding:4px 0 4px 12px}
+.why h3{font-size:18px;color:var(--bad)}
+.why p{margin:6px 0 0;line-height:1.65;color:var(--paper)}
+.bars{display:flex;flex-direction:column;gap:9px}
+.bar{display:grid;grid-template-columns:7.5em minmax(0,1fr) 8.6em;gap:10px;align-items:center;font-size:13.5px}
+.bar .t{height:9px;border-radius:5px;background:rgba(238,243,241,.12);overflow:hidden}
+.bar .t i{display:block;height:100%;background:var(--orange)}
+.bar .n{font:600 12.5px var(--mono);text-align:right;font-variant-numeric:tabular-nums;color:var(--mute)}
+.data{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
+.data div{background:rgba(12,23,32,.55);border-radius:10px;padding:8px 10px}
+.data span{display:block;font-size:11.5px;color:var(--mute)}
+.data b{font:600 16px var(--mono);font-variant-numeric:tabular-nums}
+.data b.ok{color:var(--good)} .data b.ng{color:var(--bad)}
+#scrResult .sheet,#scrPause .sheet{background:rgba(12,23,32,.94);border:1px solid rgba(238,243,241,.14);border-radius:20px;padding:20px}
+.toggles{display:flex;flex-direction:column;gap:10px}
+.toggles label{display:flex;align-items:center;gap:10px;cursor:pointer}
+.toggles input{width:20px;height:20px;accent-color:var(--orange)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+
+<div id="insetProbe"></div>
+<canvas id="cv"></canvas>
+<div id="stickZone" hidden></div>
+<div id="touchUI" hidden>
+  <button id="actBtn" type="button">FLARE</button>
+  <div id="thrTrack"><div id="thrFill"></div><div id="thrKnob"></div><span>THR</span></div>
+</div>
+<button id="pauseBtn" type="button" aria-label="一時停止" hidden>II</button>
+
+<section id="scrTitle" class="screen">
+  <div class="sheet">
+    <div class="eyebrow">P0 Prototype · 仕様 v3.1</div>
+    <h1 class="logo"><span class="l1">PLANE LANDING</span><span class="l2">KING</span></h1>
+    <div class="piano" aria-hidden="true"></div>
+    <div class="tag">着陸は真剣。滑走路はふざけている。</div>
+    <p class="lead">速度・機首・傾きを操って、3つの滑走路に降りる。接地の瞬間の降下率が勝負。失敗したら R で即リトライ。</p>
+    <div class="row">
+      <button class="btn primary" id="goSelect" type="button">フライト開始 <span class="k">Enter</span></button>
+      <button class="btn" id="toggleHelp" type="button">操作方法</button>
+    </div>
+    <div class="panel" id="help" hidden>
+      <div class="keys">
+        <div>機首上げ / 下げ<b>↑ ↓ / W S</b></div>
+        <div>左右の傾き<b>← → / A D</b></div>
+        <div>スロットル増 / 減<b>E / Q</b></div>
+        <div>フレア補助（空中）<b>Space 長押し</b></div>
+        <div>ブレーキ（接地後）<b>Space 長押し</b></div>
+        <div>接地後の操向<b>← →</b></div>
+        <div>リトライ<b>R</b></div>
+        <div>一時停止<b>Esc</b></div>
+      </div>
+      <p class="lead" style="margin-top:12px">スマホ：画面左側をドラッグで機首と傾き、右下のスライダーでスロットル、丸ボタンでフレア／ブレーキ。</p>
+    </div>
+  </div>
+</section>
+
+<section id="scrSelect" class="screen" hidden>
+  <div class="sheet">
+    <div class="eyebrow">World 1 · 通常空港</div>
+    <h2 class="logo" style="font-size:clamp(30px,6vw,44px)">滑走路を選ぶ</h2>
+    <div class="cards" id="cards"></div>
+    <div class="row"><button class="btn" id="backTitle" type="button">タイトルへ</button>
+      <span class="eyebrow" id="stats"></span></div>
+  </div>
+</section>
+
+<section id="scrResult" class="screen" hidden>
+  <div class="sheet">
+    <div class="eyebrow" id="resStage"></div>
+    <div class="res">
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div class="rank" id="resRank">S</div>
+        <div class="score" id="resScore">0</div>
+        <div class="quip" id="resQuip"></div>
+        <div class="newbest" id="resBest" hidden>自己ベスト更新</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:16px;min-width:0">
+        <div class="why" id="resWhy" hidden><h3 id="resWhyT"></h3><p id="resWhyP"></p></div>
+        <div class="bars" id="resBars"></div>
+        <div class="data" id="resData"></div>
+      </div>
+    </div>
+    <div class="row">
+      <button class="btn primary" id="btnRetry" type="button">リトライ <span class="k">R</span></button>
+      <button class="btn" id="btnNext" type="button">次の滑走路 <span class="k">N</span></button>
+      <button class="btn" id="btnSel" type="button">ステージ選択</button>
+    </div>
+  </div>
+</section>
+
+<section id="scrPause" class="screen" hidden>
+  <div class="sheet" style="max-width:440px">
+    <h2 class="logo" style="font-size:36px">一時停止</h2>
+    <div class="panel toggles">
+      <label><input type="checkbox" id="optGuide" checked> 進入ガイドと接地予測を表示</label>
+      <label><input type="checkbox" id="optInvert"> 機首操作を反転（下で機首上げ）</label>
+      <label><input type="checkbox" id="optSound" checked> 効果音</label>
+    </div>
+    <div class="row">
+      <button class="btn primary" id="btnResume" type="button">再開 <span class="k">Esc</span></button>
+      <button class="btn" id="btnPRetry" type="button">リトライ</button>
+      <button class="btn" id="btnPSel" type="button">ステージ選択</button>
+    </div>
+  </div>
+</section>
+
+<script>
+//SIM-START
+const SIM = (() => {
+  const G = 9.81, D2R = Math.PI / 180, R2D = 180 / Math.PI, DT = 1 / 60, GS = 3 * D2R;
+  const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+  // Aircraft (game units calibrated to SI-like feel). KL = 0.5*rho*S/m
+  const AC = { KL: 0.003337, CL0: 0.3, CLA: 0.1, AST: 11, CD0: 0.07, K: 0.06, TMAX: 2.5,
+    PR: 10, BR: 35, BMAX: 35, PMIN: -12, PMAX: 15, VWARN: 56, VMAX: 88, TLIMIT: 90 };
+  const STAGES = [
+    { id: 1, code: 'RWY 36', name: 'はじまり空港', theme: 'field', time: 'day',
+      desc: '無風の長い滑走路。まずはフレアで降下率を殺す感覚をつかむ。',
+      length: 3000, width: 60, aimZ: 300, z0: -2400, x0: 0, h0off: 0, v0: 72, wind: { x: 0, z: 0 }, gust: 0, turb: 0 },
+    { id: 2, code: 'RWY 09', name: 'うみかぜ空港', theme: 'sea', time: 'day',
+      desc: '海上空港。左からの横風で流されるので、風上に機首を向けて進入する。',
+      length: 2500, width: 45, aimZ: 300, z0: -2400, x0: -25, h0off: 15, v0: 76, wind: { x: 5, z: -4 }, gust: 0.8, turb: 0.15 },
+    { id: 3, code: 'RWY 27', name: 'やまかげ空港', theme: 'mount', time: 'dusk',
+      desc: '短い滑走路に右からの突風と乱気流。接地点とブレーキが勝負。',
+      length: 1800, width: 40, aimZ: 250, z0: -2300, x0: 30, h0off: 0, v0: 74, wind: { x: -7, z: -3 }, gust: 3, turb: 0.8 }
+  ];
+  const FAILS = {
+    UNDERSHOOT: ['滑走路の手前に接地', 'PAPI が赤4つなら低すぎ。機首を少し上げてスロットルを足し、橙の◆を滑走路上に保とう。'],
+    MISSED: ['滑走路を飛び越えた', '高すぎ・速すぎ。PAPI が白4つなら機首を下げ、早めにスロットルを絞る。'],
+    OFFSIDE: ['滑走路の外に接地', '横風で横に流される。風上側へ少し機首を向け、◆を中心線に重ねたまま降りる。'],
+    HARD: ['ハードランディング', '高度10m前後から機首をゆっくり上げてフレア。Space 長押しで補助が入る。'],
+    STALL: ['失速して落下', '速度 56m/s 未満や機首上げすぎで揚力を失った。スロットルを足して機首を下げる。'],
+    WING: ['翼端が地面に接触', '接地直前は左右の傾きを水平に戻す。傾き20°超は翼が当たる。'],
+    TAIL: ['テールストライク', '機首上げ12°超で尾部が接触。フレアは機首 2〜6° で十分。'],
+    FAST: ['接地速度オーバー', '88m/s 超で接地。進入中にスロットルを絞って 70m/s 前後へ。'],
+    BOUNCE: ['バウンドが止まらない', '前輪から接地するか、降下率が大きいと跳ねる。機首をわずかに上げた姿勢で接地。'],
+    VEER: ['滑走路から逸脱', '接地後は ← → で前輪操向。中心線から離れる前に戻す。'],
+    OVERRUN: ['オーバーラン', '接地点が奥すぎるか、ブレーキが遅い。接地したらすぐ Space 長押し。'],
+    TIMEOUT: ['時間切れ', '90秒以内に停止しよう。']
+  };
+
+  function windAt(st, t) {
+    const g = st.gust, tb = st.turb;
+    return {
+      x: st.wind.x + g * (0.6 * Math.sin(t * 0.37 + 1.3) + 0.4 * Math.sin(t * 1.13 + 0.2)),
+      z: st.wind.z + g * 0.5 * Math.sin(t * 0.53 + 2.1),
+      y: tb * (0.6 * Math.sin(t * 1.7 + 0.5) + 0.4 * Math.sin(t * 3.1 + 1.9))
+    };
+  }
+  const glideH = (st, z) => Math.max(0, (st.aimZ - z) * Math.tan(GS));
+  function cl(a) {
+    if (a <= AC.AST) return Math.max(-0.4, AC.CL0 + AC.CLA * a);
+    return Math.max(0.7, AC.CL0 + AC.CLA * AC.AST - 0.08 * (a - AC.AST));
+  }
+  function trim(v, gam) {
+    const CL = G * Math.cos(gam) / (AC.KL * v * v);
+    const CD = AC.CD0 + AC.K * CL * CL;
+    return { alpha: (CL - AC.CL0) / AC.CLA, thr: (AC.KL * v * v * CD + G * Math.sin(gam)) / AC.TMAX };
+  }
+  function create(st) {
+    const v = st.v0, gam = -3 * D2R, tr = trim(v, gam);
+    const s = { st, t: 0, phase: 'air', x: st.x0, h: glideH(st, st.z0) + st.h0off, z: st.z0, v, gam,
+      pitch: tr.alpha + gam * R2D, alpha: tr.alpha, bank: 0, psi: 0, thrCmd: tr.thr, thr: tr.thr,
+      w: windAt(st, 0), vx: 0, vy: 0, vz: v, gdot: 0, bounces: 0, td: null, maxDev: 0, stallT: -9,
+      trk: 0, result: null, events: [] };
+    const vh = v * Math.cos(gam);
+    s.vx = s.w.x; s.vz = vh + s.w.z; s.vy = v * Math.sin(gam);
+    return s;
+  }
+  function finish(s, ok, code, extra) {
+    if (s.result) return;
+    s.phase = 'done';
+    s.result = { ok, code: code || null, title: code ? FAILS[code][0] + (extra || '') : '', hint: code ? FAILS[code][1] : '' };
+    if (ok) Object.assign(s.result, score(s));
+    s.events.push({ type: ok ? 'stop' : 'crash' });
+  }
+  function contact(s) {
+    const st = s.st, sink = -s.vy, track = Math.atan2(s.vx, s.vz);
+    const m = { sink, x: s.x, z: s.z, v: s.v, bank: s.bank, pitch: s.pitch, crab: Math.abs(s.psi - track) * R2D, t: s.t };
+    if (!s.td) s.td = m;
+    s.h = 0;
+    let f = null, ex = '';
+    if (s.z < 0) f = 'UNDERSHOOT';
+    else if (Math.abs(s.x) > st.width / 2) f = 'OFFSIDE';
+    else if (sink > 6) { f = (s.t - s.stallT < 3) ? 'STALL' : 'HARD'; ex = `（降下率 ${sink.toFixed(1)} m/s）`; }
+    else if (Math.abs(s.bank) > 20) f = 'WING';
+    else if (s.pitch > 12) f = 'TAIL';
+    else if (s.v > AC.VMAX) f = 'FAST';
+    if (f) { s.td = s.td || m; return finish(s, false, f, ex); }
+    if (sink > 2.6 || s.pitch < -1.5) {
+      s.bounces++;
+      if (s.bounces >= 3) return finish(s, false, 'BOUNCE');
+      s.gam = Math.asin(clamp(0.35 * sink / s.v, 0.004, 0.2)); s.h = 0.02; s.vy = 0.35 * sink;
+      s.events.push({ type: 'bounce', sink });
+      return;
+    }
+    s.events.push({ type: 'touchdown', sink, first: s.bounces === 0 });
+    s.phase = 'roll'; s.trk = track; s.v = Math.hypot(s.vx, s.vz); s.vy = 0; s.gam = 0; s.thr = 0;
+  }
+  function step(s, inp) {
+    if (s.result) return;
+    const st = s.st;
+    s.t += DT;
+    if (s.t > AC.TLIMIT) return finish(s, false, 'TIMEOUT');
+    const wp = s.w, w = windAt(st, s.t); s.w = w;
+    s.thrCmd = clamp(inp.thr, 0, 1);
+    if (s.phase === 'air') {
+      const fx = Math.sin(s.psi), fz = Math.cos(s.psi);
+      s.v += -((w.x - wp.x) * fx + (w.z - wp.z) * fz); // gust changes airspeed
+      let pr = inp.pitch * AC.PR;
+      if (inp.flare && s.h < 15) pr += clamp((-s.vy - 1.2) * 2.5, -2, 6);
+      s.pitch = clamp(s.pitch + pr * DT, AC.PMIN, AC.PMAX);
+      let br = inp.bank * AC.BR;
+      if (Math.abs(inp.bank) < 0.05) br = -Math.sign(s.bank) * Math.min(Math.abs(s.bank) / DT, 8);
+      s.bank = clamp(s.bank + br * DT, -AC.BMAX, AC.BMAX);
+      s.thr += clamp(s.thrCmd - s.thr, -0.5 * DT, 0.5 * DT);
+      const alpha = s.pitch - s.gam * R2D; s.alpha = alpha;
+      const ge = clamp(1 - s.h / 20, 0, 1);
+      const CL = cl(alpha) * (1 + 0.12 * ge);
+      const q = AC.KL * s.v * s.v, L = q * CL;
+      const CD = AC.CD0 + AC.K * CL * CL * (1 - 0.4 * ge) + (alpha > AC.AST ? 0.02 * (alpha - AC.AST) : 0);
+      const bk = s.bank * D2R;
+      const vdot = s.thr * AC.TMAX - q * CD - G * Math.sin(s.gam);
+      const gdot = (L * Math.cos(bk) - G * Math.cos(s.gam)) / s.v;
+      s.gdot = gdot * R2D;
+      s.psi += L * Math.sin(bk) / (s.v * Math.cos(s.gam)) * DT;
+      s.v = Math.max(25, s.v + vdot * DT);
+      s.gam = clamp(s.gam + gdot * DT, -40 * D2R, 30 * D2R);
+      const vh = s.v * Math.cos(s.gam);
+      s.vx = vh * Math.sin(s.psi) + w.x; s.vz = vh * Math.cos(s.psi) + w.z; s.vy = s.v * Math.sin(s.gam) + w.y * clamp(s.h / 30, 0, 1);
+      s.x += s.vx * DT; s.z += s.vz * DT; s.h += s.vy * DT;
+      if (alpha > AC.AST - 1 || s.v < AC.VWARN) s.stallT = s.t;
+      if (s.h <= 0) contact(s);
+      else if (s.z > st.length + 150 || s.h > 600) finish(s, false, 'MISSED');
+    } else if (s.phase === 'roll') {
+      s.thr = 0;
+      s.trk += inp.bank * 4 * D2R * DT * clamp(s.v / 15, 0, 1);
+      s.psi += (s.trk - s.psi) * Math.min(1, DT * 4);
+      s.pitch = Math.max(0, s.pitch - 4 * DT);
+      s.bank += -s.bank * Math.min(1, DT * 6);
+      const dec = 1.5 + AC.KL * s.v * s.v * 0.15 + (inp.flare ? 6 : 0);
+      s.v = Math.max(0, s.v - dec * DT);
+      s.vx = s.v * Math.sin(s.trk); s.vz = s.v * Math.cos(s.trk); s.vy = 0;
+      s.x += s.vx * DT; s.z += s.vz * DT;
+      s.maxDev = Math.max(s.maxDev, Math.abs(s.x));
+      if (Math.abs(s.x) > st.width / 2) return finish(s, false, 'VEER');
+      if (s.z > st.length) return finish(s, false, 'OVERRUN');
+      if (s.v < 0.8) finish(s, true);
+    }
+  }
+  const lin = (val, good, zero) => val <= good ? 1 : val >= zero ? 0 : 1 - (val - good) / (zero - good);
+  function score(s) {
+    const st = s.st, td = s.td;
+    const dz = Math.abs(td.z - st.aimZ), half = st.width / 2;
+    const spdDev = td.v < 60 ? 60 - td.v : td.v > 75 ? td.v - 75 : 0;
+    const remain = st.length - s.z;
+    const parts = [
+      { label: '接地精度', max: 3000, pts: 2000 * lin(dz, 60, 450) + 1000 * lin(Math.abs(td.x), 3, half) },
+      { label: '降下速度・姿勢', max: 3000, pts: 2000 * lin(td.sink, 1.5, 6) + 600 * lin(Math.abs(td.bank), 3, 20) + 400 * lin(td.crab, 2, 15) },
+      { label: '速度管理', max: 1500, pts: 1500 * lin(spdDev, 0, 15) },
+      { label: '停止位置', max: 1500, pts: 900 * lin(Math.max(0, 300 - remain), 0, 300) + 600 * lin(Math.abs(s.x), 3, half) },
+      { label: '着陸安定性', max: 1000, pts: 1000 * clamp(1 - s.bounces * 0.4 - Math.max(0, s.maxDev - 3) / half * 0.6, 0, 1) }
+    ];
+    parts.forEach(p => p.pts = Math.round(p.pts));
+    const total = parts.reduce((a, p) => a + p.pts, 0);
+    const rank = total >= 9500 ? 'SSS' : total >= 9000 ? 'SS' : total >= 8000 ? 'S' : total >= 6500 ? 'A' : total >= 5000 ? 'B' : 'C';
+    return { total, rank, parts };
+  }
+  function predict(s) {
+    if (s.phase !== 'air' || s.vy >= -0.2) return null;
+    const t = s.h / -s.vy; if (t > 70) return null;
+    return { x: s.x + s.vx * t, z: s.z + s.vz * t, t };
+  }
+  function papi(s) { // angle to aim point, 4 lights inner→outer: true = white
+    const d = s.st.aimZ - s.z; if (d <= 0) return null;
+    const a = Math.atan2(s.h + 3, d) * R2D;
+    return [3.5, 3.17, 2.83, 2.5].map(th => a > th);
+  }
+  function autopilot(s) {
+    const st = s.st, inp = { pitch: 0, bank: 0, thr: s.thrCmd, flare: false };
+    if (s.phase === 'air') {
+      const gd = s.gam * R2D;
+      let gcmd;
+      if (s.h > 14) gcmd = clamp(-3 + (glideH(st, s.z) - s.h) * 0.08, -6, 0);
+      else gcmd = -Math.asin(clamp((0.8 + s.h / 14 * 3) / s.v, 0, 0.2)) * R2D;
+      inp.pitch = clamp(0.5 * (gcmd - gd) - 0.35 * s.gdot, -1, 1);
+      inp.thr = s.h < 9 ? 0 : clamp(trim(72, -3 * D2R).thr + 0.08 * (72 - s.v), 0, 1);
+      const track = Math.atan2(s.vx, s.vz);
+      const want = clamp(-s.x * 0.006, -0.25, 0.25);
+      const bcmd = s.h < 8 ? 0 : clamp((want - track) * R2D * 3, -20, 20);
+      inp.bank = clamp((bcmd - s.bank) / 12, -1, 1);
+    } else { inp.flare = true; inp.bank = clamp(-s.x * 0.15 - s.trk * R2D * 0.3, -1, 1); }
+    return inp;
+  }
+  return { G, D2R, R2D, DT, AC, STAGES, FAILS, create, step, predict, papi, glideH, autopilot, trim, windAt, clamp };
+})();
+//SIM-END
+
+/* ================= SAVE ================= */
+const Save = (() => {
+  const KEY = 'plk_p0_v1';
+  let d = { best: {}, perfect: 0, streak: 0, bestStreak: 0, opt: { guide: true, invert: false, sound: true } };
+  try { const r = localStorage.getItem(KEY); if (r) { const p = JSON.parse(r); d = Object.assign(d, p); d.opt = Object.assign({ guide: true, invert: false, sound: true }, p.opt || {}); } } catch (e) {}
+  const write = () => { try { localStorage.setItem(KEY, JSON.stringify(d)); } catch (e) {} };
+  return { d, write };
+})();
+
+/* ================= AUDIO ================= */
+const Snd = {
+  ctx: null, ok: false,
+  init() {
+    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
+    if (this.ctx) { this.unlock(); return; }
+    try {
+      const C = window.AudioContext || window.webkitAudioContext; const c = this.ctx = new C();
+      this.master = c.createGain(); this.master.gain.value = 0.9;
+      const comp = c.createDynamicsCompressor(); this.master.connect(comp); comp.connect(c.destination);
+      // engine: low rumble (sawtooth through lowpass) + turbine whine (audible on phone speakers)
+      const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1400;
+      this.eg = c.createGain(); this.eg.gain.value = 0; lp.connect(this.eg); this.eg.connect(this.master);
+      this.o1 = c.createOscillator(); this.o1.type = 'sawtooth'; this.o1.frequency.value = 110;
+      this.o2 = c.createOscillator(); this.o2.type = 'sawtooth'; this.o2.frequency.value = 223;
+      this.o1.connect(lp); this.o2.connect(lp); this.o1.start(); this.o2.start();
+      this.wh = c.createOscillator(); this.wh.type = 'triangle'; this.wh.frequency.value = 700;
+      this.whg = c.createGain(); this.whg.gain.value = 0; this.wh.connect(this.whg); this.whg.connect(this.master); this.wh.start();
+      const len = c.sampleRate * 2, buf = c.createBuffer(1, len, c.sampleRate), ch = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) ch[i] = Math.random() * 2 - 1;
+      this.noiseBuf = buf;
+      const n = c.createBufferSource(); n.buffer = buf; n.loop = true;
+      const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1100; bp.Q.value = 0.5;
+      this.wg = c.createGain(); this.wg.gain.value = 0; n.connect(bp); bp.connect(this.wg); this.wg.connect(this.master); n.start();
+      this.ok = true;
+      this.unlock();
+    } catch (e) { this.ok = false; }
+  },
+  unlock() {
+    const c = this.ctx; if (!c) return;
+    if (c.state !== 'running') { try { c.resume(); } catch (e) {} }
+    if (this.unlocked) return;
+    this.unlocked = true;
+    try { // iOS: a silent buffer started inside the gesture opens the audio route
+      const src = c.createBufferSource(); src.buffer = c.createBuffer(1, 1, 22050); src.connect(c.destination); src.start(0);
+    } catch (e) {}
+    try { // iOS silent switch: a playing media element moves the page to the "playback" audio category
+      const sr = 8000, n = sr / 2, b = new ArrayBuffer(44 + n), v = new DataView(b);
+      const w = (o, t) => { for (let i = 0; i < t.length; i++) v.setUint8(o + i, t.charCodeAt(i)); };
+      w(0, 'RIFF'); v.setUint32(4, 36 + n, true); w(8, 'WAVEfmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+      v.setUint32(24, sr, true); v.setUint32(28, sr, true); v.setUint16(32, 1, true); v.setUint16(34, 8, true); w(36, 'data'); v.setUint32(40, n, true);
+      for (let i = 0; i < n; i++) v.setUint8(44 + i, 128);
+      const el = this.el = new Audio(URL.createObjectURL(new Blob([b], { type: 'audio/wav' })));
+      el.loop = true; el.setAttribute('playsinline', ''); const pr = el.play(); if (pr && pr.catch) pr.catch(() => {});
+    } catch (e) {}
+  },
+  on() { return this.ok && Save.d.opt.sound; },
+  update(s, active) {
+    if (!this.ok) return;
+    if (this.ctx.state !== 'running') return;
+    const t = this.ctx.currentTime, on = this.on() && active && s;
+    const thr = s ? s.thr : 0;
+    this.eg.gain.setTargetAtTime(on ? 0.05 + thr * 0.10 : 0, t, 0.15);
+    this.whg.gain.setTargetAtTime(on ? 0.012 + thr * 0.03 : 0, t, 0.2);
+    if (s) {
+      this.o1.frequency.setTargetAtTime(95 + thr * 60, t, 0.3); this.o2.frequency.setTargetAtTime(190 + thr * 125, t, 0.3);
+      this.wh.frequency.setTargetAtTime(520 + thr * 900, t, 0.4);
+    }
+    this.wg.gain.setTargetAtTime(on ? Math.min(0.28, s.v / 300) : 0, t, 0.2);
+  },
+  beep(f, dur, type = 'square', vol = 0.08, f2) {
+    if (!this.on()) return;
+    const c = this.ctx, o = c.createOscillator(), g = c.createGain(), t = c.currentTime;
+    o.type = type; o.frequency.setValueAtTime(f, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + dur);
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(this.master); o.start(t); o.stop(t + dur + 0.02);
+  },
+  thump(vol = 0.5, dur = 0.25, freq = 700) {
+    if (!this.on()) return;
+    const c = this.ctx, n = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain(), t = c.currentTime;
+    n.buffer = this.noiseBuf; f.type = 'lowpass'; f.frequency.value = freq;
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    n.connect(f); f.connect(g); g.connect(this.master); n.start(t); n.stop(t + dur + 0.05);
+  },
+  jingle(good) {
+    const seq = good ? [523, 659, 784, 1047] : [392, 330, 262];
+    seq.forEach((f, i) => setTimeout(() => this.beep(f, 0.18, 'triangle', 0.1), i * 110));
+  }
+};
+
+/* ================= INPUT ================= */
+const Inp = {
+  keys: new Set(), thr: 0.4, stick: null, act: false, touch: false,
+  read(dt) {
+    const k = this.keys, inv = Save.d.opt.invert ? -1 : 1;
+    let pitch = ((k.has('ArrowUp') || k.has('KeyW')) ? 1 : 0) - ((k.has('ArrowDown') || k.has('KeyS')) ? 1 : 0);
+    let bank = ((k.has('ArrowRight') || k.has('KeyD')) ? 1 : 0) - ((k.has('ArrowLeft') || k.has('KeyA')) ? 1 : 0);
+    if (this.stick) {
+      const dz = v => Math.abs(v) < 0.08 ? 0 : v;
+      bank += dz(this.stick.nx); pitch += dz(-this.stick.ny);
+    }
+    pitch *= inv;
+    const up = k.has('KeyE') || k.has('ShiftLeft') || k.has('ShiftRight') || k.has('PageUp');
+    const dn = k.has('KeyQ') || k.has('PageDown');
+    if (up) this.thr = Math.min(1, this.thr + 0.5 * dt);
+    if (dn) this.thr = Math.max(0, this.thr - 0.5 * dt);
+    return { pitch: SIM.clamp(pitch, -1, 1), bank: SIM.clamp(bank, -1, 1), thr: this.thr, flare: k.has('Space') || this.act };
+  }
+};
+
+/* ================= RENDER ================= */
+const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+let W = 0, H = 0, DPR = 1, INS = { t: 0, r: 0, b: 0, l: 0 };
+function resize() {
+  DPR = Math.min(2, window.devicePixelRatio || 1); W = cv.clientWidth; H = cv.clientHeight;
+  cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+  const cs = getComputedStyle(document.getElementById('insetProbe'));
+  INS = { t: parseFloat(cs.paddingTop) || 0, r: parseFloat(cs.paddingRight) || 0, b: parseFloat(cs.paddingBottom) || 0, l: parseFloat(cs.paddingLeft) || 0 };
+}
+window.addEventListener('resize', resize);
+
+const THEMES = {
+  day: { skyTop: [62, 122, 176], skyHz: [205, 226, 234], haze: [196, 216, 222], light: [255, 236, 190] },
+  dusk: { skyTop: [38, 40, 84], skyHz: [244, 170, 110], haze: [214, 150, 120], light: [255, 214, 140] }
+};
+const FIELD = [[109, 140, 74], [127, 154, 85], [138, 143, 79], [95, 127, 69], [154, 154, 98], [115, 138, 79]];
+const rgb = (c, a) => a == null ? `rgb(${c[0] | 0},${c[1] | 0},${c[2] | 0})` : `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a})`;
+const mixc = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+function hash(i, j) { let h = (i * 374761393 + j * 668265263) | 0; h = (h ^ (h >>> 13)) * 1274126177 | 0; return ((h ^ (h >>> 16)) >>> 0) / 4294967296; }
+
+let sceneCache = null;
+function buildScene(st) {
+  const cells = [], C = 280;
+  const darken = st.time === 'dusk' ? 0.62 : 1;
+  if (st.theme !== 'sea') {
+    for (let i = -10; i < 10; i++) for (let j = -14; j < Math.ceil((st.length + 3500) / C); j++) {
+      const r = hash(i + 50, j + 90);
+      let c = FIELD[Math.floor(r * FIELD.length)];
+      if (st.theme === 'mount') c = mixc(c, [92, 104, 70], 0.35);
+      c = c.map(v => v * darken);
+      const x0 = i * C, z0 = j * C;
+      if (x0 + C > -st.width / 2 - 70 && x0 < st.width / 2 + 70 && z0 + C > -350 && z0 < st.length + 120) continue;
+      cells.push({ x0: x0 + 6, x1: x0 + C - 6, z0: z0 + 6, z1: z0 + C - 6, c });
+    }
+  }
+  const ground = st.theme === 'sea' ? [47, 104, 136].map(v => v * darken) : st.theme === 'mount' ? [84, 96, 66].map(v => v * darken) : [118, 140, 82].map(v => v * darken);
+  const peaks = [];
+  if (st.theme === 'mount' || st.time === 'dusk') {
+    for (let k = -12; k <= 12; k++) peaks.push([k * 900, 380 + hash(k + 7, 3) * 1100]);
+  }
+  sceneCache = { st, cells, ground, peaks, theme: THEMES[st.time] };
+}
+
+const cam = { x: 0, y: 0, z: 0, yaw: 0, pitch: 0, roll: 0, f: 600, cx: 0, cy: 0, cyw: 1, syw: 0, cp: 1, sp: 0 };
+function toCam(x, y, z) {
+  const dx = x - cam.x, dy = y - cam.y, dz = z - cam.z;
+  const rx = dx * cam.cyw - dz * cam.syw, rz = dx * cam.syw + dz * cam.cyw;
+  return [rx, dy * cam.cp - rz * cam.sp, dy * cam.sp + rz * cam.cp];
+}
+const NEAR = 1.5;
+function clipNear(ps) {
+  const out = [];
+  for (let i = 0; i < ps.length; i++) {
+    const a = ps[i], b = ps[(i + 1) % ps.length], ai = a[2] >= NEAR, bi = b[2] >= NEAR;
+    if (ai) out.push(a);
+    if (ai !== bi) { const t = (NEAR - a[2]) / (b[2] - a[2]); out.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, NEAR]); }
+  }
+  return out;
+}
+function polyW(pts, fill, stroke, lw) {
+  const c = clipNear(pts.map(p => toCam(p[0], p[1], p[2])));
+  if (c.length < 3) return false;
+  ctx.beginPath();
+  c.forEach((p, i) => { const sx = cam.cx + cam.f * p[0] / p[2], sy = cam.cy - cam.f * p[1] / p[2]; i ? ctx.lineTo(sx, sy) : ctx.moveTo(sx, sy); });
+  ctx.closePath();
+  if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+  if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw || 2; ctx.stroke(); }
+  return true;
+}
+const rectG = (x0, x1, z0, z1, fill) => polyW([[x0, 0, z0], [x1, 0, z0], [x1, 0, z1], [x0, 0, z1]], fill);
+function dots(list, color, size, glow) {
+  ctx.fillStyle = color; ctx.beginPath();
+  for (const p of list) {
+    const c = toCam(p[0], p[1], p[2]); if (c[2] < 3 || c[2] > 6000) continue;
+    const r = Math.max(glow ? 1.6 : 1.1, cam.f * size / c[2]);
+    const sx = cam.cx + cam.f * c[0] / c[2], sy = cam.cy - cam.f * c[1] / c[2];
+    ctx.moveTo(sx + r, sy); ctx.arc(sx, sy, r, 0, 6.2832);
+  }
+  ctx.fill();
+}
+
+let shake = 0;
+const parts = [];
+function spawnSmoke(s, n) {
+  for (let i = 0; i < n; i++) for (const side of [-3, 3]) {
+    parts.push({ x: s.x + side, y: 0.6, z: s.z + Math.random() * 3, vx: (Math.random() - .5) * 3, vy: 1 + Math.random() * 2, vz: s.vz * 0.15, life: 1, size: 1.5 + Math.random() });
+  }
+}
+
+function render(s, opt) {
+  const st = s.st, sc = sceneCache, th = sc.theme;
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  // camera
+  const onG = s.phase !== 'air' && s.h <= 0.05;
+  const back = 66, up = onG ? 8 : 10;
+  const targetYaw = s.psi * 0.75;
+  cam.yaw += (targetYaw - cam.yaw) * 0.08;
+  const fx = Math.sin(cam.yaw), fz = Math.cos(cam.yaw);
+  cam.x = s.x - fx * back; cam.z = s.z - fz * back; cam.y = Math.max(2.5, s.h + 3 + up);
+  const tp = (-6 + SIM.clamp(s.gam * SIM.R2D, -8, 4) * 0.5) * SIM.D2R;
+  cam.pitch += (tp - cam.pitch) * 0.1;
+  cam.roll += (s.bank * 0.22 * SIM.D2R - cam.roll) * 0.1;
+  cam.cyw = Math.cos(cam.yaw); cam.syw = Math.sin(cam.yaw); cam.cp = Math.cos(cam.pitch); cam.sp = Math.sin(cam.pitch);
+  cam.f = Math.min(W * 0.95, H * 1.55); cam.cx = W / 2; cam.cy = H * 0.5;
+  let sx = 0, sy = 0;
+  if (shake > 0) { sx = (Math.random() - .5) * shake; sy = (Math.random() - .5) * shake; shake *= 0.88; if (shake < 0.3) shake = 0; }
+
+  ctx.save();
+  ctx.translate(cam.cx + sx, cam.cy + sy); ctx.rotate(-cam.roll); ctx.translate(-cam.cx, -cam.cy);
+  const hy = cam.cy + cam.f * Math.tan(cam.pitch);
+  const big = Math.max(W, H) * 2;
+  const g = ctx.createLinearGradient(0, hy - H, 0, hy);
+  g.addColorStop(0, rgb(th.skyTop)); g.addColorStop(1, rgb(th.skyHz));
+  ctx.fillStyle = g; ctx.fillRect(-big, hy - big, big * 3, big);
+  if (st.time === 'dusk') { // low sun
+    const sg = ctx.createRadialGradient(W * 0.72, hy - 18, 4, W * 0.72, hy - 18, H * 0.5);
+    sg.addColorStop(0, 'rgba(255,230,170,.95)'); sg.addColorStop(0.08, 'rgba(255,190,120,.6)'); sg.addColorStop(1, 'rgba(255,160,100,0)');
+    ctx.fillStyle = sg; ctx.fillRect(-big, hy - big, big * 3, big);
+  }
+  // mountains
+  if (sc.peaks.length) {
+    const zf = st.length + 7000, mc = st.time === 'dusk' ? 'rgb(70,58,92)' : 'rgb(104,124,140)';
+    const pts = [[-12000, 0, zf]].concat(sc.peaks.map(p => [p[0], p[1], zf + (p[0] % 1700)])).concat([[12000, 0, zf]]);
+    polyW(pts, mc);
+  }
+  ctx.fillStyle = rgb(sc.ground); ctx.fillRect(-big, hy, big * 3, big);
+  // fields
+  for (const c of sc.cells) {
+    if (c.z1 < cam.z - 60 || c.z0 > cam.z + 5200 || c.x1 < cam.x - 2600 || c.x0 > cam.x + 2600) continue;
+    const d = Math.max(0, ((c.z0 + c.z1) / 2 - cam.z));
+    rectG(c.x0, c.x1, c.z0, c.z1, rgb(mixc(c.c, th.haze, Math.min(0.85, d / 5200))));
+  }
+  if (st.theme === 'sea') {
+    const dk = st.time === 'dusk' ? 0.62 : 1;
+    polyW([[-220, 0, -420], [220, 0, -420], [260, 0, st.length + 260], [-260, 0, st.length + 260]], rgb([186, 176, 136].map(v => v * dk)));
+    polyW([[-170, 0, -380], [170, 0, -380], [205, 0, st.length + 220], [-205, 0, st.length + 220]], rgb([112, 138, 84].map(v => v * dk)));
+  }
+  // haze band at horizon
+  const hz = ctx.createLinearGradient(0, hy - 2, 0, hy + H * 0.12);
+  hz.addColorStop(0, rgb(th.haze, 0.95)); hz.addColorStop(1, rgb(th.haze, 0));
+  ctx.fillStyle = hz; ctx.fillRect(-big, hy - 2, big * 3, H * 0.12 + 2);
+
+  // runway
+  const hw = st.width / 2, L = st.length, white = 'rgb(238,240,234)';
+  rectG(-hw - 6, hw + 6, -60, L + 60, 'rgb(150,148,136)');
+  rectG(-hw, hw, 0, L, 'rgb(52,56,61)');
+  const kw = (st.width - 12) / 16;
+  for (let i = 0; i < 16; i++) { if (i === 7 || i === 8) continue; const x0 = -hw + 6 + i * kw; rectG(x0 + 0.6, x0 + kw - 0.6, 6, 42, white); }
+  for (let z = 70; z < L - 40; z += 50) rectG(-0.45, 0.45, z, z + 30, white);
+  rectG(-hw + 0.8, -hw + 1.6, 0, L, white); rectG(hw - 1.6, hw - 0.8, 0, L, white);
+  for (const z of [st.aimZ - 150, st.aimZ + 150, st.aimZ + 300]) if (z > 60 && z < L - 100) {
+    rectG(-hw * 0.62, -hw * 0.62 + 6, z, z + 22, white); rectG(hw * 0.62 - 6, hw * 0.62, z, z + 22, white);
+  }
+  rectG(-hw * 0.62 - 3, -hw * 0.62 + 7, st.aimZ - 30, st.aimZ + 30, white);
+  rectG(hw * 0.62 - 7, hw * 0.62 + 3, st.aimZ - 30, st.aimZ + 30, white);
+  // lights
+  const lights = [], appr = [], red = [];
+  for (let z = 0; z <= L; z += 60) { lights.push([-hw - 2, 0.4, z]); lights.push([hw + 2, 0.4, z]); }
+  for (let z = -900; z < 0; z += 30) { appr.push([0, 0.6, z]); if (z === -300) for (let x = -18; x <= 18; x += 4) appr.push([x, 0.6, z]); }
+  for (let x = -hw; x <= hw; x += 4) { red.push([x, 0.4, L + 2]); }
+  const dusk = st.time === 'dusk';
+  dots(lights, dusk ? 'rgb(255,235,180)' : 'rgba(255,248,225,.9)', 0.55, dusk);
+  dots(appr, dusk ? 'rgb(255,255,235)' : 'rgba(255,255,240,.85)', 0.6, dusk);
+  dots(red, 'rgb(255,70,60)', 0.5, dusk);
+  // PAPI
+  const pp = SIM.papi(s);
+  if (pp) {
+    const W4 = [], R4 = [];
+    pp.forEach((wht, i) => (wht ? W4 : R4).push([-hw - 14 - i * 9, 1, st.aimZ]));
+    dots(W4, 'rgb(255,255,255)', 0.9, true); dots(R4, 'rgb(255,60,50)', 0.9, true);
+  }
+  // guide hoops + predicted touchdown
+  if (opt.guide && s.phase === 'air') {
+    const base = Math.floor(s.z / 250) + 1;
+    for (let k = 3; k >= 0; k--) {
+      const zz = (base + k) * 250; if (zz > st.aimZ - 60) continue;
+      const hh = SIM.glideH(st, zz) + 3;
+      polyW([[-18, hh - 9, zz], [18, hh - 9, zz], [18, hh + 9, zz], [-18, hh + 9, zz]], null, 'rgba(255,106,26,' + (0.85 - k * 0.15) + ')', 2.5);
+    }
+  }
+  const pr = SIM.predict(s);
+  if (opt.guide && pr && pr.t < 40) {
+    const inside = pr.z > 0 && pr.z < L && Math.abs(pr.x) < hw;
+    const sz = 9;
+    polyW([[pr.x, 0.2, pr.z - sz * 1.6], [pr.x + sz, 0.2, pr.z], [pr.x, 0.2, pr.z + sz * 1.6], [pr.x - sz, 0.2, pr.z]],
+      inside ? 'rgba(255,106,26,.85)' : 'rgba(255,90,79,.9)', 'rgba(255,255,255,.9)', 1.5);
+  }
+  // plane shadow
+  const sh = SIM.clamp(1 - s.h / 120, 0, 1);
+  if (sh > 0) {
+    const a = s.psi, ca = Math.cos(a), sa = Math.sin(a);
+    const P = (lx, lz) => [s.x + lx * ca + lz * sa, 0.15, s.z - lx * sa + lz * ca];
+    polyW([P(-17, -2), P(17, -2), P(17, 4), P(-17, 4)], `rgba(10,20,10,${0.32 * sh})`);
+    polyW([P(-2, -18), P(2, -18), P(2, 20), P(-2, 20)], `rgba(10,20,10,${0.32 * sh})`);
+  }
+  // smoke
+  for (let i = parts.length - 1; i >= 0; i--) {
+    const p = parts[i]; p.x += p.vx / 60; p.y += p.vy / 60; p.z += p.vz / 60; p.size += 0.08; p.life -= 1 / 70;
+    if (p.life <= 0) { parts.splice(i, 1); continue; }
+    const c = toCam(p.x, p.y, p.z); if (c[2] < 2) continue;
+    ctx.fillStyle = `rgba(235,235,230,${p.life * 0.5})`; ctx.beginPath();
+    ctx.arc(cam.cx + cam.f * c[0] / c[2], cam.cy - cam.f * c[1] / c[2], cam.f * p.size / c[2], 0, 6.2832); ctx.fill();
+  }
+  drawPlane(s);
+  ctx.restore();
+}
+
+function drawPlane(s) {
+  const c = toCam(s.x, s.h + 3, s.z); if (c[2] < 2) return;
+  const px = cam.cx + cam.f * c[0] / c[2], py = cam.cy - cam.f * c[1] / c[2], k = cam.f / c[2];
+  ctx.save(); ctx.translate(px, py); ctx.scale(k, k);
+  ctx.rotate(s.bank * SIM.D2R);
+  const nose = SIM.clamp((s.pitch * SIM.D2R - cam.pitch) * 1.2, -0.3, 0.4); // >0: nose up → see belly-ish
+  const yawRel = SIM.clamp(s.psi - cam.yaw, -0.3, 0.3) * 6;
+  const crashed = s.result && !s.result.ok;
+  if (crashed) ctx.rotate(Math.sin(performance.now() / 90) * 0.06);
+  const hull = '#f2f3ef', shade = '#c7ccce', orange = '#ff6a1a';
+  // gear
+  ctx.fillStyle = '#2b2f33';
+  for (const gx of [-3.2, 3.2]) { ctx.fillRect(gx - 0.18, 1.2, 0.36, 1.4); ctx.fillRect(gx - 0.75, 2.3, 1.5, 0.75); }
+  // wings
+  ctx.fillStyle = shade;
+  ctx.beginPath(); ctx.moveTo(0, 0.1 - nose * 2); ctx.lineTo(17, -1.5 - nose * 3); ctx.lineTo(17, -1.0 - nose * 2); ctx.lineTo(0, 0.9 + nose);
+  ctx.lineTo(-17, -1.0 - nose * 2); ctx.lineTo(-17, -1.5 - nose * 3); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = orange; ctx.fillRect(16.4, -1.65 - nose * 3, 0.6, 0.8); ctx.fillRect(-17, -1.65 - nose * 3, 0.6, 0.8);
+  // engines
+  for (const ex of [-6.4, 6.4]) {
+    ctx.fillStyle = hull; ctx.beginPath(); ctx.arc(ex, 1.1, 1.15, 0, 6.2832); ctx.fill();
+    ctx.fillStyle = '#3b4146'; ctx.beginPath(); ctx.arc(ex, 1.1, 0.72, 0, 6.2832); ctx.fill();
+  }
+  // h-stab
+  ctx.fillStyle = hull;
+  ctx.beginPath(); ctx.moveTo(-6, -0.9 - nose * 4); ctx.lineTo(6, -0.9 - nose * 4); ctx.lineTo(6, -0.5 - nose * 4); ctx.lineTo(-6, -0.5 - nose * 4); ctx.closePath(); ctx.fill();
+  // fuselage
+  const fg = ctx.createRadialGradient(-0.6, -0.7, 0.2, 0, 0, 2.1);
+  fg.addColorStop(0, '#ffffff'); fg.addColorStop(1, '#c9ced0');
+  ctx.fillStyle = fg; ctx.beginPath(); ctx.ellipse(yawRel * 0.1, 0, 2.05, 2.0, 0, 0, 6.2832); ctx.fill();
+  ctx.fillStyle = '#3b4146'; ctx.beginPath(); ctx.ellipse(yawRel * 0.1, 0.1, 0.55, 0.5, 0, 0, 6.2832); ctx.fill();
+  // fin
+  ctx.fillStyle = orange;
+  ctx.beginPath(); ctx.moveTo(-0.35, -1.7); ctx.lineTo(0.35, -1.7); ctx.lineTo(0.18 + yawRel * 0.2, -7.6); ctx.lineTo(-0.18 + yawRel * 0.2, -7.6); ctx.closePath(); ctx.fill();
+  if (s.st.time === 'dusk' && s.phase === 'air') {
+    ctx.fillStyle = 'rgba(255,240,200,.9)';
+    for (const lx of [-3.6, 3.6]) { ctx.beginPath(); ctx.arc(lx, 0.6, 0.35, 0, 6.2832); ctx.fill(); }
+  }
+  ctx.restore();
+  if (crashed) {
+    ctx.save(); ctx.translate(px, py - 10);
+    const r = Math.max(36, k * 9);
+    ctx.fillStyle = '#ffc83d'; ctx.strokeStyle = '#0c1720'; ctx.lineWidth = 3;
+    ctx.beginPath(); for (let i = 0; i < 20; i++) { const a = i / 20 * 6.2832, rr = i % 2 ? r * 0.55 : r; ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); }
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#0c1720'; ctx.font = `400 ${Math.round(r * 0.42)}px "Dela Gothic One",sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('ドスン！', 0, 2); ctx.restore();
+  }
+}
+
+/* ================= HUD ================= */
+function rr(x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+const C_HUD = '#eef7fb', C_MUTE = '#a9bcc4', C_WARN = '#ffc83d', C_BAD = '#ff5a4f', C_GOOD = '#5fdc9b', C_OR = '#ff6a1a';
+let flash = null;
+function hudBox(x, y, w, h) { ctx.fillStyle = 'rgba(12,23,32,.58)'; rr(x, y, w, h, 10); ctx.fill(); }
+function txt(t, x, y, font, color, align = 'left', base = 'alphabetic') { ctx.font = font; ctx.fillStyle = color; ctx.textAlign = align; ctx.textBaseline = base; ctx.fillText(t, x, y); }
+function warnIcon(x, y, s, col) { ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(x, y - s); ctx.lineTo(x + s * 1.1, y + s * 0.8); ctx.lineTo(x - s * 1.1, y + s * 0.8); ctx.closePath(); ctx.fill(); txt('!', x, y + s * 0.55, `700 ${s * 1.3}px ${'IBM Plex Mono'}`, '#0c1720', 'center'); }
+
+function drawHUD(s, mode) {
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  const u = SIM.clamp(Math.min(W, H) / 520, 0.72, 1.25);
+  const st = s.st, mono = n => `600 ${Math.round(n * u)}px "IBM Plex Mono",monospace`, disp = n => `400 ${Math.round(n * u)}px "Dela Gothic One",sans-serif`, body = n => `700 ${Math.round(n * u)}px "Zen Kaku Gothic New",sans-serif`;
+  const top = INS.t + 10, L = INS.l + 10, R = W - INS.r - 10;
+  // top center: stage + PAPI
+  txt(`${st.code}  ${st.name}`, W / 2, top + 16 * u, body(14), C_HUD, 'center');
+  const pp = SIM.papi(s);
+  const pY = top + 32 * u;
+  hudBox(W / 2 - 66 * u, pY - 12 * u, 132 * u, 26 * u);
+  txt('PAPI', W / 2 - 58 * u, pY + 5 * u, mono(10), C_MUTE);
+  for (let i = 0; i < 4; i++) {
+    const on = pp ? pp[3 - i] : null; // draw outer→inner left→right
+    ctx.fillStyle = on == null ? '#55646b' : on ? '#ffffff' : '#ff3c32';
+    ctx.beginPath(); ctx.arc(W / 2 - 4 * u + i * 17 * u, pY + 1 * u, 5.5 * u, 0, 6.2832); ctx.fill();
+  }
+  // time
+  txt(`${Math.max(0, SIM.AC.TLIMIT - s.t).toFixed(0)}s`, L + 52, top + 26, mono(15), s.t > 75 ? C_WARN : C_HUD);
+  // wind compass top-right
+  const wx = s.w.x, wz = s.w.z, ws = Math.hypot(wx, wz);
+  const cx = R - 34 * u, cy = top + 34 * u, rad = 26 * u;
+  hudBox(cx - rad - 8 * u, cy - rad - 6 * u, rad * 2 + 16 * u, rad * 2 + 30 * u);
+  ctx.strokeStyle = 'rgba(238,247,251,.35)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(cx, cy, rad, 0, 6.2832); ctx.stroke();
+  ctx.fillStyle = 'rgba(238,247,251,.55)'; ctx.fillRect(cx - 2.5 * u, cy - rad * 0.7, 5 * u, rad * 1.4);
+  if (ws > 0.3) {
+    const ang = Math.atan2(wx, -wz); // direction wind blows to, screen space (up = runway forward)
+    ctx.save(); ctx.translate(cx, cy); ctx.rotate(ang);
+    ctx.strokeStyle = C_OR; ctx.fillStyle = C_OR; ctx.lineWidth = 3 * u;
+    ctx.beginPath(); ctx.moveTo(0, rad * 0.75); ctx.lineTo(0, -rad * 0.55); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, -rad * 0.85); ctx.lineTo(7 * u, -rad * 0.45); ctx.lineTo(-7 * u, -rad * 0.45); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+  txt(ws > 0.3 ? `風 ${ws.toFixed(0)}m/s` : '無風', cx, cy + rad + 17 * u, mono(11), C_HUD, 'center');
+
+  // side readouts
+  const bw = 112 * u, bh = 74 * u, by = H * 0.30;
+  const lx = Math.max(L, W * 0.5 - Math.min(W * 0.36, 330 * u) - bw / 2), rx = Math.min(R - bw, W * 0.5 + Math.min(W * 0.36, 330 * u) - bw / 2);
+  const kt = s.v * 1.944;
+  const spdCol = s.phase === 'air' && (s.v < SIM.AC.VWARN || s.v > 85) ? C_BAD : C_HUD;
+  hudBox(lx, by, bw, bh);
+  txt('SPD', lx + 10 * u, by + 17 * u, mono(10), C_MUTE);
+  txt(s.v.toFixed(0), lx + bw - 32 * u, by + 46 * u, disp(28), spdCol, 'right');
+  txt('m/s', lx + bw - 8 * u, by + 46 * u, mono(10), C_MUTE, 'right');
+  txt(`${kt.toFixed(0)} kt`, lx + bw - 8 * u, by + 64 * u, mono(11), C_MUTE, 'right');
+  const sink = -s.vy;
+  const vsCol = s.phase === 'air' && s.h < 40 ? (sink > 4 ? C_BAD : sink > 1.5 ? C_WARN : C_GOOD) : C_HUD;
+  hudBox(rx, by, bw, bh + 20 * u);
+  txt('ALT', rx + 10 * u, by + 17 * u, mono(10), C_MUTE);
+  txt(Math.max(0, s.h).toFixed(s.h < 20 ? 1 : 0), rx + bw - 22 * u, by + 46 * u, disp(28), C_HUD, 'right');
+  txt('m', rx + bw - 8 * u, by + 46 * u, mono(10), C_MUTE, 'right');
+  txt('V/S', rx + 10 * u, by + 68 * u, mono(10), C_MUTE);
+  txt(`${sink >= 0 ? '↓' : '↑'}${Math.abs(sink).toFixed(1)}`, rx + bw - 8 * u, by + 70 * u, mono(15), vsCol, 'right');
+  txt('m/s', rx + bw - 8 * u, by + 86 * u, mono(9), C_MUTE, 'right');
+  // throttle (keyboard players) under SPD
+  if (!Inp.touch) {
+    const ty = by + bh + 10 * u;
+    hudBox(lx, ty, bw, 30 * u);
+    txt('THR', lx + 10 * u, ty + 19 * u, mono(10), C_MUTE);
+    ctx.fillStyle = 'rgba(238,247,251,.15)'; ctx.fillRect(lx + 42 * u, ty + 11 * u, bw - 52 * u, 8 * u);
+    ctx.fillStyle = C_OR; ctx.fillRect(lx + 42 * u, ty + 11 * u, (bw - 52 * u) * s.thr, 8 * u);
+    ctx.fillStyle = C_HUD; ctx.fillRect(lx + 42 * u + (bw - 52 * u) * Inp.thr - 1, ty + 8 * u, 2, 14 * u);
+  }
+  // aim distance
+  if (s.phase === 'air') {
+    const d = st.aimZ - s.z;
+    txt(d > 0 ? `目標点まで ${d >= 1000 ? (d / 1000).toFixed(1) + 'km' : d.toFixed(0) + 'm'}` : '目標点通過', W / 2, pY + 34 * u, mono(12), C_HUD, 'center');
+  } else if (s.phase === 'roll') {
+    txt(`残り滑走路 ${(st.length - s.z).toFixed(0)}m`, W / 2, pY + 34 * u, mono(12), (st.length - s.z) < 300 ? C_WARN : C_HUD, 'center');
+  }
+  // warnings
+  const warns = [];
+  if (s.phase === 'air') {
+    if (s.t - s.stallT < 0.05) warns.push(['失速注意  STALL', C_BAD]);
+    if (sink > 5 && s.h < 80) warns.push(['降下率大  SINK RATE', C_BAD]);
+    const pr = SIM.predict(s);
+    if (pr && s.h < 90 && (Math.abs(pr.x) > st.width / 2 || pr.z < 0)) warns.push([pr.z < 0 ? '滑走路手前に落ちる' : '滑走路外を予測', C_WARN]);
+    if (s.t < 5 && Math.abs(st.wind.x) > 0.5) warns.push([`横風 ${st.wind.x > 0 ? '左から' : '右から'} ${Math.abs(st.wind.x)}m/s`, C_WARN]);
+  } else if (s.phase === 'roll' && st.length - s.z < 300 && s.v > 15) warns.push(['ブレーキ！', C_WARN]);
+  let wy = pY + 50 * u;
+  for (const [t, c] of warns) {
+    ctx.font = body(15); const tw = ctx.measureText(t).width + 44 * u;
+    ctx.fillStyle = 'rgba(12,23,32,.78)'; rr(W / 2 - tw / 2, wy, tw, 30 * u, 8); ctx.fill();
+    ctx.strokeStyle = c; ctx.lineWidth = 2; ctx.stroke();
+    warnIcon(W / 2 - tw / 2 + 17 * u, wy + 15 * u, 8 * u, c);
+    txt(t, W / 2 + 10 * u, wy + 21 * u, body(15), c, 'center');
+    wy += 36 * u;
+  }
+  // flash (touchdown commentary)
+  if (flash && flash.t > 0) {
+    flash.t -= 1 / 60;
+    ctx.globalAlpha = Math.min(1, flash.t * 2);
+    txt(flash.big, W / 2, H * 0.62, disp(34), flash.col, 'center');
+    if (flash.sub) txt(flash.sub, W / 2, H * 0.62 + 28 * u, mono(14), C_HUD, 'center');
+    ctx.globalAlpha = 1;
+  }
+  // hints
+  const hint = hintFor(s);
+  if (hint && mode === 'play') {
+    ctx.font = body(14); const tw = Math.min(W - 40, ctx.measureText(hint).width + 28);
+    const hy = H - INS.b - (Inp.touch ? 26 : 22) * u - 20;
+    const hx = Inp.touch ? Math.min(W / 2, (W - 180) / 2 + 10) : W / 2;
+    ctx.fillStyle = 'rgba(12,23,32,.68)'; rr(hx - tw / 2, hy - 20 * u, tw, 30 * u, 8); ctx.fill();
+    txt(hint, hx, hy, body(14), C_HUD, 'center');
+  }
+}
+function hintFor(s) {
+  if (s.result) return null;
+  const T = Inp.touch, st = s.st;
+  if (s.phase === 'roll') return T ? '丸ボタン長押しでブレーキ・左ドラッグで操向' : 'Space 長押しでブレーキ・← → で操向';
+  if (st.id === 1 || s.t < 6) {
+    if (s.h < 18) return T ? '今！丸ボタン長押しかドラッグで機首を少し上げてフレア' : '今！ Space 長押しか ↑ で機首を少し上げてフレア';
+    if (s.h < 45) return '高度10m前後でフレア。V/S を 1.5m/s 以下に';
+    if (st.id === 1) return T ? '左ドラッグで機首と傾き。橙の◆を滑走路に重ねる' : '↑↓ 機首・←→ 傾き・Q/E スロットル。橙の◆を滑走路に';
+    return 'PAPI は白2つ・赤2つが正しい進入角';
+  }
+  return null;
+}
+
+/* ================= GAME ================= */
+const $ = id => document.getElementById(id);
+const screens = { title: $('scrTitle'), select: $('scrSelect'), result: $('scrResult'), pause: $('scrPause') };
+let mode = 'title', sim = null, stageIdx = 0, acc = 0, last = 0, resultTimer = 0, attract = true;
+function show(name) { for (const k in screens) screens[k].hidden = k !== name; }
+
+function startAttract() { attract = true; buildScene(SIM.STAGES[0]); sim = SIM.create(SIM.STAGES[0]); parts.length = 0; flash = null; }
+function startStage(i) {
+  Snd.init();
+  Snd.beep(660, 0.12, 'triangle', 0.1); setTimeout(() => Snd.beep(990, 0.16, 'triangle', 0.1), 110);
+  stageIdx = i; attract = false; const st = SIM.STAGES[i];
+  buildScene(st); sim = SIM.create(st); Inp.thr = sim.thrCmd; parts.length = 0; flash = null; shake = 0; resultTimer = 0;
+  cam.yaw = 0; cam.pitch = -6 * SIM.D2R; cam.roll = 0;
+  mode = 'play'; show(null); setPlayUI(true); acc = 0;
+}
+function setPlayUI(on) {
+  $('pauseBtn').hidden = !on;
+  $('touchUI').hidden = !(on && Inp.touch);
+  $('stickZone').hidden = !(on && Inp.touch);
+}
+function quipFor(sink) { return sink < 0.8 ? ['バター着陸！', C_GOOD] : sink < 1.5 ? ['ナイス接地', C_GOOD] : sink < 2.6 ? ['まずまず', C_WARN] : ['ドスン', C_BAD]; }
+
+function handleEvents(s) {
+  while (s.events.length) {
+    const e = s.events.shift();
+    if (attract) continue;
+    if (e.type === 'touchdown') {
+      const q = quipFor(e.sink); flash = { big: q[0], sub: `接地 ↓${e.sink.toFixed(1)} m/s`, col: q[1], t: 1.6 };
+      shake = Math.min(14, e.sink * 3); spawnSmoke(s, 6); Snd.thump(0.35 + e.sink * 0.08, 0.3, 900); Snd.beep(1300, 0.25, 'sine', 0.06, 500);
+      if (navigator.vibrate) try { navigator.vibrate(30 + e.sink * 15); } catch (er) {}
+    } else if (e.type === 'bounce') {
+      flash = { big: '跳ねた！', sub: `↓${e.sink.toFixed(1)} m/s`, col: C_WARN, t: 1.2 }; shake = 10; spawnSmoke(s, 4); Snd.thump(0.6, 0.3, 600);
+    } else if (e.type === 'crash') {
+      shake = 22; Snd.thump(0.9, 0.6, 300); Snd.jingle(false); resultTimer = 1.1;
+      if (navigator.vibrate) try { navigator.vibrate([80, 40, 120]); } catch (er) {}
+    } else if (e.type === 'stop') { Snd.jingle(true); resultTimer = 0.7; }
+  }
+}
+
+let warnBeepT = 0;
+function frame(now) {
+  const dt = Math.min(0.1, (now - (last || now)) / 1000); last = now;
+  if (mode === 'play' || (mode !== 'pause' && attract)) {
+    acc += dt;
+    while (acc >= SIM.DT) {
+      acc -= SIM.DT;
+      const inp = attract ? SIM.autopilot(sim) : Inp.read(SIM.DT);
+      SIM.step(sim, inp);
+    }
+    if (attract && sim.result) startAttract();
+  }
+  handleEvents(sim);
+  render(sim, { guide: attract ? false : Save.d.opt.guide });
+  if (!attract && (mode === 'play' || (mode === 'pause'))) drawHUD(sim, mode);
+  Snd.update(sim, mode === 'play');
+  if (mode === 'play' && !sim.result && sim.phase === 'air' && sim.t - sim.stallT < 0.05) {
+    warnBeepT -= dt; if (warnBeepT <= 0) { Snd.beep(880, 0.12, 'square', 0.05); warnBeepT = 0.45; }
+  }
+  if (mode === 'play' && sim.result && resultTimer > 0) {
+    resultTimer -= dt; if (resultTimer <= 0) showResult();
+  }
+  // throttle slider visual
+  if (Inp.touch && mode === 'play') {
+    $('thrFill').style.height = (sim.thr * 100) + '%';
+    $('thrKnob').style.bottom = `calc(${Inp.thr * 100}% - 3px)`;
+    $('actBtn').textContent = sim.phase === 'roll' ? 'BRAKE' : 'FLARE';
+  }
+  requestAnimationFrame(frame);
+}
+
+function showResult() {
+  mode = 'result'; setPlayUI(false);
+  const s = sim, r = s.result, st = s.st, d = Save.d;
+  $('resStage').textContent = `${st.code} · ${st.name}`;
+  let newBest = false;
+  if (r.ok) {
+    const b = d.best[st.id];
+    if (!b || r.total > b.score) { d.best[st.id] = { score: r.total, rank: r.rank }; newBest = true; }
+    d.streak++; d.bestStreak = Math.max(d.bestStreak, d.streak); if (r.rank === 'SSS') d.perfect++;
+  } else d.streak = 0;
+  Save.write();
+  $('resRank').textContent = r.ok ? r.rank : '着陸失敗';
+  $('resRank').className = 'rank' + (r.ok ? '' : ' fail');
+  $('resScore').textContent = r.ok ? r.total.toLocaleString() : '—';
+  $('resQuip').textContent = r.ok ? (r.rank === 'SSS' ? 'PERFECT LANDING' : s.td ? quipFor(s.td.sink)[0] : '') : '';
+  $('resBest').hidden = !newBest;
+  $('resWhy').hidden = r.ok;
+  if (!r.ok) { $('resWhyT').textContent = r.title; $('resWhyP').textContent = r.hint; }
+  const bars = $('resBars'); bars.innerHTML = '';
+  if (r.ok) for (const p of r.parts) {
+    const el = document.createElement('div'); el.className = 'bar';
+    el.innerHTML = `<span>${p.label}</span><span class="t"><i style="width:${(p.pts / p.max * 100).toFixed(1)}%"></i></span><span class="n">${p.pts.toLocaleString()} / ${p.max.toLocaleString()}</span>`;
+    bars.appendChild(el);
+  }
+  const data = $('resData'); data.innerHTML = '';
+  const td = s.td;
+  const items = td ? [
+    ['降下率', td.sink.toFixed(1) + ' m/s', td.sink <= 1.5],
+    ['接地点（目標から）', (td.z - st.aimZ >= 0 ? '+' : '') + (td.z - st.aimZ).toFixed(0) + ' m', Math.abs(td.z - st.aimZ) <= 60],
+    ['横ずれ', Math.abs(td.x).toFixed(1) + ' m', Math.abs(td.x) <= 3],
+    ['接地速度', td.v.toFixed(0) + ' m/s', td.v >= 60 && td.v <= 75],
+    ['バンク', Math.abs(td.bank).toFixed(1) + '°', Math.abs(td.bank) <= 3],
+    ['クラブ角', td.crab.toFixed(1) + '°', td.crab <= 2],
+    ['機首角', td.pitch.toFixed(1) + '°', td.pitch >= 1 && td.pitch <= 7],
+    ['バウンド', s.bounces + ' 回', s.bounces === 0]
+  ] : [['飛行時間', s.t.toFixed(1) + ' s', false]];
+  for (const [k, v, good] of items) { const el = document.createElement('div'); el.innerHTML = `<span>${k}</span><b class="${good ? 'ok' : 'ng'}">${v}</b>`; data.appendChild(el); }
+  $('btnNext').hidden = stageIdx >= SIM.STAGES.length - 1;
+  show('result');
+  setTimeout(() => $('btnRetry').focus({ preventScroll: true }), 30);
+}
+
+function windText(st) {
+  const x = st.wind.x, z = st.wind.z;
+  if (!x && !z) return '無風';
+  const parts = [];
+  if (x) parts.push(`${x > 0 ? '左' : '右'}から横風 ${Math.abs(x)}m/s`);
+  if (z < 0) parts.push(`向かい風 ${-z}m/s`);
+  if (st.gust >= 2) parts.push(`突風 ±${st.gust}`);
+  return parts.join(' · ');
+}
+function renderCards() {
+  const wrap = $('cards'); wrap.innerHTML = '';
+  SIM.STAGES.forEach((st, i) => {
+    const b = Save.d.best[st.id];
+    const el = document.createElement('button'); el.className = 'card'; el.type = 'button';
+    el.innerHTML = `<div class="strip"><span>${st.code}</span><small>STAGE ${st.id}</small></div>
+      <div class="body"><h3>${st.name}</h3><p>${st.desc}</p>
+      <div class="chips"><span class="chip">${st.length}m × ${st.width}m</span><span class="chip">${windText(st)}</span></div>
+      <div class="best"><span>${b ? 'ベスト ' + b.score.toLocaleString() : '未クリア'}</span><b>${b ? b.rank : '—'}</b></div></div>`;
+    el.addEventListener('click', () => startStage(i));
+    wrap.appendChild(el);
+  });
+  const d = Save.d;
+  $('stats').textContent = `PERFECT ${d.perfect} · 連続成功 ${d.streak}（最高 ${d.bestStreak}）`;
+}
+function toSelect() { mode = 'select'; setPlayUI(false); if (!attract) startAttract(); renderCards(); show('select'); setTimeout(() => { const c = document.querySelector('.card'); c && c.focus({ preventScroll: true }); }, 30); }
+function pause() { if (mode !== 'play' || sim.result) return; mode = 'pause'; setPlayUI(false); show('pause'); }
+function resume() { if (mode !== 'pause') return; mode = 'play'; show(null); setPlayUI(true); last = performance.now(); Inp.keys.clear(); }
+
+/* ---- wiring ---- */
+$('goSelect').onclick = () => { Snd.init(); toSelect(); };
+$('toggleHelp').onclick = () => { $('help').hidden = !$('help').hidden; };
+$('backTitle').onclick = () => { mode = 'title'; show('title'); };
+$('btnRetry').onclick = () => startStage(stageIdx);
+$('btnNext').onclick = () => startStage(Math.min(SIM.STAGES.length - 1, stageIdx + 1));
+$('btnSel').onclick = toSelect;
+$('btnResume').onclick = resume;
+$('btnPRetry').onclick = () => startStage(stageIdx);
+$('btnPSel').onclick = toSelect;
+$('pauseBtn').onclick = pause;
+for (const [id, key] of [['optGuide', 'guide'], ['optInvert', 'invert'], ['optSound', 'sound']]) {
+  $(id).checked = Save.d.opt[key];
+  $(id).onchange = e => { Save.d.opt[key] = e.target.checked; Save.write(); };
+}
+
+const GAME_KEYS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyQ', 'KeyE', 'PageUp', 'PageDown']);
+window.addEventListener('keydown', e => {
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  if (mode === 'play') {
+    if (GAME_KEYS.has(e.code)) e.preventDefault();
+    Inp.keys.add(e.code);
+    if (e.code === 'KeyR') startStage(stageIdx);
+    if (e.code === 'Escape') pause();
+    if (Inp.touch && GAME_KEYS.has(e.code)) { Inp.touch = false; setPlayUI(true); }
+  } else if (mode === 'pause') {
+    if (e.code === 'Escape') resume();
+    if (e.code === 'KeyR') startStage(stageIdx);
+  } else if (mode === 'result') {
+    if (e.code === 'KeyR') { e.preventDefault(); startStage(stageIdx); }
+    if (e.code === 'KeyN' && stageIdx < SIM.STAGES.length - 1) startStage(stageIdx + 1);
+    if (e.code === 'Escape') toSelect();
+  } else if (mode === 'title') {
+    if (e.code === 'Enter') { Snd.init(); toSelect(); }
+  } else if (mode === 'select') {
+    if (/^Digit[1-3]$/.test(e.code)) startStage(+e.code.slice(5) - 1);
+    if (e.code === 'Escape') { mode = 'title'; show('title'); }
+  }
+});
+window.addEventListener('keyup', e => Inp.keys.delete(e.code));
+window.addEventListener('blur', () => { Inp.keys.clear(); Inp.act = false; Inp.stick = null; });
+
+// audio unlock on any gesture (required by mobile browsers)
+for (const ev of ['pointerdown', 'touchend', 'keydown', 'click']) window.addEventListener(ev, () => Snd.init(), true);
+$('optSound').addEventListener('change', e => { if (e.target.checked) { Snd.init(); Snd.beep(880, 0.15, 'triangle', 0.12); } });
+// touch detection
+window.addEventListener('pointerdown', e => {
+  if (e.pointerType === 'touch' && !Inp.touch) { Inp.touch = true; if (mode === 'play') setPlayUI(true); }
+}, true);
+if (matchMedia('(pointer:coarse)').matches) Inp.touch = true;
+
+// virtual stick (left)
+const sz = $('stickZone');
+let stickId = null;
+sz.addEventListener('pointerdown', e => {
+  e.preventDefault(); stickId = e.pointerId; sz.setPointerCapture(e.pointerId);
+  Inp.stick = { ox: e.clientX, oy: e.clientY, nx: 0, ny: 0 };
+});
+sz.addEventListener('pointermove', e => {
+  if (e.pointerId !== stickId || !Inp.stick) return;
+  const R = 70; Inp.stick.nx = SIM.clamp((e.clientX - Inp.stick.ox) / R, -1, 1); Inp.stick.ny = SIM.clamp((e.clientY - Inp.stick.oy) / R, -1, 1);
+});
+const endStick = e => { if (e.pointerId === stickId) { stickId = null; Inp.stick = null; } };
+sz.addEventListener('pointerup', endStick); sz.addEventListener('pointercancel', endStick);
+// stick visual
+const _render = render;
+render = function (s, opt) {
+  _render(s, opt);
+  if (Inp.stick && mode === 'play') {
+    const st = Inp.stick;
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.strokeStyle = 'rgba(238,243,241,.5)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(st.ox, st.oy, 70, 0, 6.2832); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,106,26,.7)'; ctx.beginPath(); ctx.arc(st.ox + st.nx * 70, st.oy + st.ny * 70, 22, 0, 6.2832); ctx.fill();
+  }
+};
+// throttle slider
+const tt = $('thrTrack');
+const setThr = e => { const r = tt.getBoundingClientRect(); Inp.thr = SIM.clamp(1 - (e.clientY - r.top) / r.height, 0, 1); };
+tt.addEventListener('pointerdown', e => { e.preventDefault(); tt.setPointerCapture(e.pointerId); setThr(e); });
+tt.addEventListener('pointermove', e => { if (tt.hasPointerCapture(e.pointerId)) setThr(e); });
+// action button
+const ab = $('actBtn');
+ab.addEventListener('pointerdown', e => { e.preventDefault(); ab.setPointerCapture(e.pointerId); Inp.act = true; ab.classList.add('held'); });
+const endAct = () => { Inp.act = false; ab.classList.remove('held'); };
+ab.addEventListener('pointerup', endAct); ab.addEventListener('pointercancel', endAct);
+document.addEventListener('touchmove', e => { if (mode === 'play') e.preventDefault(); }, { passive: false });
+document.addEventListener('gesturestart', e => e.preventDefault());
+
+resize(); startAttract(); show('title');
+(document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(() => requestAnimationFrame(frame));
+</script>
+
+</body>
+</html>

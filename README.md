@@ -5,14 +5,10 @@
 ## 構成
 
 ```
-index.html                         統合サイト（ゲーム一覧・プレイ画面・管理画面）
-games.js                           組み込みゲームの一覧
-games/
-  golden-egg-chase-king/index.html
-  fart-candle-king/index.html
-  30-second-panic-king/index.html
-  frypan-ronin/index.html          （three.min.js 同梱）
-  nonsense-barber/index.html
+index.html               統合サイト（ゲーム一覧・プレイ画面・管理画面）
+games.js                 組み込みゲームの一覧（ここに登録したゲームがサイトに並ぶ）
+games/<id>/index.html    各ゲーム本体
+games/_lib/three.min.js  3Dゲーム用の共通ライブラリ（Frypan Ronin・Sky Slide King）
 ```
 
 ## 遊び方

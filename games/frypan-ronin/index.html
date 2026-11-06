@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;700;800&family=JetBrains+Mono:wght@500;700&family=Dela+Gothic+One&family=Shippori+Mincho+B1:wght@800&display=swap">
 <style>
+[hidden]{display:none!important}
 /* Layout: full-bleed WebGL arena; brand, vitality and move list top-left, kills top-right, technique name top-centre, combo right, touch controls bottom. Single committed light "white room" look. */
 :root{
   --room:#eef1f3; --ink:#1a2027; --mute:#5f6a74; --cyan:#00bfdc; --cyan-deep:#007f93; --alert:#c4122f; --oil:#2fd14a; --oil-deep:#13863a;
@@ -140,7 +141,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--room);color:var(
   </div>
 </div>
 
-<script src="three.min.js"></script>
+<script src="../_lib/three.min.js"></script>
 <script>
 (function(){
 if(!window.THREE){document.body.insertAdjacentHTML('beforeend','<div class="err">3Dエンジンを読み込めませんでした。接続を確認して再読み込みしてください。</div>');return;}

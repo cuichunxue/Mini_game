@@ -191,7 +191,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:48px}
   </form>
 </dialog>
 
-<script src="games.js?v=4"></script>
+<script src="games.js?v=5"></script>
 <script>
 (() => {
   "use strict";
@@ -477,6 +477,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:48px}
         silent.loop = true;
         silent.setAttribute("playsinline", "");
         silent.setAttribute("x-webkit-airplay", "deny");
+        silent.dataset.arcadeSilent = "1";
         silent.play().catch(() => { silent = null; });
       }
     };
