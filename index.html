@@ -191,7 +191,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:48px}
   </form>
 </dialog>
 
-<script src="games.js?v=3"></script>
+<script src="games.js?v=4"></script>
 <script>
 (() => {
   "use strict";
@@ -424,6 +424,73 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:48px}
     else player.requestFullscreen?.().catch(() => toast("全画面にできませんでした"));
   });
   if (!document.fullscreenEnabled) $("#fsBtn").hidden = true;
+
+  /* ---------- audio helper (injected into same-origin game frames) ----------
+   * iPhone/iPad では
+   *  - Web Audio はユーザー操作（タップ）の中で resume しないと鳴らない
+   *  - マナーモード（消音スイッチ）だと Web Audio が鳴らない
+   * そこで、ゲームの AudioContext を記録してタップのたびに resume し、
+   * さらに「再生」扱いの音声セッションにしてマナーモードでも鳴るようにする。 */
+  let silentUrl = null;
+  function getSilentUrl() {
+    if (silentUrl) return silentUrl;
+    // 0.25 秒・8kHz・8bit の無音 WAV
+    const n = 2000, buf = new ArrayBuffer(44 + n), v = new DataView(buf);
+    const str = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+    str(0, "RIFF"); v.setUint32(4, 36 + n, true); str(8, "WAVEfmt ");
+    v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+    v.setUint32(24, 8000, true); v.setUint32(28, 8000, true); v.setUint16(32, 1, true); v.setUint16(34, 8, true);
+    str(36, "data"); v.setUint32(40, n, true);
+    for (let i = 0; i < n; i++) v.setUint8(44 + i, 128);
+    return silentUrl = URL.createObjectURL(new Blob([buf], { type: "audio/wav" }));
+  }
+  function setPlaybackSession(w) {
+    try { if (w.navigator.audioSession) { w.navigator.audioSession.type = "playback"; return true; } } catch {}
+    return false;
+  }
+  setPlaybackSession(window);
+
+  function enhanceFrame() {
+    let w, d;
+    try { w = frame.contentWindow; d = w.document; } catch { return; } // cross-origin: nothing we can do
+    if (!w || !d || w.__arcadeAudio || w.location.href === "about:blank") return;
+    const ctxs = new Set(); // AudioContexts the game creates from now on
+    w.__arcadeAudio = ctxs;
+    const hasSession = setPlaybackSession(w);
+
+    for (const name of ["AudioContext", "webkitAudioContext"]) {
+      const Orig = w[name];
+      if (typeof Orig !== "function") continue;
+      const Wrapped = function (...args) { const c = new Orig(...args); ctxs.add(c); return c; };
+      Wrapped.prototype = Orig.prototype;
+      try { Object.setPrototypeOf(Wrapped, Orig); w[name] = Wrapped; } catch {}
+    }
+
+    let silent = null;
+    const unlock = () => {
+      for (const c of ctxs) if (c.state !== "running" && c.state !== "closed") c.resume().catch(() => {});
+      if (!hasSession && !silent) {
+        // Fallback for older iOS: a looping silent <audio> switches the page to "playback",
+        // so Web Audio is not muted by the ringer switch.
+        silent = d.createElement("audio");
+        silent.src = getSilentUrl();
+        silent.loop = true;
+        silent.setAttribute("playsinline", "");
+        silent.setAttribute("x-webkit-airplay", "deny");
+        silent.play().catch(() => { silent = null; });
+      }
+    };
+    for (const ev of ["pointerdown", "touchend", "click", "keydown"]) {
+      w.addEventListener(ev, unlock, { capture: true, passive: true });
+    }
+    // Games pause audio when hidden; bring it back when the page is visible again
+    d.addEventListener("visibilitychange", () => {
+      if (d.hidden) { silent?.pause(); }
+      else { silent?.play().catch(() => {}); }
+    });
+    w.addEventListener("pagehide", () => { silent?.pause(); silent = null; });
+  }
+  frame.addEventListener("load", enhanceFrame);
 
   /* ---------- toast ---------- */
   let toastTimer;

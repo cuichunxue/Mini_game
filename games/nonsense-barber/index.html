@@ -327,6 +327,7 @@ function tone(f,d,type,v,delay){
   if(!soundOn) return;
   try{
     ac=ac||new (window.AudioContext||window.webkitAudioContext)();
+    if(ac.state!=='running'&&ac.resume)ac.resume();
     var t=ac.currentTime+(delay||0), o=ac.createOscillator(), g=ac.createGain();
     o.type=type||'square'; o.frequency.setValueAtTime(f,t);
     g.gain.setValueAtTime(v||0.04,t); g.gain.exponentialRampToValueAtTime(0.0001,t+d);
