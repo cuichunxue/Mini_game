@@ -44,6 +44,20 @@ body{font-family:var(--body);font-size:15px}
 #actBtn{width:86px;height:86px;border-radius:50%;border:2px solid var(--paper);background:rgba(255,106,26,.82);color:#fff;
   font:400 15px var(--display);letter-spacing:.04em;touch-action:none}
 #actBtn.held{background:var(--orange);transform:scale(.95)}
+#touchUI .tcol{display:flex;flex-direction:column;align-items:center;gap:12px}
+#rollBtn{width:64px;height:64px;border-radius:50%;border:2px solid var(--paper);background:rgba(40,160,220,.78);color:#fff;
+  font:400 13px var(--display);letter-spacing:.04em;touch-action:none;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1}
+#rollBtn small{font:600 16px var(--mono);margin-top:2px}
+#rollBtn.held{transform:scale(.92);background:rgba(40,160,220,1)}
+#rollBtn[disabled]{opacity:.3}
+@media (max-height:520px){
+  #touchUI .tcol{flex-direction:row;align-items:flex-end;gap:10px}
+  #rollBtn{width:56px;height:56px}
+  #actBtn{width:76px;height:76px}
+  #thrTrack{height:min(150px,46vh)}
+}
+#actBtn.boost{background:linear-gradient(180deg,#36c7ff,#1a6fff);box-shadow:0 0 0 0 rgba(54,199,255,.6)}
+#actBtn.boost.held{box-shadow:0 0 22px 6px rgba(54,199,255,.7)}
 #pauseBtn{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));left:calc(10px + env(safe-area-inset-left,0px));
   width:40px;height:40px;border-radius:10px;border:1.5px solid rgba(238,243,241,.45);background:rgba(12,23,32,.6);color:var(--paper);
   font:600 14px var(--mono);cursor:pointer}
@@ -121,7 +135,7 @@ h1,h2,h3{margin:0;text-wrap:balance}
 <canvas id="cv"></canvas>
 <div id="stickZone" hidden></div>
 <div id="touchUI" hidden>
-  <button id="actBtn" type="button">FLARE</button>
+  <div class="tcol"><button id="rollBtn" type="button">ROLL<small>↻</small></button><button id="actBtn" type="button">FLARE</button></div>
   <div id="thrTrack"><div id="thrFill"></div><div id="thrKnob"></div><span>THR</span></div>
 </div>
 <button id="pauseBtn" type="button" aria-label="一時停止" hidden>II</button>
@@ -142,13 +156,15 @@ h1,h2,h3{margin:0;text-wrap:balance}
         <div>機首上げ / 下げ<b>↑ ↓ / W S</b></div>
         <div>左右の傾き（旋回）<b>← → / A D</b></div>
         <div>スロットル増 / 減<b>E / Q</b></div>
-        <div>フレア補助（空中）<b>Space 長押し</b></div>
+        <div>ブースト（リング区間）<b>Space / B 長押し</b></div>
+        <div>バレルロール<b>Z / X（← →2回押し）</b></div>
+        <div>フレア補助（着陸前）<b>Space 長押し</b></div>
         <div>ブレーキ（接地後）<b>Space 長押し</b></div>
         <div>接地後の操向<b>← →</b></div>
         <div>リトライ<b>R</b></div>
         <div>一時停止<b>Esc</b></div>
       </div>
-      <p class="lead" style="margin-top:12px">スマホ：画面左側をドラッグで機首と傾き、右下のスライダーでスロットル、丸ボタンでフレア／ブレーキ。次のリングの方向は画面端の矢印と左上のマップで確認。</p>
+      <p class="lead" style="margin-top:12px">スマホ：画面左側をドラッグで機首と傾き、右下のスライダーでスロットル、丸ボタンはリング区間で<b>ブースト</b>・着陸前は<b>フレア</b>／接地後は<b>ブレーキ</b>。青い <b>ROLL</b> でバレルロール。ビルや塔のそばをすり抜けるとニアミスでブースト回復、空の★も拾おう。次のリングの方向は画面端の矢印と左上のマップで確認。</p>
     </div>
   </div>
 </section>
@@ -171,6 +187,7 @@ h1,h2,h3{margin:0;text-wrap:balance}
         <div class="rank" id="resRank">S</div>
         <div class="score" id="resScore">0</div>
         <div class="quip" id="resQuip"></div>
+        <div class="quip" id="resQuipSky" style="color:#5fd7ff;font-size:13px" hidden></div>
         <div class="newbest" id="resBest" hidden>自己ベスト更新</div>
       </div>
       <div style="display:flex;flex-direction:column;gap:16px;min-width:0">
@@ -325,24 +342,38 @@ const SIM = (() => {
       let nx = ax + bx, nz = az + bz, ln = Math.hypot(nx, nz); nx /= ln; nz /= ln;
       return { x: r[0], z: r[1], h: r[2], r: r[3] || 30, nx, nz };
     });
-    return worlds[st.id] = { grid, buildings, extra, rings, pts };
+    const Wd = { grid, buildings, extra, rings, pts, stars: [] };
+    // TRIZ #3 local quality / #22: optional stars off the ring line reward free flight
+    const chain = [{ x: st.start.x, z: st.start.z, h: st.start.h }].concat(rings);
+    for (let k = 0; k < chain.length - 1; k++) {
+      const a = chain[k], b = chain[k + 1], L = Math.hypot(b.x - a.x, b.z - a.z) || 1, ux = (b.z - a.z) / L, uz = -(b.x - a.x) / L;
+      for (const t of [0.33, 0.66]) {
+        const side = (hsh(k * 7 + 3, Math.round(t * 100)) - 0.5) * 2, lat = Math.sign(side || 1) * (35 + Math.abs(side) * 45);
+        const x = a.x + (b.x - a.x) * t + ux * lat, z = a.z + (b.z - a.z) * t + uz * lat;
+        let h = a.h + (b.h - a.h) * t + (hsh(k + 11, Math.round(t * 50)) - 0.3) * 50;
+        h = Math.max(h, 35);
+        if (hitTest(Wd, x, h, z, 20)) continue;
+        Wd.stars.push({ x, z, h });
+      }
+    }
+    return worlds[st.id] = Wd;
   }
-  function hitTest(Wd, x, h, z) {
+  function hitTest(Wd, x, h, z, m = 0) {
     if (h < 0) return null;
-    const B = WD.B, i = Math.floor((x - WD.X0) / B), j = Math.floor((z - WD.Z0) / B), M = 6;
+    const B = WD.B, i = Math.floor((x - WD.X0) / B), j = Math.floor((z - WD.Z0) / B), M = 6 + m;
     for (let di = -1; di <= 1; di++) for (let dj = -1; dj <= 1; dj++) {
       const ii = i + di, jj = j + dj; if (ii < 0 || jj < 0 || ii >= WD.NI || jj >= WD.NJ) continue;
       const b = Wd.grid[ii + jj * WD.NI];
-      if (b && h < b.h + 2 && x > b.x0 - M && x < b.x1 + M && z > b.z0 - M && z < b.z1 + M) return 'BUILDING';
+      if (b && h < b.h + 2 + m && x > b.x0 - M && x < b.x1 + M && z > b.z0 - M && z < b.z1 + M) return 'BUILDING';
     }
-    for (const b of Wd.extra) if (h < b.h + 2 && x > b.x0 - M && x < b.x1 + M && z > b.z0 - M && z < b.z1 + M) return 'BUILDING';
+    for (const b of Wd.extra) if (h < b.h + 2 + m && x > b.x0 - M && x < b.x1 + M && z > b.z0 - M && z < b.z1 + M) return 'BUILDING';
     const T = WD.tower, dT = Math.hypot(x - T.x, z - T.z);
-    if (h < T.h && dT < 44 * Math.pow(1 - h / T.h, 1.6) + 5) return 'TOWER';
+    if (h < T.h + m && dT < 44 * Math.pow(Math.max(0, 1 - h / T.h), 1.6) + 5 + m) return 'TOWER';
     const S = WD.tree, dS = Math.hypot(x - S.x, z - S.z);
-    if (h < S.h) { let r = Math.max(4, 30 - h * 0.04); if (Math.abs(h - 357) < 20) r = 25; if (Math.abs(h - 448) < 11) r = 20; if (dS < r + 5) return 'TREE'; }
+    if (h < S.h + m) { let r = Math.max(4, 30 - h * 0.04); if (Math.abs(h - 357) < 20) r = 25; if (Math.abs(h - 448) < 11) r = 20; if (dS < r + 5 + m) return 'TREE'; }
     const Bd = WD.bridge;
-    if (Math.abs(z - Bd.z) < 16 && x > Bd.x0 - 30 && x < Bd.x1 + 30 && h > Bd.d0 - 3 && h < Bd.d1 + 3) return 'BRIDGE';
-    for (const tx of Bd.tx) if (Math.abs(x - tx) < 12 && Math.abs(z - Bd.z) < 16 && h < Bd.th + 2) return 'BRIDGE';
+    if (Math.abs(z - Bd.z) < 16 + m && x > Bd.x0 - 30 && x < Bd.x1 + 30 && h > Bd.d0 - 3 - m && h < Bd.d1 + 3 + m) return 'BRIDGE';
+    for (const tx of Bd.tx) if (Math.abs(x - tx) < 12 + m && Math.abs(z - Bd.z) < 16 + m && h < Bd.th + 2 + m) return 'BRIDGE';
     return null;
   }
   function surface(st, x, z) {
@@ -375,7 +406,9 @@ const SIM = (() => {
     const s = { st, W: Wd, t: 0, phase: 'air', x: S.x, h: S.h, z: S.z, v, gam,
       pitch: tr.alpha, alpha: tr.alpha, bank: 0, psi, thrCmd: tr.thr, thr: tr.thr,
       w: windAt(st, 0), vx: 0, vy: 0, vz: v, gdot: 0, bounces: 0, td: null, maxDev: 0, stallT: -9,
-      trk: 0, result: null, events: [], ring: 0, hits: [] };
+      trk: 0, result: null, events: [], ring: 0, hits: [],
+      boost: 60, boosting: false, sbrk: false, roll: 0, rollT: -1, rollDir: 1, combo: 0, comboT: -9, nearCD: 0,
+      stars: Wd.stars.map(() => false), sky: { trick: 0, near: 0, star: 0, speed: 0 }, ringT: null };
     s.vx = v * Math.sin(psi) + s.w.x; s.vz = v * Math.cos(psi) + s.w.z; s.vy = 0;
     return s;
   }
@@ -394,10 +427,26 @@ const SIM = (() => {
       const t = d0 / (d0 - d1), ix = px + (s.x - px) * t, iz = pz + (s.z - pz) * t, ih = ph + (s.h - ph) * t;
       const lat = Math.hypot(Math.hypot(ix - R.x, iz - R.z), ih - R.h);
       const ok = lat <= R.r, q = ok ? (lat < R.r * 0.45 ? 1 : 0.75) : 0;
-      s.hits.push({ ok, q, lat: Math.round(lat) }); s.events.push({ type: 'ring', ok, q, idx: s.ring, n: s.W.rings.length }); s.ring++;
+      const rolling = ok && s.rollT >= 0;
+      if (ok) s.boost = Math.min(100, s.boost + 18);
+      if (rolling) s.sky.trick = Math.min(TRICK_CAP, s.sky.trick + 400);
+      s.hits.push({ ok, q, lat: Math.round(lat) }); s.events.push({ type: 'ring', ok, q, idx: s.ring, n: s.W.rings.length, rolling }); s.ring++;
+      if (s.ring === s.W.rings.length) speedBonus(s);
     } else if (d1 > 350) {
       s.hits.push({ ok: false, q: 0, lat: 999 }); s.events.push({ type: 'ring', ok: false, q: 0, idx: s.ring, n: s.W.rings.length }); s.ring++;
+      if (s.ring === s.W.rings.length) speedBonus(s);
     }
+  }
+  // TRIZ #15 dynamics: fast sky section is rewarded, separately from the slow landing
+  const TRICK_CAP = 3000, NEAR_CAP = 2000;
+  function speedBonus(s) {
+    if (s.ringT != null) return;
+    s.ringT = s.t;
+    const ch = [s.st.start].concat(s.W.rings); let L = 0;
+    for (let i = 1; i < ch.length; i++) L += Math.hypot(ch[i].x - ch[i - 1].x, ch[i].z - ch[i - 1].z);
+    const par = L / 72;
+    s.sky.speed = Math.round(1500 * clamp((par - s.t) / (par * 0.3), 0, 1));
+    s.events.push({ type: 'speed', pts: s.sky.speed, t: s.t, par });
   }
   function contact(s) {
     const st = s.st, sink = -s.vy, track = Math.atan2(s.vx, s.vz);
@@ -453,19 +502,51 @@ const SIM = (() => {
       const q = AC.KL * s.v * s.v, L = q * CL;
       const CD = AC.CD0 + AC.K * CL * CL * (1 - 0.4 * ge) + (alpha > AC.AST ? 0.02 * (alpha - AC.AST) : 0);
       const bk = s.bank * D2R;
-      const vdot = s.thr * AC.TMAX - q * CD - G * Math.sin(s.gam);
+      let vdot = s.thr * AC.TMAX - q * CD - G * Math.sin(s.gam);
+      // TRIZ #15/#19: BOOST only in the sky section; auto speed brake once on final (#11 cushion in advance)
+      const fl = finalLeg(s);
+      s.boosting = !!inp.boost && !fl && s.boost > 0;
+      if (s.boosting) { vdot += 7; s.boost = Math.max(0, s.boost - 22 * DT); }
+      else if (!fl) s.boost = Math.min(100, s.boost + 2.5 * DT);
+      if (fl && s.v > 80) { vdot -= (s.v - 80) * 0.55; if (!s.sbrk) { s.sbrk = true; s.events.push({ type: 'sbrk' }); } }
       const gdot = (L * Math.cos(bk) - G * Math.cos(s.gam)) / s.v;
       s.gdot = gdot * R2D;
       s.psi += L * Math.sin(bk) / (s.v * Math.cos(s.gam)) * DT;
-      s.v = Math.max(25, s.v + vdot * DT);
+      s.v = clamp(s.v + vdot * DT, 25, 150);
       s.gam = clamp(s.gam + gdot * DT, -40 * D2R, 30 * D2R);
       const vh = s.v * Math.cos(s.gam);
       s.vx = vh * Math.sin(s.psi) + w.x; s.vz = vh * Math.cos(s.psi) + w.z; s.vy = s.v * Math.sin(s.gam) + w.y * clamp(s.h / 30, 0, 1);
       s.x += s.vx * DT; s.z += s.vz * DT; s.h += s.vy * DT;
       if (alpha > AC.AST - 1 || s.v < AC.VWARN) s.stallT = s.t;
-      if (!finalLeg(s)) checkRing(s, px, ph, pz);
+      // TRIZ #17 another dimension: the barrel roll is a visual axis on top of the flight model,
+      // so it adds thrill without destabilising the physics (#25 self-service: it flies itself)
+      if (inp.trick && s.rollT < 0 && s.h > 25 && !(fl && s.h < 150)) { s.rollT = 0; s.rollDir = inp.trick > 0 ? 1 : -1; s.events.push({ type: 'rollstart' }); }
+      if (s.rollT >= 0) {
+        s.rollT += DT; const p = Math.min(1, s.rollT / 0.95), e = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+        s.roll = s.rollDir * 360 * e;
+        if (p >= 1) {
+          s.roll = 0; s.rollT = -1;
+          if (s.t - s.comboT > 6) s.combo = 0;
+          s.combo++; s.comboT = s.t;
+          const pts = Math.min(150 + 50 * Math.min(s.combo - 1, 4), Math.max(0, TRICK_CAP - s.sky.trick));
+          s.sky.trick += pts; s.boost = Math.min(100, s.boost + 12);
+          s.events.push({ type: 'trick', pts, combo: s.combo });
+        }
+      }
+      if (!fl) checkRing(s, px, ph, pz);
       const hc = hitTest(s.W, s.x, s.h, s.z);
       if (hc) return finish(s, false, hc);
+      // TRIZ #22 blessing in disguise: flying close to danger refills BOOST
+      if (s.t > s.nearCD && s.h > 8) {
+        const nm = hitTest(s.W, s.x, s.h, s.z, 26);
+        if (nm) { s.nearCD = s.t + 1.1; const pts = Math.min(s.v > 100 ? 250 : 150, Math.max(0, NEAR_CAP - s.sky.near)); s.sky.near += pts; s.boost = Math.min(100, s.boost + 15); s.events.push({ type: 'near', pts, what: nm }); }
+      }
+      for (let i = 0; i < s.stars.length; i++) {
+        if (s.stars[i]) continue; const S2 = s.W.stars[i];
+        if (Math.abs(S2.z - s.z) < 30 && Math.hypot(S2.x - s.x, S2.h - s.h, S2.z - s.z) < 24) {
+          s.stars[i] = true; s.sky.star += 120; s.boost = Math.min(100, s.boost + 20); s.events.push({ type: 'star', got: s.stars.filter(Boolean).length, n: s.stars.length });
+        }
+      }
       if (s.h <= 0) contact(s);
       else if (s.z > st.length + 150) finish(s, false, 'MISSED');
       else if (s.h > AC.CEIL || Math.abs(s.x) > 6000 || s.z < -13000) finish(s, false, 'LOST');
@@ -501,9 +582,10 @@ const SIM = (() => {
       { label: '着陸安定性', max: 500, pts: 500 * clamp(1 - s.bounces * 0.4 - Math.max(0, s.maxDev - 3) / half * 0.6, 0, 1) }
     ];
     parts.forEach(p => p.pts = Math.round(p.pts));
-    const total = parts.reduce((a, p) => a + p.pts, 0);
-    const rank = total >= 9500 ? 'SSS' : total >= 9000 ? 'SS' : total >= 8000 ? 'S' : total >= 6500 ? 'A' : total >= 5000 ? 'B' : 'C';
-    return { total, rank, parts };
+    const landing = parts.reduce((a, p) => a + p.pts, 0);
+    const rank = landing >= 9500 ? 'SSS' : landing >= 9000 ? 'SS' : landing >= 8000 ? 'S' : landing >= 6500 ? 'A' : landing >= 5000 ? 'B' : 'C';
+    const sk = s.sky, sky = sk.trick + sk.near + sk.star + sk.speed;
+    return { total: landing + sky, landing, sky, rank, parts };
   }
   function predict(s) {
     if (s.phase !== 'air' || s.vy >= -0.2 || !finalLeg(s)) return null;
@@ -607,7 +689,16 @@ const Snd = {
       this.o1.frequency.setTargetAtTime(95 + thr * 60, t, 0.3); this.o2.frequency.setTargetAtTime(190 + thr * 125, t, 0.3);
       this.wh.frequency.setTargetAtTime(520 + thr * 900, t, 0.4);
     }
-    this.wg.gain.setTargetAtTime(on ? Math.min(0.28, s.v / 300) : 0, t, 0.2);
+    const bz = on && s.boosting;
+    this.wg.gain.setTargetAtTime(on ? Math.min(0.42, s.v / 300 + (bz ? 0.14 : 0)) : 0, t, 0.2);
+    if (s && bz) { this.o1.frequency.setTargetAtTime(170, t, 0.25); this.o2.frequency.setTargetAtTime(345, t, 0.25); this.wh.frequency.setTargetAtTime(1900, t, 0.3); this.eg.gain.setTargetAtTime(0.2, t, 0.15); }
+  },
+  swish(vol = 0.5, dur = 0.5) {
+    if (!this.on()) return;
+    const c = this.ctx, n = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain(), t = c.currentTime;
+    n.buffer = this.noiseBuf; f.type = 'bandpass'; f.Q.value = 1.2; f.frequency.setValueAtTime(400, t); f.frequency.exponentialRampToValueAtTime(2600, t + dur * 0.5); f.frequency.exponentialRampToValueAtTime(500, t + dur);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + dur * 0.4); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    n.connect(f); f.connect(g); g.connect(this.master); n.start(t); n.stop(t + dur + 0.05);
   },
   beep(f, dur, type = 'square', vol = 0.08, f2) {
     if (!this.on()) return;
@@ -631,7 +722,7 @@ const Snd = {
 
 /* ================= INPUT ================= */
 const Inp = {
-  keys: new Set(), thr: 0.4, stick: null, act: false, touch: false,
+  keys: new Set(), thr: 0.4, stick: null, act: false, touch: false, trickQ: 0,
   read(dt) {
     const k = this.keys, inv = Save.d.opt.invert ? -1 : 1;
     let pitch = ((k.has('ArrowUp') || k.has('KeyW')) ? 1 : 0) - ((k.has('ArrowDown') || k.has('KeyS')) ? 1 : 0);
@@ -642,7 +733,9 @@ const Inp = {
     const dn = k.has('KeyQ') || k.has('PageDown');
     if (up) this.thr = Math.min(1, this.thr + 0.5 * dt);
     if (dn) this.thr = Math.max(0, this.thr - 0.5 * dt);
-    return { pitch: SIM.clamp(pitch, -1, 1), bank: SIM.clamp(bank, -1, 1), thr: this.thr, flare: k.has('Space') || this.act };
+    const trick = this.trickQ; this.trickQ = 0;
+    const hold = k.has('Space') || this.act;
+    return { pitch: SIM.clamp(pitch, -1, 1), bank: SIM.clamp(bank, -1, 1), thr: this.thr, flare: hold, boost: hold || k.has('KeyB'), trick };
   }
 };
 
@@ -677,7 +770,7 @@ const PAL = [
   [[156, 108, 86], [138, 100, 82], [170, 132, 106], [124, 96, 84]]                                     // brick
 ];
 const TINT = { day: [1, 1, 1], dusk: [0.86, 0.7, 0.66], night: [0.2, 0.23, 0.34] };
-let sceneCache = null;
+let sceneCache = null, boostFx = 0;
 function buildScene(st) {
   const th = THEMES[st.time], Wd = SIM.buildWorld(st);
   const stars = [];
@@ -906,6 +999,17 @@ function bridgeCable(Bd, zoff) {
   }
   return pts;
 }
+function drawStar(S2) {
+  const c = toCam(S2.x, S2.h, S2.z); if (c[2] < 6) return;
+  const px = cam.cx + cam.f * c[0] / c[2], py = cam.cy - cam.f * c[1] / c[2], r = SIM.clamp(cam.f * 7 / c[2], 3, 46);
+  const t = performance.now() / 1000, rot = t * 2 + S2.x;
+  ctx.save(); ctx.translate(px, py);
+  ctx.fillStyle = 'rgba(255,214,80,.28)'; ctx.beginPath(); ctx.arc(0, 0, r * 1.7, 0, 6.2832); ctx.fill();
+  ctx.rotate(rot); ctx.beginPath();
+  for (let i = 0; i < 10; i++) { const a = i / 10 * 6.2832 - Math.PI / 2, rr2 = i % 2 ? r * 0.45 : r; ctx.lineTo(Math.cos(a) * rr2, Math.sin(a) * rr2); }
+  ctx.closePath(); ctx.fillStyle = '#ffd23f'; ctx.fill(); ctx.lineWidth = Math.max(1, r * 0.12); ctx.strokeStyle = '#8a5a00'; ctx.stroke();
+  ctx.restore();
+}
 function drawRing(R, kind) {
   const c0 = toCam(R.x, R.h, R.z); if (c0[2] < 12) return;
   const rx = R.nz, rz = -R.nx, pts = [];
@@ -969,7 +1073,9 @@ function render(s, opt) {
   HZ = th.haze; TIME = time;
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   const onG = s.phase !== 'air' && s.h <= 0.05;
-  const back = onG ? 62 : 70, up = onG ? 8 : 12;
+  boostFx += ((s.boosting ? 1 : 0) - boostFx) * 0.06;
+  const spdFx = SIM.clamp((s.v - 80) / 60, 0, 1);
+  const back = onG ? 62 : 70 + boostFx * 14, up = onG ? 8 : 12;
   cam.yaw += (s.psi - cam.yaw) * 0.07;
   const fx = Math.sin(cam.yaw), fz = Math.cos(cam.yaw);
   cam.x = s.x - fx * back; cam.z = s.z - fz * back; cam.y = Math.max(2.5, s.h + 3 + up);
@@ -977,7 +1083,7 @@ function render(s, opt) {
   cam.pitch += (tp - cam.pitch) * 0.1;
   cam.roll += (s.bank * 0.22 * SIM.D2R - cam.roll) * 0.1;
   cam.cyw = Math.cos(cam.yaw); cam.syw = Math.sin(cam.yaw); cam.cp = Math.cos(cam.pitch); cam.sp = Math.sin(cam.pitch);
-  cam.f = Math.min(W * 0.95, H * 1.55); cam.cx = W / 2; cam.cy = H * 0.5;
+  cam.f = Math.min(W * 0.95, H * 1.55) / (1 + 0.22 * boostFx + 0.12 * spdFx); cam.cx = W / 2; cam.cy = H * 0.5;
   let sx = 0, sy = 0;
   if (shake > 0) { sx = (Math.random() - .5) * shake; sy = (Math.random() - .5) * shake; shake *= 0.88; if (shake < 0.3) shake = 0; }
 
@@ -1126,6 +1232,9 @@ function render(s, opt) {
     if (i < s.ring || i > s.ring + 2) return;
     const d = depthOf(R.x, R.z); if (d > 0) items.push({ d: d - 2, k: 6, R, kind: i === s.ring ? 0 : 1 });
   });
+  if (s.stars && (!s.result || attract)) Wd.stars.forEach((S2, i) => {
+    if (s.stars[i]) return; const d = depthOf(S2.x, S2.z); if (d > 4 && d < 2600) items.push({ d, k: 7, S2 });
+  });
   items.sort((a, b) => b.d - a.d);
   const flick = Math.sin(performance.now() / 280) > -0.3;
   const roofRed = [];
@@ -1148,6 +1257,7 @@ function render(s, opt) {
       lineW(c1, cc, 0.9); lineW(c2, cc, 0.9);
       if (time === 'night') { const lp = c1.concat(c2).filter((_, i) => i % 1 === 0); dots(lp, 'rgba(255,255,255,.95)', 1.2, true); dots(lp.map(p => [p[0], 48, p[2]]), 'rgba(140,200,255,.9)', 1, true); }
     } else if (it.k === 6) drawRing(it.R, it.kind);
+    else if (it.k === 7) drawStar(it.S2);
   }
 
   for (let i = parts.length - 1; i >= 0; i--) {
@@ -1165,7 +1275,7 @@ function drawPlane(s) {
   const c = toCam(s.x, s.h + 3, s.z); if (c[2] < 2) return;
   const px = cam.cx + cam.f * c[0] / c[2], py = cam.cy - cam.f * c[1] / c[2], k = cam.f / c[2];
   ctx.save(); ctx.translate(px, py); ctx.scale(k, k);
-  ctx.rotate(s.bank * SIM.D2R);
+  ctx.rotate((s.bank + (s.roll || 0)) * SIM.D2R);
   const nose = SIM.clamp((s.pitch * SIM.D2R - cam.pitch) * 1.2, -0.3, 0.4);
   const yawRel = SIM.clamp(s.psi - cam.yaw, -0.3, 0.3) * 6;
   const crashed = s.result && !s.result.ok;
@@ -1232,8 +1342,22 @@ function pullUp(s) {
   return false;
 }
 
+let pops = [];
+function pop(text, col) { pops.push({ text, col: col || C_HUD, t: 1.4 }); if (pops.length > 4) pops.shift(); }
+function speedLines(s) {
+  const k = SIM.clamp((s.v - 85) / 50, 0, 1) * 0.7 + boostFx * 0.6; if (k < 0.04 || s.phase !== 'air') return;
+  const cx = W / 2, cy = H * 0.5, n = Math.round(10 + 34 * k), R0 = Math.min(W, H) * 0.32, R1 = Math.hypot(W, H) * 0.6;
+  ctx.save(); ctx.lineCap = 'round';
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * 6.2832, r0 = R0 + Math.random() * R0 * 0.6, len = 40 + Math.random() * 120 * k;
+    ctx.strokeStyle = `rgba(255,255,255,${0.12 + 0.35 * k * Math.random()})`; ctx.lineWidth = 1 + 2 * Math.random() * k;
+    ctx.beginPath(); ctx.moveTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0); ctx.lineTo(cx + Math.cos(a) * Math.min(R1, r0 + len), cy + Math.sin(a) * Math.min(R1, r0 + len)); ctx.stroke();
+  }
+  ctx.restore();
+}
 function drawHUD(s, mode) {
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  speedLines(s);
   const u = SIM.clamp(Math.min(W, H) / 520, 0.72, 1.25);
   const st = s.st, Wd = s.W, mono = n => `600 ${Math.round(n * u)}px "IBM Plex Mono",monospace`, disp = n => `400 ${Math.round(n * u)}px "Dela Gothic One",sans-serif`, body = n => `700 ${Math.round(n * u)}px "Zen Kaku Gothic New",sans-serif`;
   const top = INS.t + 10, L = INS.l + 10, R = W - INS.r - 10;
@@ -1304,7 +1428,7 @@ function drawHUD(s, mode) {
   let by = H * 0.30;
   if (lx < mx + mw + 6) by = Math.max(by, my + mh + 10);
   const kt = s.v * 1.944;
-  const spdCol = s.phase === 'air' && (s.v < SIM.AC.VWARN || s.v > 85) ? C_BAD : C_HUD;
+  const spdCol = s.phase === 'air' && (s.v < SIM.AC.VWARN || (fin && s.v > 85)) ? C_BAD : s.boosting ? '#5fd7ff' : C_HUD;
   hudBox(lx, by, bw, bh);
   txt('SPD', lx + 10 * u, by + 17 * u, mono(10), C_MUTE);
   txt(s.v.toFixed(0), lx + bw - 32 * u, by + 46 * u, disp(28), spdCol, 'right');
@@ -1326,6 +1450,38 @@ function drawHUD(s, mode) {
     ctx.fillStyle = 'rgba(238,247,251,.15)'; ctx.fillRect(lx + 42 * u, ty + 11 * u, bw - 52 * u, 8 * u);
     ctx.fillStyle = C_OR; ctx.fillRect(lx + 42 * u, ty + 11 * u, (bw - 52 * u) * s.thr, 8 * u);
     ctx.fillStyle = C_HUD; ctx.fillRect(lx + 42 * u + (bw - 52 * u) * Inp.thr - 1, ty + 8 * u, 2, 14 * u);
+  }
+  // BOOST gauge (sky section) / speed-brake note (final)
+  {
+    const gy = by + bh + (Inp.touch ? 10 : 46) * u, gw = bw;
+    hudBox(lx, gy, gw, 30 * u);
+    if (!fin && s.phase === 'air') {
+      txt('BOOST', lx + 8 * u, gy + 19 * u, mono(9), s.boosting ? '#5fd7ff' : C_MUTE);
+      const bx = lx + 50 * u, bww = gw - 58 * u;
+      ctx.fillStyle = 'rgba(238,247,251,.15)'; ctx.fillRect(bx, gy + 10 * u, bww, 10 * u);
+      const g2 = ctx.createLinearGradient(bx, 0, bx + bww, 0); g2.addColorStop(0, '#1a6fff'); g2.addColorStop(1, '#5fd7ff');
+      ctx.fillStyle = s.boost < 15 ? C_BAD : g2; ctx.fillRect(bx, gy + 10 * u, bww * s.boost / 100, 10 * u);
+    } else txt(s.sbrk ? 'SPD BRAKE ●' : 'APPROACH', lx + gw / 2, gy + 19 * u, mono(10), s.sbrk && s.v > 80 ? C_WARN : C_MUTE, 'center');
+  }
+  // SKY score + combo (under the wind compass)
+  {
+    const sk = s.sky, tot = sk.trick + sk.near + sk.star + sk.speed;
+    const sx2 = R - 8 * u, sy2 = top + 34 * u + 26 * u + 40 * u;
+    txt('SKY', sx2 - 70 * u, sy2, mono(10), C_MUTE, 'right');
+    txt(tot.toLocaleString(), sx2, sy2, disp(18), '#ffd23f', 'right');
+    const stars = s.stars.filter(Boolean).length;
+    txt(`★ ${stars}/${s.stars.length}`, sx2, sy2 + 18 * u, mono(11), C_HUD, 'right');
+    if (s.combo > 1 && s.t - s.comboT < 6) txt(`ROLL ×${s.combo}`, sx2, sy2 + 36 * u, disp(14), '#5fd7ff', 'right');
+  }
+  // pops (small bonus messages)
+  {
+    let py2 = H * 0.42;
+    for (let i = pops.length - 1; i >= 0; i--) {
+      const p2 = pops[i]; p2.t -= 1 / 60; if (p2.t <= 0) { pops.splice(i, 1); continue; }
+      ctx.globalAlpha = Math.min(1, p2.t * 2.5);
+      txt(p2.text, W / 2, py2 - (1.4 - p2.t) * 16 * u, disp(17), p2.col, 'center');
+      ctx.globalAlpha = 1; py2 -= 24 * u;
+    }
   }
   // distance line
   if (s.phase === 'air') {
@@ -1398,6 +1554,8 @@ function drawHUD(s, mode) {
 function hintFor(s) {
   if (s.result) return null;
   const T = Inp.touch, st = s.st, fin = SIM.finalLeg(s);
+  if (!fin && s.phase === 'air' && s.t >= 8 && s.t < 15) return T ? '青いボタン長押しでブースト・ROLLでバレルロール' : 'Space/B 長押しでブースト・Z/X（←→2回押し）でバレルロール';
+  if (!fin && s.phase === 'air' && s.t >= 15 && s.t < 20) return 'ビルや塔のそばを抜けるとニアミスでブースト回復。★も拾おう';
   if (s.phase === 'roll') return T ? '丸ボタン長押しでブレーキ・左ドラッグで操向' : 'Space 長押しでブレーキ・← → で操向';
   if (!fin) {
     if (s.t < 8) return T ? '左ドラッグで機首と傾き。オレンジのリングをくぐれ' : '↑↓ 機首・←→ 傾きで旋回・Q/E スロットル。リングをくぐれ';
@@ -1425,7 +1583,7 @@ function startStage(i) {
   Snd.init();
   Snd.beep(660, 0.12, 'triangle', 0.1); setTimeout(() => Snd.beep(990, 0.16, 'triangle', 0.1), 110);
   stageIdx = i; attract = false; const st = SIM.STAGES[i];
-  buildScene(st); sim = SIM.create(st); Inp.thr = sim.thrCmd; parts.length = 0; flash = null; shake = 0; resultTimer = 0;
+  buildScene(st); sim = SIM.create(st); Inp.thr = sim.thrCmd; Inp.trickQ = 0; parts.length = 0; flash = null; pops = []; shake = 0; resultTimer = 0; boostFx = 0;
   cam.yaw = sim.psi; cam.pitch = -7 * SIM.D2R; cam.roll = 0;
   mode = 'play'; show(null); setPlayUI(true); acc = 0;
 }
@@ -1440,7 +1598,16 @@ function handleEvents(s) {
   while (s.events.length) {
     const e = s.events.shift();
     if (attract) continue;
-    if (e.type === 'ring') {
+    if (e.type === 'trick') {
+      flash = { big: e.combo > 1 ? `バレルロール ×${e.combo}` : 'バレルロール！', sub: `+${e.pts}`, col: '#5fd7ff', t: 1.0 };
+      Snd.beep(660, 0.12, 'triangle', 0.08); setTimeout(() => Snd.beep(990, 0.14, 'triangle', 0.08), 70);
+    } else if (e.type === 'rollstart') { Snd.swish(0.5, 0.6); }
+    else if (e.type === 'near') { pop(`ニアミス！ +${e.pts}`, C_WARN); Snd.swish(0.7, 0.35); if (navigator.vibrate) try { navigator.vibrate(15); } catch (er) {} }
+    else if (e.type === 'star') { pop(`★ ${e.got}/${e.n}  +120`, '#ffd23f'); Snd.beep(1568, 0.1, 'sine', 0.08); setTimeout(() => Snd.beep(2093, 0.16, 'sine', 0.07), 60); }
+    else if (e.type === 'speed') { pop(e.pts > 0 ? `スピードボーナス +${e.pts}` : `スカイ区間 ${e.t.toFixed(1)}s`, e.pts > 0 ? '#5fd7ff' : C_MUTE); }
+    else if (e.type === 'sbrk') { pop('スピードブレーキ展開', C_WARN); Snd.thump(0.25, 0.4, 400); }
+    else if (e.type === 'ring') {
+      if (e.ok && e.rolling) { pop('ローリング通過！ +400', '#5fd7ff'); }
       if (e.ok) {
         flash = { big: e.q === 1 ? 'ど真ん中！' : 'ナイス！', sub: `RING ${e.idx + 1}/${e.n}`, col: e.q === 1 ? C_OR : C_GOOD, t: 1.1 };
         Snd.beep(880, 0.1, 'triangle', 0.09); setTimeout(() => Snd.beep(1320, 0.14, 'triangle', 0.09), 80);
@@ -1482,7 +1649,10 @@ function frame(now) {
   if (Inp.touch && mode === 'play') {
     $('thrFill').style.height = (sim.thr * 100) + '%';
     $('thrKnob').style.bottom = `calc(${Inp.thr * 100}% - 3px)`;
-    $('actBtn').textContent = sim.phase === 'roll' ? 'BRAKE' : 'FLARE';
+    const fin = SIM.finalLeg(sim), ab2 = $('actBtn');
+    const lbl = sim.phase === 'roll' ? 'BRAKE' : fin ? 'FLARE' : 'BOOST';
+    if (ab2.textContent !== lbl) { ab2.textContent = lbl; ab2.classList.toggle('boost', lbl === 'BOOST'); }
+    $('rollBtn').disabled = sim.phase !== 'air' || (fin && sim.h < 150);
   }
   requestAnimationFrame(frame);
 }
@@ -1502,15 +1672,25 @@ function showResult() {
   $('resRank').textContent = r.ok ? r.rank : LANDING_FAILS.has(r.code) ? '着陸失敗' : '墜落';
   $('resRank').className = 'rank' + (r.ok ? '' : ' fail');
   $('resScore').textContent = r.ok ? r.total.toLocaleString() : '—';
+  if (r.ok) $('resQuipSky').textContent = `着陸 ${r.landing.toLocaleString()} ＋ スカイ ${r.sky.toLocaleString()}`;
+  $('resQuipSky').hidden = !r.ok;
   $('resQuip').textContent = r.ok ? (r.rank === 'SSS' ? 'PERFECT FLIGHT' : s.td ? quipFor(s.td.sink)[0] : '') : '';
   $('resBest').hidden = !newBest;
   $('resWhy').hidden = r.ok;
   if (!r.ok) { $('resWhyT').textContent = r.title; $('resWhyP').textContent = r.hint; }
   const bars = $('resBars'); bars.innerHTML = '';
-  if (r.ok) for (const p of r.parts) {
+  const addBar = (label, pts, max, col) => {
     const el = document.createElement('div'); el.className = 'bar';
-    el.innerHTML = `<span>${p.label}</span><span class="t"><i style="width:${(p.pts / p.max * 100).toFixed(1)}%"></i></span><span class="n">${p.pts.toLocaleString()} / ${p.max.toLocaleString()}</span>`;
+    el.innerHTML = `<span>${label}</span><span class="t"><i style="width:${Math.min(100, pts / max * 100).toFixed(1)}%${col ? ';background:' + col : ''}"></i></span><span class="n">${pts.toLocaleString()}${max ? ' / ' + max.toLocaleString() : ''}</span>`;
     bars.appendChild(el);
+  };
+  if (r.ok) {
+    for (const p of r.parts) addBar(p.label, p.pts, p.max);
+    const sk = s.sky, sc = '#5fd7ff';
+    addBar('バレルロール', sk.trick, 3000, sc);
+    addBar('ニアミス', sk.near, 2000, sc);
+    addBar(`★スター ${s.stars.filter(Boolean).length}/${s.stars.length}`, sk.star, Math.max(120, s.stars.length * 120), sc);
+    addBar('スピードボーナス', sk.speed, 1500, sc);
   }
   const data = $('resData'); data.innerHTML = '';
   const td = s.td;
@@ -1522,7 +1702,8 @@ function showResult() {
     ['バンク', Math.abs(td.bank).toFixed(1) + '°', Math.abs(td.bank) <= 3],
     ['機首角', td.pitch.toFixed(1) + '°', td.pitch >= 1 && td.pitch <= 7],
     ['バウンド', s.bounces + ' 回', s.bounces === 0]
-  ] : [['飛行時間', s.t.toFixed(1) + ' s', false], ['最終高度', Math.max(0, s.h).toFixed(0) + ' m', false]]);
+  ] : [['飛行時間', s.t.toFixed(1) + ' s', false], ['最終高度', Math.max(0, s.h).toFixed(0) + ' m', false],
+        ['スカイ（参考）', (s.sky.trick + s.sky.near + s.sky.star + s.sky.speed).toLocaleString(), false]]);
   for (const [k, v, good] of items) { const el = document.createElement('div'); el.innerHTML = `<span>${k}</span><b class="${good ? 'ok' : 'ng'}">${v}</b>`; data.appendChild(el); }
   $('btnNext').hidden = stageIdx >= SIM.STAGES.length - 1;
   show('result');
@@ -1572,11 +1753,19 @@ for (const [id, key] of [['optGuide', 'guide'], ['optInvert', 'invert'], ['optSo
   $(id).onchange = e => { Save.d.opt[key] = e.target.checked; Save.write(); };
 }
 
-const GAME_KEYS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyQ', 'KeyE', 'PageUp', 'PageDown']);
+const GAME_KEYS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyQ', 'KeyE', 'PageUp', 'PageDown', 'KeyB', 'KeyZ', 'KeyX']);
+const lastTap = {};
 window.addEventListener('keydown', e => {
   if (e.ctrlKey || e.metaKey || e.altKey) return;
   if (mode === 'play') {
     if (GAME_KEYS.has(e.code)) e.preventDefault();
+    if (!e.repeat) {
+      if (e.code === 'KeyZ') Inp.trickQ = -1;
+      if (e.code === 'KeyX') Inp.trickQ = 1;
+      for (const [c, d] of [['ArrowLeft', -1], ['KeyA', -1], ['ArrowRight', 1], ['KeyD', 1]]) if (e.code === c) {
+        const n = performance.now(); if (n - (lastTap[c] || 0) < 260) Inp.trickQ = d; lastTap[c] = n;
+      }
+    }
     Inp.keys.add(e.code);
     if (e.code === 'KeyR') startStage(stageIdx);
     if (e.code === 'Escape') pause();
@@ -1631,6 +1820,13 @@ const tt = $('thrTrack');
 const setThr = e => { const r = tt.getBoundingClientRect(); Inp.thr = SIM.clamp(1 - (e.clientY - r.top) / r.height, 0, 1); };
 tt.addEventListener('pointerdown', e => { e.preventDefault(); tt.setPointerCapture(e.pointerId); setThr(e); });
 tt.addEventListener('pointermove', e => { if (tt.hasPointerCapture(e.pointerId)) setThr(e); });
+const rb = $('rollBtn');
+rb.addEventListener('pointerdown', e => {
+  e.preventDefault(); rb.classList.add('held');
+  const nx = Inp.stick ? Inp.stick.nx : 0; Inp.trickQ = nx < -0.2 ? -1 : nx > 0.2 ? 1 : (sim && sim.bank < -3 ? -1 : 1);
+});
+const endRoll = () => rb.classList.remove('held');
+rb.addEventListener('pointerup', endRoll); rb.addEventListener('pointercancel', endRoll);
 const ab = $('actBtn');
 ab.addEventListener('pointerdown', e => { e.preventDefault(); ab.setPointerCapture(e.pointerId); Inp.act = true; ab.classList.add('held'); });
 const endAct = () => { Inp.act = false; ab.classList.remove('held'); };
