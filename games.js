@@ -13,7 +13,7 @@
  *
  * サイト上の「管理」画面からも追加・削除できます（その場合はこのブラウザだけに保存されます）。
  */
-window.GAMES_VERSION = "11";
+window.GAMES_VERSION = "12";
 
 window.GAMES = [
   {
@@ -222,5 +222,14 @@ window.GAMES = [
     emoji: "🍜",
     color: "#b8322a",
     accent: "#ffe0a3"
+  },
+  {
+    id: "bounce-king",
+    title: "Bounce King",
+    description: "トランポリンでリングに合わせてタップ！5回バウンドでパワーをためて、どこまで遠くへ飛べるか挑戦。",
+    path: "games/bounce-king/index.html",
+    emoji: "🤸",
+    color: "#43b3ff",
+    accent: "#ffd23f"
   }
 ];
