@@ -13,7 +13,7 @@
  *
  * サイト上の「管理」画面からも追加・削除できます（その場合はこのブラウザだけに保存されます）。
  */
-window.GAMES_VERSION = "10";
+window.GAMES_VERSION = "11";
 
 window.GAMES = [
   {
@@ -204,5 +204,23 @@ window.GAMES = [
     emoji: "⚽",
     color: "#1f7a3d",
     accent: "#e9ff70"
+  },
+  {
+    id: "downhill-king",
+    title: "Downhill King",
+    description: "山頂から一気に駆け下りろ！スピードを制御しながら7人のライバルと競うダウンヒルレース。",
+    path: "games/downhill-king/index.html",
+    emoji: "🚵",
+    color: "#2f6d3a",
+    accent: "#ffd23d"
+  },
+  {
+    id: "one-noodle-king",
+    title: "ONE NOODLE KING",
+    description: "一杯に一本だけの長寿麺を、切らずに最後まですすりきれ！長押しの加減が勝負。",
+    path: "games/one-noodle-king/index.html",
+    emoji: "🍜",
+    color: "#b8322a",
+    accent: "#ffe0a3"
   }
 ];
