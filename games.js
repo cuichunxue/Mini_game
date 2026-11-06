@@ -13,7 +13,11 @@
  *
  * サイト上の「管理」画面からも追加・削除できます（その場合はこのブラウザだけに保存されます）。
  */
-window.GAMES_VERSION = "13";
+window.GAMES_VERSION = "14";
+
+/* 管理画面のパスワード（SHA-256 ハッシュ。パスワードそのものは書かない）
+ * 変更するには: "mini-game-arcade:" + 新しいパスワード を SHA-256 にかけた値に置き換える */
+window.ADMIN_PASSWORD_HASH = "c7793f384cf22b066d54f9b21c81c3cb8ef8c240488cfd3654c551c5dc2c0534";
 
 window.GAMES = [
   {

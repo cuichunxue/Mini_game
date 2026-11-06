@@ -93,7 +93,7 @@ dialog::backdrop{background:rgba(5,3,15,.7);backdrop-filter:blur(3px)}
 dialog form{padding:24px;display:flex;flex-direction:column;gap:14px}
 dialog h3{font-family:var(--display);font-weight:400;font-size:22px;margin:0}
 label{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:800;color:var(--muted)}
-input[type=text],input[type=url],textarea{background:var(--bg);border:2px solid var(--line);border-radius:12px;padding:8px 12px;font-weight:500;outline:none;width:100%}
+input[type=text],input[type=url],input[type=password],textarea{background:var(--bg);border:2px solid var(--line);border-radius:12px;padding:8px 12px;font-weight:500;outline:none;width:100%}
 input:focus,textarea:focus{border-color:var(--gold)}
 textarea{resize:vertical;min-height:60px}
 .row{display:flex;gap:12px}
@@ -104,6 +104,7 @@ input[type=color]{width:100%;height:42px;border:2px solid var(--line);border-rad
 .seg input{position:absolute;opacity:0;pointer-events:none}
 .seg label:has(input:checked){background:var(--gold);color:#241a00}
 .hint{font-size:12px;color:var(--muted);margin:0;font-weight:500}
+#pwMsg{color:#ff8a8a;min-height:1.2em;font-weight:800}
 .dlg-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:4px}
 .preview{display:flex;align-items:center;gap:12px;font-size:13px;color:var(--muted)}
 .preview .mini{width:72px;aspect-ratio:16/10;border-radius:10px;display:grid;place-items:center;font-size:28px}
@@ -188,6 +189,20 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:48px}
 </div>
 
 <!-- Add dialog -->
+<dialog id="pwDlg">
+  <form method="dialog" id="pwForm">
+    <h3>🔒 管理者パスワード</h3>
+    <label>パスワード
+      <input type="password" name="pw" id="pwInput" autocomplete="current-password" required>
+    </label>
+    <p class="hint" id="pwMsg" role="alert"></p>
+    <div class="dlg-actions">
+      <button class="btn" type="button" value="cancel" data-close>キャンセル</button>
+      <button class="btn primary" value="ok" id="pwOk">開く</button>
+    </div>
+  </form>
+</dialog>
+
 <dialog id="addDlg">
   <form method="dialog" id="addForm">
     <h3>ゲームを追加</h3>
@@ -221,13 +236,13 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:48px}
     </label>
 
     <div class="dlg-actions">
-      <button class="btn" value="cancel" formnovalidate>キャンセル</button>
+      <button class="btn" type="button" value="cancel" data-close>キャンセル</button>
       <button class="btn primary" value="ok" id="addOk">追加する</button>
     </div>
   </form>
 </dialog>
 
-<script src="games.js?v=13"></script>
+<script src="games.js?v=14"></script>
 <script>
 (() => {
   "use strict";
@@ -427,7 +442,40 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:48px}
 
   $("#search").addEventListener("input", e => { query = e.target.value; render(); });
 
-  $("#manageBtn").addEventListener("click", () => {
+  /* ---------- admin password ----------
+   * 管理モードに入るときに毎回パスワードを確認する。games.js の ADMIN_PASSWORD_HASH と照合
+   * （SHA-256、"mini-game-arcade:" + パスワード）。公開サイトなので簡易ロックである点に注意。 */
+  const PW_SALT = "mini-game-arcade:";
+  const pwDlg = $("#pwDlg"), pwForm = $("#pwForm"), pwInput = $("#pwInput"), pwMsg = $("#pwMsg");
+  let pwFails = 0, pwLockUntil = 0, pwResolve = null;
+  async function sha256Hex(text) {
+    const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+    return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, "0")).join("");
+  }
+  function askAdminPassword() {
+    if (!window.ADMIN_PASSWORD_HASH) return Promise.resolve(true); // not configured
+    if (!(window.crypto && crypto.subtle)) { alert("このブラウザではパスワードを確認できません（https で開いてください）。"); return Promise.resolve(false); }
+    pwForm.reset(); pwMsg.textContent = "";
+    pwDlg.showModal(); pwInput.focus();
+    return new Promise(res => { pwResolve = res; });
+  }
+  pwForm.addEventListener("submit", async e => {
+    if (e.submitter?.value !== "ok") return;
+    e.preventDefault();
+    const wait = Math.ceil((pwLockUntil - Date.now()) / 1000);
+    if (wait > 0) { pwMsg.textContent = `${wait} 秒後にもう一度お試しください。`; return; }
+    const ok = (await sha256Hex(PW_SALT + pwInput.value)) === String(window.ADMIN_PASSWORD_HASH).toLowerCase();
+    if (ok) { pwFails = 0; pwDlg.close("ok"); return; }
+    pwFails++; pwInput.select();
+    if (pwFails >= 5) { pwFails = 0; pwLockUntil = Date.now() + 30000; pwMsg.textContent = "5回まちがえました。30秒後にもう一度お試しください。"; }
+    else pwMsg.textContent = "パスワードがちがいます。";
+  });
+  // Cancel buttons are type=button so that Enter in a text field submits the OK button, not Cancel
+  document.querySelectorAll("dialog [data-close]").forEach(b => b.addEventListener("click", () => b.closest("dialog").close("cancel")));
+  pwDlg.addEventListener("close", () => { const r = pwResolve; pwResolve = null; r?.(pwDlg.returnValue === "ok"); });
+
+  $("#manageBtn").addEventListener("click", async () => {
+    if (!manage && !(await askAdminPassword())) return;
     manage = !manage;
     $("#manageBtn").classList.toggle("on", manage);
     $("#manageBtn").setAttribute("aria-pressed", manage);
