@@ -188,7 +188,7 @@ ja:{eyebrow:'60秒ナンセンス追いかけアクション',tagline:'〜金の
 n_gold:'金の卵',d_gold:'+100',n_rainbow:'虹色の卵',d_rainbow:'+500・磁石',n_giant:'巨大金の卵',d_giant:'+2,000・2秒じっと',
 n_stinky:'臭い卵',d_stinky:'−200・コンボ切れ',n_bomb:'爆弾の卵',d_bomb:'2秒気絶',
 ctrl:'ドラッグ / WASD・矢印キー',best:'最高記録',start:'スタート',
-hintTouch:'ドラッグして金の卵を集めよう！',hintPC:'WASD・矢印キーかドラッグで金の卵を集めよう！',
+hintTouch:'画面のどこでもOK！指をすべらせた方向に走るよ',hintPC:'WASD・矢印キーかドラッグで金の卵を集めよう！',
 timeup:'タイムアップ！',r_best:'最高記録',r_eggs:'金の卵',r_combo:'最大コンボ',retry:'もう一回！',copy:'結果をコピー',copied:'結果をコピーしました',copyFail:'コピーできませんでした。下の文を選択してください',newrec:'新記録！',
 ev_flock:'ニワトリ大増殖！どれが本物？',ev_fly:'空飛ぶニワトリ！',ev_dino:'恐竜誕生！逃げろ！',ev_reverse:'立場逆転！ニワトリの逆襲',ev_fever:'金の卵フィーバー！',ev_rain:'卵の雨！',
 ph1:'15秒 混乱開始',ph2:'30秒 カオス',ph3:'45秒 ラストスパート',
@@ -201,7 +201,7 @@ en:{eyebrow:'A 60-SECOND NONSENSE CHASE',tagline:'Chase the hen that lays golden
 n_gold:'Golden egg',d_gold:'+100',n_rainbow:'Rainbow egg',d_rainbow:'+500 · magnet',n_giant:'Giant golden egg',d_giant:'+2,000 · hold 2s',
 n_stinky:'Stinky egg',d_stinky:'−200 · breaks combo',n_bomb:'Bomb egg',d_bomb:'stunned 2s',
 ctrl:'Drag / WASD · arrow keys',best:'Best',start:'START',
-hintTouch:'Drag to grab the golden eggs!',hintPC:'WASD, arrow keys or drag to grab golden eggs!',
+hintTouch:'Swipe anywhere — you run the way your finger moves!',hintPC:'WASD, arrow keys or drag to grab golden eggs!',
 timeup:'TIME UP!',r_best:'Best',r_eggs:'Gold eggs',r_combo:'Top combo',retry:'PLAY AGAIN',copy:'Copy result',copied:'Result copied',copyFail:'Copy failed. Select the text below instead',newrec:'NEW BEST!',
 ev_flock:'Chicken clones! Which one is real?',ev_fly:'The hen can fly!',ev_dino:'A dinosaur hatched! Run!',ev_reverse:'Role swap! The hen strikes back',ev_fever:'GOLDEN EGG FEVER!',ev_rain:'It’s raining eggs!',
 ph1:'0:15 Chaos begins',ph2:'0:30 Full chaos',ph3:'0:45 Final sprint',
@@ -545,10 +545,15 @@ function updateDino(dt){
 
 /* ---------- input ---------- */
 const keys=new Set();
-const ptr={down:false,x:0,y:0,touch:false,id:null};
+const ptr={down:false,x:0,y:0,touch:false,id:null,tx:0,ty:0};
+/* Touch = trackpad style: the player follows the *movement* of the finger, not its position,
+   so the finger can stay anywhere (e.g. below the player) and never covers the character. */
+const TOUCH_GAIN=1.6;
 function ptrPos(e){const r=cv.getBoundingClientRect();ptr.x=e.clientX-r.left;ptr.y=e.clientY-r.top}
-cv.addEventListener('pointerdown',e=>{initAudio();if(ptr.down&&ptr.id!==e.pointerId)return;ptr.down=true;ptr.id=e.pointerId;ptr.touch=e.pointerType!=='mouse';ptrPos(e);try{cv.setPointerCapture(e.pointerId)}catch(_){}e.preventDefault()});
-cv.addEventListener('pointermove',e=>{if(ptr.down&&e.pointerId===ptr.id)ptrPos(e)});
+function anchorTouch(){const P=S.player;if(P){ptr.tx=P.x;ptr.ty=P.y}}
+cv.addEventListener('pointerdown',e=>{initAudio();if(ptr.down&&ptr.id!==e.pointerId)return;ptr.down=true;ptr.id=e.pointerId;ptr.touch=e.pointerType!=='mouse';ptrPos(e);if(ptr.touch)anchorTouch();try{cv.setPointerCapture(e.pointerId)}catch(_){}e.preventDefault()});
+cv.addEventListener('pointermove',e=>{if(!ptr.down||e.pointerId!==ptr.id)return;const ox=ptr.x,oy=ptr.y;ptrPos(e);
+  if(ptr.touch){ptr.tx=clamp(ptr.tx+(ptr.x-ox)*TOUCH_GAIN,FL,FR);ptr.ty=clamp(ptr.ty+(ptr.y-oy)*TOUCH_GAIN,FT,FB)}});
 const up=e=>{if(e.pointerId===ptr.id){ptr.down=false;ptr.id=null}};
 cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);cv.addEventListener('lostpointercapture',up);
 const KEYMAP={ArrowUp:'u',KeyW:'u',ArrowDown:'d',KeyS:'d',ArrowLeft:'l',KeyA:'l',ArrowRight:'r',KeyD:'r'};
@@ -568,13 +573,13 @@ function updatePlayer(dt){
   if(P.soot>0){P.soot-=dt;if(Math.random()<dt*7)addP({k:'smoke',x:P.x+rand(-1,1)*P.r*.4,y:P.y-P.z-P.r*2.4,vx:rand(-4,4)*U,vy:-rand(8,16)*U,g:0,life:.7,max:.7,s:U*rand(.8,1.4),col:'rgba(70,64,60,.7)'})}
   const sp=PS();
   if(P.stun>0){
-    P.stun-=dt;P.x+=P.kx*dt;P.y+=P.ky*dt;const k=Math.pow(.03,dt);P.kx*=k;P.ky*=k;P.vx=P.vy=0;
+    P.stun-=dt;P.x+=P.kx*dt;P.y+=P.ky*dt;if(ptr.down&&ptr.touch)anchorTouch();const k=Math.pow(.03,dt);P.kx*=k;P.ky*=k;P.vx=P.vy=0;
     if(P.z>0)P.spin+=dt*14;else P.spin=0;
     const h=clampIn(P,P.r);if(h.hx)P.kx*=-.6;if(h.hy)P.ky*=-.6;
   }else{
     let ix=0,iy=0,f=1;
     if(keys.size){if(keys.has('l'))ix--;if(keys.has('r'))ix++;if(keys.has('u'))iy--;if(keys.has('d'))iy++;const m=Math.hypot(ix,iy);if(m){ix/=m;iy/=m}}
-    else if(ptr.down){const tx=ptr.x,ty=ptr.y-(ptr.touch?7*U:0),dx=tx-P.x,dy=ty-P.y,d=Math.hypot(dx,dy);if(d>U*1.2){ix=dx/d;iy=dy/d;f=Math.min(1,d/(5*U))}}
+    else if(ptr.down){const tx=ptr.touch?ptr.tx:ptr.x,ty=ptr.touch?ptr.ty:ptr.y,dx=tx-P.x,dy=ty-P.y,d=Math.hypot(dx,dy);if(d>U*1.2){ix=dx/d;iy=dy/d;f=Math.min(1,d/(5*U))}}
     const tvx=ix*sp*f,tvy=iy*sp*f,a=Math.min(1,dt*14);
     P.vx+=(tvx-P.vx)*a;P.vy+=(tvy-P.vy)*a;
     P.x+=P.vx*dt;P.y+=P.vy*dt;clampIn(P,P.r);
