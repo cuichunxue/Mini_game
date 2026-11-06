@@ -1,0 +1,864 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ナンセンス理髪店</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=DotGothic16&family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap">
+<style>
+[hidden]{display:none!important}
+/* Layout: barber-pole stripe on top, then one phone-width column laid out like a shop counter: customer, mirror, tools, till. */
+:root{
+  --bg:#EDF3F8; --surface:#FFFFFF; --fg:#13243B; --muted:#55677D; --line:#C9D5E1;
+  --red:#DE3340; --red-d:#A8212C; --on-red:#FFFFFF;
+  --blue:#1F5AA6; --on-blue:#FFFFFF;
+  --gold:#F2B705; --frame:#B98B2E;
+  --ok:#12805A; --ok-bg:#DAF3E8; --bad:#C62B40; --bad-bg:#FBDDE1;
+  --warn-bg:#FFF0BE; --warn-fg:#5B4300;
+  --mirror-a:#D5E7F5; --mirror-b:#F3F9FE; --glint:rgba(255,255,255,.55);
+  --skin:#F7CBA7; --skin-d:#D9A57D; --ink:#2B2B2B; --cape:#1F5AA6;
+  --paper:#FFFBEA; --paper-ink:#2B2B2B; --paper-line:#BDB7A0;
+  --font-display:"Dela Gothic One","Hiragino Sans","Noto Sans JP",system-ui,sans-serif;
+  --font-body:"M PLUS Rounded 1c","Hiragino Maru Gothic ProN","Hiragino Sans","Noto Sans JP",system-ui,sans-serif;
+  --font-mono:"DotGothic16","Osaka-Mono","Noto Sans JP",monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0B1524; --surface:#13233A; --fg:#EAF1F8; --muted:#9DB0C6; --line:#2B405E;
+    --red:#FF5A66; --red-d:#B3303A; --on-red:#2A070B;
+    --blue:#5FA2F0; --on-blue:#07182C;
+    --gold:#FFC93C; --frame:#D9A93C;
+    --ok:#46D39A; --ok-bg:#103A2B; --bad:#FF7285; --bad-bg:#47202A;
+    --warn-bg:#47380C; --warn-fg:#FFE08A;
+    --mirror-a:#1B3350; --mirror-b:#0F2038; --glint:rgba(255,255,255,.07);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0B1524; --surface:#13233A; --fg:#EAF1F8; --muted:#9DB0C6; --line:#2B405E;
+  --red:#FF5A66; --red-d:#B3303A; --on-red:#2A070B;
+  --blue:#5FA2F0; --on-blue:#07182C;
+  --gold:#FFC93C; --frame:#D9A93C;
+  --ok:#46D39A; --ok-bg:#103A2B; --bad:#FF7285; --bad-bg:#47202A;
+  --warn-bg:#47380C; --warn-fg:#FFE08A;
+  --mirror-a:#1B3350; --mirror-b:#0F2038; --glint:rgba(255,255,255,.07);
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:15px;line-height:1.55}
+button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+
+.pole{height:12px;background:repeating-linear-gradient(-45deg,var(--red) 0 12px,var(--surface) 12px 24px,var(--blue) 24px 36px,var(--surface) 36px 48px);background-size:68px 68px;animation:pole 1.4s linear infinite}
+@keyframes pole{to{background-position:68px 0}}
+
+.wrap{max-width:520px;margin:0 auto;padding-block:12px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.open{font-family:var(--font-display);font-size:13px;letter-spacing:.12em;color:var(--red);border:2px solid var(--red);border-radius:6px;padding:1px 8px}
+.snd{border:2px solid var(--line);background:var(--surface);border-radius:10px;width:42px;height:34px;cursor:pointer;font-size:16px}
+.snd[aria-pressed="false"]{opacity:.45}
+
+.hud{display:flex;gap:8px;margin-bottom:14px}
+.stat{flex:1;min-width:0;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:6px 10px}
+.stat small{display:block;font-size:11px;letter-spacing:.08em;color:var(--muted);white-space:nowrap}
+.stat b{font-family:var(--font-mono);font-size:19px;font-weight:400;font-variant-numeric:tabular-nums}
+
+h1,h2,.disp{font-family:var(--font-display);font-weight:400;margin:0;line-height:1.25;text-wrap:balance}
+.screen{display:flex;flex-direction:column;gap:12px;animation:in .25s ease both}
+@keyframes in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+p{margin:0}
+
+/* title */
+.hero{display:flex;flex-direction:column;gap:10px;padding-top:6px}
+.sign{align-self:flex-start;font-family:var(--font-display);background:var(--red);color:var(--on-red);padding:2px 12px;border-radius:6px;transform:rotate(-4deg);font-size:15px;letter-spacing:.15em}
+.hero h1{font-size:clamp(32px,10vw,46px)}
+.lead{color:var(--muted);font-size:16px}
+.steps{list-style:none;margin:4px 0;padding:0;display:flex;flex-direction:column;gap:8px;counter-reset:s}
+.steps li{counter-increment:s;display:flex;gap:10px;align-items:flex-start;min-width:0}
+.steps li::before{content:counter(s);flex:0 0 26px;height:26px;border-radius:50%;background:var(--blue);color:var(--on-blue);font-family:var(--font-mono);display:grid;place-items:center;font-size:15px}
+.menu{font-family:var(--font-mono);background:var(--surface);border:1px dashed var(--line);border-radius:12px;padding:10px 12px;display:flex;flex-wrap:wrap;gap:4px 16px;font-size:15px}
+.best{color:var(--muted);font-size:13px}
+
+.btn{display:block;width:100%;border:0;border-radius:14px;padding:14px 16px;font-weight:800;font-size:17px;background:var(--red);color:var(--on-red);cursor:pointer;box-shadow:0 4px 0 var(--red-d);transition:transform .08s,box-shadow .08s}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--red-d)}
+.btn.ghost{background:var(--surface);color:var(--fg);border:2px solid var(--line);box-shadow:0 4px 0 var(--line)}
+.btn[disabled]{opacity:.5;pointer-events:none}
+
+/* day intro / panels */
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.kv{display:flex;justify-content:space-between;gap:12px;align-items:baseline}
+.kv span:first-child{color:var(--muted);font-size:13px}
+.kv b{font-family:var(--font-mono);font-weight:400;font-size:18px;font-variant-numeric:tabular-nums;text-align:right}
+.fc{background:var(--warn-bg);color:var(--warn-fg);border-radius:10px;padding:8px 12px;font-weight:800;font-size:14px}
+.vipnote{font-size:13px;color:var(--muted)}
+
+/* cut */
+.who small{font-size:12px;letter-spacing:.06em;color:var(--muted)}
+.who h2{font-size:20px}
+.vip{display:inline-block;background:var(--gold);color:#3a2a00;font-family:var(--font-display);font-size:13px;padding:0 8px;border-radius:6px;vertical-align:middle;margin-right:6px}
+.quote{font-size:16px;font-weight:700;margin-top:4px}
+.ticket{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;background:var(--paper);color:var(--paper-ink);border:1px dashed var(--paper-line);border-radius:8px;padding:6px 10px;font-size:14px}
+.ticket .tk-h{font-family:var(--font-mono);letter-spacing:.1em;font-size:13px}
+.timer{display:flex;align-items:center;gap:10px}
+.bar{flex:1;height:12px;background:var(--line);border-radius:99px;overflow:hidden}
+.bar i{display:block;height:100%;width:100%;background:var(--blue);border-radius:99px}
+.bar.low i{background:var(--red)}
+.timer b{font-family:var(--font-mono);font-weight:400;font-size:20px;min-width:3.2em;text-align:right;font-variant-numeric:tabular-nums}
+.event{min-height:2.7em;display:flex;align-items:center;font-size:13px;color:var(--muted);padding:2px 2px}
+.event.hit{background:var(--warn-bg);color:var(--warn-fg);font-weight:800;border-radius:10px;padding:6px 10px;animation:shake .4s}
+@keyframes shake{20%{transform:translateX(-5px)}40%{transform:translateX(5px)}60%{transform:translateX(-3px)}80%{transform:translateX(3px)}}
+
+.mirror{position:relative;width:min(100%,300px);aspect-ratio:300/324;margin-inline:auto;border:6px solid var(--frame);border-radius:24px;background:linear-gradient(135deg,var(--mirror-a),var(--mirror-b));overflow:hidden}
+.mirror.sm{width:min(70%,220px)}
+.mirror svg{position:absolute;inset:0;width:100%;height:100%}
+.mirror::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(115deg,transparent 30%,var(--glint) 36%,transparent 42%,transparent 50%,var(--glint) 53%,transparent 58%)}
+.hr{fill:var(--hair);stroke:var(--hair-d);stroke-width:2.5}
+.skin{fill:var(--skin);stroke:var(--skin-d);stroke-width:2}
+.scis{font-size:30px;text-anchor:middle;animation:snap .6s ease-out forwards}
+@keyframes snap{0%{transform:scale(.5) rotate(-30deg);opacity:1}60%{transform:scale(1.2) rotate(15deg);opacity:1}100%{transform:scale(1) rotate(0);opacity:0}}
+.bit{fill:var(--hair);stroke:var(--hair-d);stroke-width:1;transform-box:fill-box;transform-origin:center;animation:fall .8s ease-in forwards}
+@keyframes fall{to{transform:translate(var(--dx),80px) rotate(220deg);opacity:0}}
+
+.tools{display:flex;gap:8px;flex-wrap:wrap}
+.seg{flex:1 1 28%;border:2px solid var(--line);background:var(--surface);border-radius:12px;padding:9px 6px;font-weight:800;cursor:pointer;font-size:14px}
+.seg[aria-pressed="true"]{background:var(--blue);border-color:var(--blue);color:var(--on-blue)}
+.chips{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.chip{display:flex;flex-direction:column;align-items:center;gap:0;border:2px solid var(--line);background:var(--surface);border-radius:12px;padding:6px 2px 7px;cursor:pointer;min-width:0;min-height:92px}
+.chip:active{transform:scale(.95)}
+.chips[data-tool="tonic"] .chip{border-style:dashed}
+.chips[data-tool="clip"] .chip{border-color:var(--blue)}
+.cl{font-size:12px;font-weight:800}
+.cn{font-family:var(--font-display);font-size:28px;line-height:1.1}
+.ct{font-size:11px;color:var(--muted)}
+.cs{font-size:10.5px;font-weight:800;margin-top:2px;text-align:center;line-height:1.25}
+.chip.ok{background:var(--ok-bg);border-color:var(--ok)}
+.chip.ok .cs{color:var(--ok)}
+.chip.under{background:var(--bad-bg);border-color:var(--bad)}
+.chip.under .cs{color:var(--bad)}
+.note{font-size:12px;color:var(--muted)}
+.accs{display:flex;flex-wrap:wrap;gap:8px}
+.pill{border:2px solid var(--line);background:var(--surface);border-radius:99px;padding:7px 14px;font-weight:700;cursor:pointer;font-size:14px}
+.pill[aria-pressed="true"]{background:var(--red);border-color:var(--red);color:var(--on-red)}
+.lab{font-size:12px;letter-spacing:.1em;color:var(--muted);font-weight:700}
+
+/* result */
+.center{align-items:center;text-align:center}
+.stars{display:flex;gap:4px;justify-content:center}
+.st{font-size:38px;line-height:1;color:var(--line)}
+.st.on{color:var(--gold);animation:pop .45s calc(var(--i)*.16s) both}
+@keyframes pop{0%{transform:scale(.2) rotate(-40deg);opacity:0}70%{transform:scale(1.3)}100%{transform:none;opacity:1}}
+.score{font-family:var(--font-mono);font-size:18px}
+.review{width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+.review .by{font-size:12px;color:var(--muted);margin-top:6px}
+.detail{font-size:13px;color:var(--muted)}
+.combo{font-family:var(--font-display);color:var(--red);font-size:20px}
+
+/* receipt */
+.receipt{background:var(--paper);color:var(--paper-ink);border-radius:6px;padding:14px 16px;font-family:var(--font-mono);font-size:16px;box-shadow:0 2px 0 var(--paper-line);display:flex;flex-direction:column;gap:4px}
+.r-h{font-size:22px;text-align:center;letter-spacing:.3em}
+.r-s{text-align:center;font-size:12px;color:#6b6650}
+.row{display:flex;justify-content:space-between;gap:12px}
+.row span:last-child{font-variant-numeric:tabular-nums;white-space:nowrap}
+.receipt hr{border:0;border-top:1px dashed var(--paper-line);margin:4px 0;width:100%}
+.tot{font-size:20px}
+.r-pay{font-size:14px}
+.r-pay b{font-weight:400;display:block;font-size:17px;margin-top:2px}
+.got{background:var(--surface);border:2px solid var(--gold);border-radius:14px;padding:12px;text-align:center;display:flex;flex-direction:column;gap:4px}
+.got .amt{font-family:var(--font-display);font-size:34px}
+.got .flav{font-size:14px;color:var(--muted)}
+.got .pts{font-family:var(--font-mono);color:var(--blue)}
+.lvup{color:var(--red);font-weight:800;font-size:15px}
+.pay-btns{display:flex;flex-direction:column;gap:10px}
+
+/* shop */
+.shop{display:flex;flex-direction:column;gap:10px}
+.up{display:flex;gap:12px;align-items:center;justify-content:space-between;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 12px}
+.up .info{min-width:0;flex:1}
+.up .nm{font-weight:800}
+.up .ds{font-size:12px;color:var(--muted)}
+.pips{letter-spacing:.2em;color:var(--blue);font-size:13px}
+.buy{flex:0 0 auto;border:0;border-radius:10px;padding:9px 12px;font-weight:700;background:var(--blue);color:var(--on-blue);cursor:pointer;font-family:var(--font-mono);font-size:15px;white-space:nowrap}
+.buy[disabled]{background:var(--line);color:var(--muted);cursor:default}
+
+/* end */
+.rank{font-size:24px}
+.sum{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;width:100%}
+.sum div{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:8px}
+.sum small{display:block;font-size:11px;color:var(--muted);letter-spacing:.08em}
+.sum b{font-family:var(--font-mono);font-weight:400;font-size:18px}
+.log{list-style:none;margin:0;padding:0;width:100%;display:flex;flex-direction:column;gap:6px;text-align:left}
+.log li{display:flex;gap:10px;align-items:center;justify-content:space-between;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:6px 12px;font-size:14px;min-width:0}
+.log li span:first-child{min-width:0;overflow-wrap:anywhere;flex:1}
+.log .gs{color:var(--gold);letter-spacing:.05em;white-space:nowrap}
+.log .gm{font-family:var(--font-mono);white-space:nowrap;font-variant-numeric:tabular-nums}
+.ok-t{color:var(--ok);font-weight:800}
+.ng-t{color:var(--bad);font-weight:800}
+
+@media (prefers-reduced-motion: reduce){
+  .pole,.screen,.st.on,.scis,.bit,.event.hit{animation:none}
+  .st.on{opacity:1}
+}
+</style>
+</head>
+<body>
+
+
+<div class="pole"></div>
+<div class="wrap">
+  <div class="top">
+    <span class="open">営業中</span>
+    <button class="snd" id="snd" aria-pressed="true" aria-label="効果音">♪</button>
+  </div>
+  <div class="hud" id="hud" hidden>
+    <div class="stat"><small id="h-l1">DAY 1</small><b id="h-n">1/5</b></div>
+    <div class="stat"><small>財布</small><b id="h-money">¥0</b></div>
+    <div class="stat"><small id="h-l3">ポイント Lv1</small><b id="h-pts">0pt</b></div>
+  </div>
+  <main id="app"></main>
+</div>
+
+<script>
+(function(){
+'use strict';
+var $=function(s,r){return (r||document).querySelector(s)};
+var $$=function(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))};
+var rnd=function(a,b){return a+Math.random()*(b-a)};
+var pick=function(a){return a[Math.floor(Math.random()*a.length)]};
+var yen=function(n){return (n<0?'-':'')+'¥'+Math.abs(n).toLocaleString('ja-JP')};
+var r10=function(x){return Math.round(x/10)*10};
+
+var DAYS=5, PER_DAY=5;
+var GOALS=[5500,6500,8500,9500,11000];
+var DAY_TITLES=['開店初日','ざわつく二日目','VIPが来る三日目','ハプニング全開の四日目','最終日・伝説の一日'];
+var LVT=[0,100,260,460,720,1050,1450];
+var LVN=['見習い','町の床屋','人気店','行列店','カリスマ店','伝説の店','ナンセンス殿堂'];
+function lvOf(p){var l=1;for(var i=0;i<LVT.length;i++){if(p>=LVT[i])l=i+1}return l}
+
+var ZONES=[
+  {id:'top',label:'てっぺん',ax:150,ay:50},
+  {id:'bangs',label:'前髪',ax:150,ay:105},
+  {id:'left',label:'左',ax:58,ay:140},
+  {id:'right',label:'右',ax:242,ay:140},
+  {id:'back',label:'後ろ',ax:150,ay:225}
+];
+var ZKEYS=['top','bangs','left','right','back'];
+var ACCS=[
+  {id:'none',label:'なし',verb:'なにもつけない'},
+  {id:'negi',label:'ネギ',verb:'ネギを刺す'},
+  {id:'ribbon',label:'リボン',verb:'リボンを結ぶ'},
+  {id:'antenna',label:'アンテナ',verb:'アンテナを立てる'},
+  {id:'mage',label:'ちょんまげ',verb:'ちょんまげにする'},
+  {id:'sunflower',label:'ひまわり',verb:'ひまわりを挿す'},
+  {id:'crown',label:'王冠',verb:'王冠をのせる'},
+  {id:'ears',label:'猫耳',verb:'猫耳をつける'},
+  {id:'nest',label:'鳥の巣',verb:'鳥の巣をのせる'}
+];
+function accOf(id){return ACCS.filter(function(a){return a.id===id})[0]}
+
+// t = [てっぺん, 前髪, 左, 右, 後ろ]
+var CUST=[
+  {name:'ネギ蔵さん',hair:'#4a3b32',hairD:'#2e231d',deco:'mustache',quote:'朝イチのネギ市場みたいにしてくれ。てっぺんだけ元気にな。',t:[4,1,1,1,2],acc:'negi'},
+  {name:'ゲンさん（宇宙人）',hair:'#7bd389',hairD:'#3f9a52',deco:'glasses',quote:'Wi-Fiが入る髪型で頼む。前髪は電波の邪魔だ。',t:[3,0,2,2,3],acc:'antenna'},
+  {name:'佐藤課長',hair:'#555b66',hairD:'#2f333b',deco:'glasses',quote:'会議で笑われない程度に。でも5％は笑われたい。',t:[2,2,2,2,2],acc:'none'},
+  {name:'源三郎（前世は武士）',hair:'#26262b',hairD:'#0f0f12',deco:'none',quote:'前世の自分に戻してくれ。頭の上に一本、頼む。',t:[2,0,0,0,2],acc:'mage'},
+  {name:'みけさん',hair:'#f1a7c6',hairD:'#c9709a',deco:'none',quote:'猫耳が生えそうなくらい、サイドをふわっと。',t:[2,2,4,4,1],acc:'ribbon'},
+  {name:'校長先生',hair:'#9aa0a8',hairD:'#6b7078',deco:'mustache',quote:'教育的指導の長さで。前は短く、後ろは長く。',t:[1,1,1,1,4],acc:'none'},
+  {name:'ひまわり農家のトメさん',hair:'#d4a24a',hairD:'#a37722',deco:'none',quote:'ひまわりに負けん頭にしてくれ！',t:[4,3,3,3,2],acc:'sunflower'},
+  {name:'謎の配達員',hair:'#2f6fb3',hairD:'#1b4575',deco:'none',quote:'届け物がある。髪は適当でいい。ただし右だけ長く。',t:[2,1,1,4,2],acc:'ribbon'},
+  {name:'生後5分の赤ちゃん（自称）',hair:'#f4d9a6',hairD:'#c9a766',deco:'none',quote:'生後5分の風格で。ほぼ無でお願いします。',t:[1,0,0,0,0],acc:'ribbon'},
+  {name:'ハニワ太郎',hair:'#e0562f',hairD:'#a63413',deco:'glasses',quote:'ロックに頼む。てっぺんは天を突け。花も挿せ。',t:[4,0,1,1,3],acc:'sunflower'},
+  {name:'王様（自称）',hair:'#c9c9d4',hairD:'#8e8ea0',deco:'mustache',quote:'王の威厳が欲しい。てっぺんは高く、横は刈れ。',t:[4,1,0,0,2],acc:'crown'},
+  {name:'ミケ丸',hair:'#f0a050',hairD:'#b36c1e',deco:'none',quote:'猫になりたい。耳をつけて、横はふんわりな。',t:[2,2,4,4,1],acc:'ears'},
+  {name:'スズメ博士',hair:'#7a6a58',hairD:'#4e4234',deco:'glasses',quote:'小鳥が住める頭にしてくれ。巣は上だ。',t:[4,2,2,2,2],acc:'nest'},
+  {name:'深夜のコンビニ店員',hair:'#2b2b3a',hairD:'#14141d',deco:'none',quote:'夜勤明けなので、前髪は目を隠したい。',t:[2,4,1,1,2],acc:'none'},
+  {name:'双子の兄（弟は来ていない）',hair:'#b0442f',hairD:'#7d2a18',deco:'none',quote:'左右が別人みたいにしてくれ。双子だから。',t:[2,2,4,0,2],acc:'ribbon'},
+  {name:'ペンギン好きの先生',hair:'#1c1c26',hairD:'#07070b',deco:'glasses',quote:'氷の上でも目立つ髪型でお願いします。',t:[3,3,0,0,3],acc:'crown'}
+];
+
+var PAYS=[
+  {id:'cash',fmt:function(){return 'ピン札（なぜか温かい）'},rate:[1,1],after:'温かいお金は、気持ちもほっこりする。'},
+  {id:'acorn',unit:40,fmt:function(n){return 'どんぐり '+n+'個'},rate:[0.6,1.7],after:'どんぐりは近所のリスが買い取ってくれた。'},
+  {id:'shoulder',unit:300,fmt:function(n){return '肩たたき券 '+n+'枚'},rate:[0.5,1.6],after:'肩がほぐれて、むしろ得した気分。'},
+  {id:'dream',unit:500,fmt:function(n){return '昨日見た夢 '+n+'本'},rate:[0.4,1.8],after:'夢は枕の下の金庫にしまった。'},
+  {id:'iou',fmt:function(){return '「あとで払う」と書いた紙'},rate:[0.2,2],after:'紙はなぜかお札として使えた。'},
+  {id:'emoney',fmt:function(){return '電子マネー「ピッ」（残高：謎）'},rate:[0.9,1.15],after:'ピッ。残高は宇宙の彼方だった。'},
+  {id:'karaage',unit:80,fmt:function(n){return '唐揚げ '+n+'個'},rate:[0.7,1.5],after:'唐揚げはスタッフ全員でおいしくいただいた。'},
+  {id:'pt',unit:5,fmt:function(n){return '他店のポイント '+n+'pt'},rate:[0.5,1.4],after:'他店のポイントは、まあ、何かには使える。'}
+];
+
+var REV={
+  5:['切られた瞬間、昨日の夢の続きが見えました。','生まれ変わってもここに来ます。','美容室というより、もはや儀式。ありがとう。','鏡の中の自分と、初めて友達になれた気がする。'],
+  4:['ほぼ完璧。あと1ミリで宇宙と交信できた。','いい仕事。ただ、カラスの視線が気になる。','満足です。帰り道、信号が全部青でした。','惜しい。でも次は唐揚げを持ってまた来ます。'],
+  3:['悪くない。猫にも「にゃ」と言われた。','普通。普通すぎて逆に前衛的。','可もなく不可もなく、ただし風が強い。','髪型より、待合室のソファの方が印象に残った。'],
+  2:['左右で別人格が生まれました。','私の髪、どこかで迷子ですか？','会議で「それ何の植物？」と聞かれました。','切りすぎか切らなすぎか。どっちにしても事件。'],
+  1:['これはもう髪型ではなく現象です。','帰り道、鳩に二度見されました。','前世の私が泣いている。','髪が「さよなら」と手を振って去っていきました。']
+};
+
+var EVENTS=[
+  {z:'bangs',d:-1,m:'カラスが前髪をくわえて飛んでいった！'},
+  {z:'top',d:1,m:'扇風機の風で、てっぺんがふわっと伸びた！'},
+  {z:'back',d:-1,m:'猫が後ろ髪にじゃれついた！'},
+  {z:'right',d:1,m:'静電気で右サイドが逆立った！'},
+  {z:'left',d:-1,m:'店長が勝手に左を刈っていった！'}
+];
+var FORECASTS=[
+  {n:'カラスの渡り注意報',e:0},
+  {n:'扇風機フル稼働の日',e:1},
+  {n:'猫の集会日和',e:2},
+  {n:'静電気注意報',e:3},
+  {n:'店長の気まぐれデー',e:4}
+];
+
+var UPS=[
+  {id:'blade',name:'よく切れるハサミ',desc:'ハサミのくしゃみが減る',max:3,cost:[1500,2800,4500]},
+  {id:'glass',name:'のんびり砂時計',desc:'制限時間 +3秒（1段ごと）',max:3,cost:[1200,2200,3500]},
+  {id:'scare',name:'カラスよけかかし',desc:'ハプニングが起きにくくなる',max:3,cost:[1400,2600,4200]},
+  {id:'cat',name:'招き猫',desc:'チップ・スピード・コンボが +25%（1段ごと）',max:3,cost:[1800,3200,5000]},
+  {id:'tonic',name:'トニック定期便',desc:'トニックが安くなる（最後は無料）',max:3,cost:[800,1500,2400]},
+  {id:'clip',name:'バリカン',desc:'一気に2段切れる新しい道具（たまに暴走）',max:1,cost:[2500]}
+];
+
+/* sound */
+var soundOn=true, ac=null;
+function tone(f,d,type,v,delay){
+  if(!soundOn) return;
+  try{
+    ac=ac||new (window.AudioContext||window.webkitAudioContext)();
+    var t=ac.currentTime+(delay||0), o=ac.createOscillator(), g=ac.createGain();
+    o.type=type||'square'; o.frequency.setValueAtTime(f,t);
+    g.gain.setValueAtTime(v||0.04,t); g.gain.exponentialRampToValueAtTime(0.0001,t+d);
+    o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t+d+0.02);
+  }catch(e){}
+}
+var sfx={
+  snip:function(){tone(1500,.04,'square',.03);tone(1100,.05,'square',.03,.06)},
+  tonic:function(){tone(600,.12,'sine',.05);tone(900,.12,'sine',.05,.1)},
+  bad:function(){tone(200,.25,'sawtooth',.04)},
+  star:function(i){tone(500+i*110,.15,'triangle',.06)},
+  coin:function(){tone(988,.08,'triangle',.06);tone(1319,.2,'triangle',.06,.08)},
+  levelup:function(){[523,659,784,1047].forEach(function(f,i){tone(f,.25,'triangle',.07,i*.12)})},
+  ding:function(){tone(880,.3,'sine',.06)}
+};
+
+/* head drawing */
+function accSVG(id,ax,ay){
+  var g='';
+  if(id==='negi'){
+    g='<g transform="rotate(-14)"><rect x="-6" y="-52" width="12" height="34" rx="6" fill="#59b044"/><rect x="-6" y="-24" width="12" height="32" rx="5" fill="#f4f7ea" stroke="#cfd8c0"/>'+
+      '<path d="M-5 -50 Q-15 -64 -4 -72" stroke="#59b044" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M5 -50 Q15 -62 8 -70" stroke="#59b044" stroke-width="5" fill="none" stroke-linecap="round"/></g>';
+  }else if(id==='ribbon'){
+    g='<g transform="translate(36,6) rotate(15)"><path d="M0 0 L-24 -15 L-24 15Z" fill="#e23a45"/><path d="M0 0 L24 -15 L24 15Z" fill="#e23a45"/><circle r="6" fill="#b3202b"/></g>';
+  }else if(id==='antenna'){
+    g='<line x1="0" y1="6" x2="0" y2="-40" stroke="#555" stroke-width="3"/><circle cx="0" cy="-44" r="7" fill="#e23a45"/><path d="M-15 -56 Q0 -68 15 -56" stroke="#e23a45" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M-24 -62 Q0 -84 24 -62" stroke="#e23a45" stroke-width="3" fill="none" stroke-linecap="round" opacity=".6"/>';
+  }else if(id==='mage'){
+    g='<rect x="-3" y="-6" width="6" height="14" class="hr"/><ellipse cx="0" cy="-16" rx="16" ry="10" class="hr"/><rect x="-7" y="-6" width="14" height="4" fill="#e23a45"/>';
+  }else if(id==='sunflower'){
+    var p='';
+    for(var i=0;i<8;i++){p+='<ellipse cx="0" cy="-12" rx="5.5" ry="10" fill="#f7c600" transform="rotate('+(i*45)+')"/>'}
+    g='<g transform="translate(38,-4)">'+p+'<circle r="8" fill="#7a4a1d"/></g>';
+  }else if(id==='crown'){
+    g='<path d="M-26 8 L-26 -12 L-13 0 L0 -20 L13 0 L26 -12 L26 8Z" fill="#f2b705" stroke="#b98b2e" stroke-width="2.5" stroke-linejoin="round"/><circle cx="-26" cy="-14" r="4" fill="#e23a45"/><circle cx="0" cy="-22" r="4.5" fill="#1f5aa6"/><circle cx="26" cy="-14" r="4" fill="#e23a45"/>';
+  }else if(id==='ears'){
+    g='<path d="M-46 8 L-40 -22 L-16 4Z" class="hr"/><path d="M46 8 L40 -22 L16 4Z" class="hr"/><path d="M-40 0 L-38 -12 L-28 -2Z" fill="#f4a8b8"/><path d="M40 0 L38 -12 L28 -2Z" fill="#f4a8b8"/>';
+  }else if(id==='nest'){
+    g='<ellipse cx="0" cy="2" rx="30" ry="9" fill="#8b6b3d" stroke="#5a4426" stroke-width="2.5"/><ellipse cx="-9" cy="-6" rx="7" ry="9" fill="#f6f1e4" stroke="#cfc6ae"/><ellipse cx="9" cy="-6" rx="7" ry="9" fill="#bfe3f2" stroke="#8fbdd0"/><circle cx="0" cy="-22" r="9" fill="#f9c846"/><path d="M8 -24 L16 -21 L8 -18Z" fill="#e23a45"/><circle cx="-2" cy="-24" r="1.8" fill="#2b2b2b"/>';
+  }
+  return g?'<g transform="translate('+ax+' '+ay+')">'+g+'</g>':'';
+}
+function headSVG(c,lv,acc,mood){
+  var back=lv.back>0?'<rect class="hr" x="66" y="80" width="168" height="'+(30+lv.back*36)+'" rx="26"/>':'';
+  var top=lv.top>0?'<ellipse class="hr" cx="150" cy="86" rx="'+(52+lv.top*3)+'" ry="'+(lv.top*13)+'"/>':'';
+  var bangs=lv.bangs>0?'<rect class="hr" x="90" y="80" width="120" height="'+(lv.bangs*13)+'" rx="12"/>':'';
+  var lw=10+lv.left*9, rw=10+lv.right*9;
+  var left=lv.left>0?'<rect class="hr" x="'+(96-lw)+'" y="84" width="'+lw+'" height="'+(24+lv.left*22)+'" rx="14"/>':'';
+  var right=lv.right>0?'<rect class="hr" x="204" y="84" width="'+rw+'" height="'+(24+lv.right*22)+'" rx="14"/>':'';
+  var eyes, mouth;
+  if(mood==='happy'){
+    eyes='<path d="M123 146 Q130 136 137 146" stroke="var(--ink)" stroke-width="3.5" fill="none" stroke-linecap="round"/><path d="M163 146 Q170 136 177 146" stroke="var(--ink)" stroke-width="3.5" fill="none" stroke-linecap="round"/>';
+    mouth='<path d="M130 174 Q150 196 170 174Z" fill="#c2414b" stroke="var(--ink)" stroke-width="3" stroke-linejoin="round"/>';
+  }else if(mood==='sad'){
+    eyes='<circle cx="130" cy="146" r="5" fill="var(--ink)"/><circle cx="170" cy="146" r="5" fill="var(--ink)"/><path d="M120 134 L138 138" stroke="var(--ink)" stroke-width="3" stroke-linecap="round"/><path d="M180 134 L162 138" stroke="var(--ink)" stroke-width="3" stroke-linecap="round"/>';
+    mouth='<path d="M134 186 Q150 170 166 186" stroke="var(--ink)" stroke-width="3.5" fill="none" stroke-linecap="round"/>';
+  }else{
+    eyes='<circle cx="130" cy="146" r="5" fill="var(--ink)"/><circle cx="170" cy="146" r="5" fill="var(--ink)"/>';
+    mouth='<path d="M136 180 L164 180" stroke="var(--ink)" stroke-width="3.5" stroke-linecap="round"/>';
+  }
+  var deco='';
+  if(c.deco==='glasses'){deco='<circle cx="130" cy="146" r="14" fill="none" stroke="var(--ink)" stroke-width="3"/><circle cx="170" cy="146" r="14" fill="none" stroke="var(--ink)" stroke-width="3"/><path d="M144 146 L156 146" stroke="var(--ink)" stroke-width="3"/>'}
+  if(c.deco==='mustache'){deco='<path d="M126 170 Q138 160 150 170 Q162 160 174 170 Q162 178 150 172 Q138 178 126 170Z" fill="var(--hair-d)"/>'}
+  var ay=lv.top>0?92-lv.top*13:80;
+  return '<g>'+back+
+    '<rect class="skin" x="132" y="196" width="36" height="76" rx="10"/>'+
+    '<path d="M30 324 L30 290 Q60 268 112 264 L188 264 Q240 268 270 290 L270 324Z" fill="var(--cape)"/>'+
+    '<path d="M112 264 Q150 284 188 264" stroke="var(--surface)" stroke-width="7" fill="none" stroke-linecap="round"/>'+
+    '<circle class="skin" cx="92" cy="148" r="11"/><circle class="skin" cx="208" cy="148" r="11"/>'+
+    '<ellipse class="skin" cx="150" cy="140" rx="58" ry="66"/>'+
+    left+right+top+bangs+
+    '<circle cx="112" cy="166" r="8" fill="#f08a8a" opacity=".35"/><circle cx="188" cy="166" r="8" fill="#f08a8a" opacity=".35"/>'+
+    eyes+mouth+deco+accSVG(acc,150,ay)+'</g>';
+}
+function hairStyle(c){return '--hair:'+c.hair+';--hair-d:'+c.hairD}
+
+/* state */
+var app=$('#app'), hudEl=$('#hud');
+var S={};
+function resetGame(){
+  S={day:1,idx:0,money:0,pts:0,dayMoney:0,order:[],dayLog:[],daySum:[],allStars:[],goalHits:0,
+     used:[],combo:0,maxCombo:0,ups:{blade:0,glass:0,scare:0,cat:0,tonic:0,clip:0},
+     cust:null,lv:{},tgt:{},acc:'none',tool:'cut',t0:0,limit:30,events:[],timer:null,
+     done:false,res:null,sayId:0,forecast:FORECASTS[0],bonusDone:false};
+}
+resetGame();
+
+function sneezeP(){return Math.max(0,0.12+0.02*(S.day-1)-0.04*S.ups.blade)}
+function limitFor(){return 30-2*(S.day-1)+3*S.ups.glass}
+function tonicCost(){return [100,60,30,0][S.ups.tonic]}
+function menuPrice(){return 1200+60*(lvOf(S.pts)-1)}
+function addPts(n){
+  var o=lvOf(S.pts);S.pts+=n;var l=lvOf(S.pts);
+  return l>o?{lv:l,name:LVN[l-1]}:null;
+}
+
+function setScreen(h){
+  app.innerHTML='<div class="screen">'+h+'</div>';
+  try{window.scrollTo(0,0)}catch(e){}
+}
+function paintHud(){
+  var lv=lvOf(S.pts);
+  $('#h-l1').textContent='DAY '+S.day+' / '+DAYS;
+  $('#h-n').textContent=Math.min(S.idx+1,PER_DAY)+'/'+PER_DAY;
+  $('#h-money').textContent=yen(S.money);
+  $('#h-l3').textContent='ポイント Lv'+lv;
+  $('#h-pts').textContent=S.pts+'pt';
+}
+function starsHTML(n){
+  var h='';
+  for(var i=1;i<=5;i++){h+='<span class="st'+(i<=n?' on':'')+'" style="--i:'+i+'">★</span>'}
+  return h;
+}
+function starsText(n){return '★★★★★'.slice(0,n)+'☆☆☆☆☆'.slice(0,5-n)}
+function shuffle(a){a=a.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t}return a}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function avgOf(arr){var s=0;arr.forEach(function(x){s+=x});return arr.length?s/arr.length:0}
+
+/* screens */
+function showTitle(){
+  clearInterval(S.timer);
+  hudEl.hidden=true;
+  var best=null;
+  try{best=JSON.parse(localStorage.getItem('nsb-best2')||'null')}catch(e){}
+  setScreen(
+    '<div class="hero"><div class="sign">本日開店</div><h1>ナンセンス<br>理髪店</h1>'+
+    '<p class="lead">お客さんは全員わけがわからない。頼れるのはハサミだけ。</p></div>'+
+    '<ol class="steps">'+
+    '<li><span>注文票の目標に合わせて、5か所の髪の長さをそろえる</span></li>'+
+    '<li><span>希望の「おまけ」を選んで仕上げる</span></li>'+
+    '<li><span>評価で料金とチップが決まる。支払いは何で来るかわからない</span></li>'+
+    '<li><span>1日の目標売上を超えたらボーナス。ショップで道具を強化して、5日間でお店を育てよう</span></li></ol>'+
+    '<div class="menu"><span>カット '+yen(1200)+'〜</span><span>トニック −¥100</span><span>全'+DAYS+'日</span></div>'+
+    (best?'<p class="best">自己ベスト スコア '+best.score+'（Lv'+best.lv+'・'+best.pts+'pt・財布 '+yen(best.money)+'）</p>':'')+
+    '<button class="btn" id="start">開店する</button>'
+  );
+  $('#start').onclick=function(){sfx.snip();newGame()};
+}
+
+function newGame(){
+  resetGame();
+  hudEl.hidden=false;
+  showDayIntro();
+}
+
+function showDayIntro(){
+  S.forecast=pick(FORECASTS);
+  S.limit=limitFor();
+  S.idx=0;
+  paintHud();
+  var goal=GOALS[S.day-1];
+  setScreen(
+    '<p class="lab">DAY '+S.day+' / '+DAYS+'</p><h2>'+DAY_TITLES[S.day-1]+'</h2>'+
+    '<div class="panel">'+
+    '<div class="kv"><span>今日の目標売上</span><b>'+yen(goal)+'</b></div>'+
+    '<div class="kv"><span>制限時間（1人）</span><b>'+S.limit+'秒</b></div>'+
+    '<div class="kv"><span>カット代</span><b>'+yen(menuPrice())+'</b></div>'+
+    '<div class="kv"><span>店ランク</span><b>Lv'+lvOf(S.pts)+' '+LVN[lvOf(S.pts)-1]+'</b></div>'+
+    '</div>'+
+    '<div class="fc">本日の予報：'+S.forecast.n+'</div>'+
+    (S.day>=3?'<p class="vipnote">本日はVIPのお客さんが1人来店します。料金とチップは2倍です。</p>':'')+
+    (S.day>=2?'<p class="vipnote">髪の長さがバラバラの状態で来るお客さんも増えてきます。足りない分はトニックで。</p>':'')+
+    '<button class="btn" id="open">開店！</button>'
+  );
+  sfx.ding();
+  $('#open').onclick=function(){sfx.snip();startDay()};
+}
+
+function startDay(){
+  var pool=CUST.filter(function(c){return S.used.indexOf(c.name)<0});
+  if(pool.length<PER_DAY){S.used=[];pool=CUST.slice()}
+  var o=shuffle(pool).slice(0,PER_DAY).map(function(c){return Object.assign({},c)});
+  o.forEach(function(c){S.used.push(c.name)});
+  if(S.day>=3){pick(o).vip=true}
+  S.order=o;S.idx=0;S.dayMoney=0;S.dayLog=[];S.bonusDone=false;
+  startCustomer();
+}
+
+function startCustomer(){
+  var c=S.order[S.idx];
+  S.cust=c;
+  S.tgt={};
+  ZKEYS.forEach(function(k,i){S.tgt[k]=c.t[i]});
+  var minS=S.day===1?4:S.day===2?3:2;
+  S.lv={};
+  ZKEYS.forEach(function(k){
+    S.lv[k]=(S.day===1||Math.random()<0.4)?4:minS+Math.floor(Math.random()*(5-minS));
+  });
+  S.acc='none';S.tool='cut';S.done=false;
+  S.limit=limitFor();
+  S.t0=performance.now();
+  var sc=1-0.3*S.ups.scare;
+  S.events=[];
+  if(Math.random()<(S.day===1?0.6:1)*sc)S.events.push({at:rnd(5,S.limit*0.55),done:false});
+  if(S.day>=4&&Math.random()<0.5*sc)S.events.push({at:rnd(S.limit*0.55,S.limit-4),done:false});
+  paintHud();
+  var chips=ZONES.map(function(z){
+    return '<button class="chip" data-z="'+z.id+'"><span class="cl">'+z.label+'</span><span class="cn">4</span><span class="ct"></span><span class="cs"></span></button>';
+  }).join('');
+  var accs=ACCS.map(function(a){
+    return '<button class="pill" data-a="'+a.id+'" aria-pressed="'+(a.id==='none')+'">'+a.label+'</button>';
+  }).join('');
+  var tc=tonicCost();
+  setScreen(
+    '<div class="who"><small id="meta"></small><h2>'+(c.vip?'<span class="vip">VIP</span>':'')+esc(c.name)+'</h2><p class="quote">「'+esc(c.quote)+'」</p></div>'+
+    '<div class="ticket"><span class="tk-h">オーダー票</span><span>おまけ：<b>'+accOf(c.acc).verb+'</b></span></div>'+
+    '<div class="timer"><div class="bar" id="bar"><i id="fill"></i></div><b id="left">'+S.limit+'.0</b></div>'+
+    '<div class="event" id="event"></div>'+
+    '<div class="mirror"><svg id="head" viewBox="0 -24 300 324" style="'+hairStyle(c)+'" role="img" aria-label="お客さんの頭"></svg><svg id="fx" viewBox="0 -24 300 324" style="'+hairStyle(c)+'" aria-hidden="true"></svg></div>'+
+    '<div class="tools" role="group" aria-label="道具"><button class="seg" id="t-cut" aria-pressed="true">✂️ ハサミ</button>'+
+    (S.ups.clip?'<button class="seg" id="t-clip" aria-pressed="false">⚡ バリカン</button>':'')+
+    '<button class="seg" id="t-tonic" aria-pressed="false">🧴 トニック '+(tc?'−¥'+tc:'無料')+'</button></div>'+
+    '<div class="chips" id="chips" data-tool="cut">'+chips+'</div>'+
+    '<p class="note">数字は髪の長さ（0〜4）。目標と同じ数字にしよう。タップで切る。</p>'+
+    '<div class="lab">おまけ</div><div class="accs" id="accs">'+accs+'</div>'+
+    '<button class="btn" id="finish">仕上げる！</button>'
+  );
+  paintMeta();paintChips();paintHead('neutral');defaultHint();
+  $$('.chip').forEach(function(b){b.onclick=function(){cutZone(b.getAttribute('data-z'))}});
+  $('#t-cut').onclick=function(){setTool('cut')};
+  var tcl=$('#t-clip');if(tcl)tcl.onclick=function(){setTool('clip')};
+  $('#t-tonic').onclick=function(){setTool('tonic')};
+  $$('.pill').forEach(function(b){b.onclick=function(){
+    S.acc=b.getAttribute('data-a');
+    $$('.pill').forEach(function(p){p.setAttribute('aria-pressed',String(p===b))});
+    paintHead('neutral');sfx.snip();
+  }});
+  $('#finish').onclick=function(){finishCut(false)};
+  clearInterval(S.timer);
+  S.timer=setInterval(tick,100);
+}
+
+function paintMeta(){
+  var m=$('#meta');if(!m)return;
+  m.textContent='お客さん '+(S.idx+1)+'/'+PER_DAY+
+    (S.combo>=2?'　コンボ×'+S.combo:'')+
+    '　今日 '+yen(S.dayMoney)+' / 目標 '+yen(GOALS[S.day-1]);
+}
+function setTool(t){
+  S.tool=t;
+  ['cut','clip','tonic'].forEach(function(k){
+    var b=$('#t-'+k);if(b)b.setAttribute('aria-pressed',String(k===t));
+  });
+  $('#chips').setAttribute('data-tool',t);
+}
+function paintHead(mood){
+  var el=$('#head');if(!el)return;
+  el.innerHTML=headSVG(S.cust,S.lv,S.acc,mood);
+}
+function paintChips(){
+  ZONES.forEach(function(z){
+    var b=$('.chip[data-z="'+z.id+'"]');if(!b)return;
+    var cur=S.lv[z.id],tg=S.tgt[z.id],cls,txt;
+    if(cur===tg){cls='ok';txt='ぴったり'}
+    else if(cur>tg){cls='over';txt='あと'+(cur-tg)+'切る'}
+    else{cls='under';txt=(tg-cur)+'足りない'}
+    b.className='chip '+cls;
+    $('.cn',b).textContent=cur;
+    $('.ct',b).textContent='目標 '+tg;
+    $('.cs',b).textContent=txt;
+    b.setAttribute('aria-label',z.label+' 現在'+cur+' 目標'+tg+' '+txt);
+  });
+}
+function burst(zid,kind){
+  var fx=$('#fx');if(!fx)return;
+  var z=ZONES.filter(function(q){return q.id===zid})[0];
+  var g=document.createElementNS('http://www.w3.org/2000/svg','g');
+  var h='<text class="scis" x="'+z.ax+'" y="'+z.ay+'">'+(kind==='tonic'?'✨':'✂️')+'</text>';
+  if(kind!=='tonic'){
+    for(var i=0;i<5;i++){h+='<rect class="bit" x="'+(z.ax+rnd(-22,22))+'" y="'+(z.ay+rnd(0,20))+'" width="7" height="12" rx="3" style="--dx:'+Math.round(rnd(-30,30))+'px"/>'}
+  }
+  g.innerHTML=h;fx.appendChild(g);
+  setTimeout(function(){if(g.parentNode)g.parentNode.removeChild(g)},900);
+}
+function say(msg,hit){
+  var e=$('#event');if(!e)return;
+  e.textContent=msg;e.className=hit?'event hit':'event';
+  var id=++S.sayId;
+  setTimeout(function(){if(id===S.sayId)defaultHint()},hit?3200:1800);
+}
+function defaultHint(){
+  var e=$('#event');if(!e)return;
+  e.className='event';e.textContent='予報：'+S.forecast.n+'。切りすぎてもトニックで戻せる。';
+}
+function cutZone(z){
+  if(S.done)return;
+  var d,msg='',bad=false;
+  if(S.tool==='cut'||S.tool==='clip'){
+    if(S.lv[z]===0){say('もう切るところがない！',false);return}
+    if(S.tool==='clip'){
+      d=-2;
+      if(Math.random()<0.1){d=-3;msg='バリカンが暴走！ 3段も持っていかれた';bad=true}
+    }else{
+      d=-1;
+      if(S.lv[z]>=2&&Math.random()<sneezeP()){d=-2;msg='ハサミがくしゃみ！ 2段も切れた';bad=true}
+    }
+    S.lv[z]=Math.max(0,S.lv[z]+d);
+    burst(z,'cut');
+    bad?sfx.bad():sfx.snip();
+  }else{
+    var tc=tonicCost();
+    S.money-=tc;S.dayMoney-=tc;
+    if(Math.random()<0.15){
+      var others=ZKEYS.filter(function(k){return k!==z});
+      z=pick(others);msg='トニックが迷子になって '+ZONES.filter(function(q){return q.id===z})[0].label+' に届いた！';bad=true;
+    }
+    S.lv[z]=Math.min(4,S.lv[z]+1);
+    burst(z,'tonic');sfx.tonic();
+    paintHud();paintMeta();
+  }
+  paintChips();paintHead('neutral');
+  if(msg)say(msg,bad);
+}
+function fireEvent(){
+  var ev=Math.random()<0.6?EVENTS[S.forecast.e]:pick(EVENTS);
+  S.lv[ev.z]=Math.max(0,Math.min(4,S.lv[ev.z]+ev.d));
+  burst(ev.z,ev.d<0?'cut':'tonic');
+  sfx.bad();
+  paintChips();paintHead('neutral');
+  say(ev.m,true);
+}
+function tick(){
+  if(S.done)return;
+  var el=(performance.now()-S.t0)/1000, left=Math.max(0,S.limit-el);
+  var f=$('#fill');if(!f)return;
+  f.style.width=(left/S.limit*100)+'%';
+  $('#left').textContent=left.toFixed(1);
+  $('#bar').className='bar'+(left<8?' low':'');
+  S.events.forEach(function(ev){
+    if(!ev.done&&el>=ev.at){ev.done=true;fireEvent()}
+  });
+  if(left<=0)finishCut(true);
+}
+
+function finishCut(timeUp){
+  if(S.done)return;
+  S.done=true;clearInterval(S.timer);
+  var err=0;
+  ZONES.forEach(function(z){err+=Math.abs(S.lv[z.id]-S.tgt[z.id])});
+  var accOk=S.acc===S.cust.acc;
+  var left=timeUp?0:Math.max(0,S.limit-(performance.now()-S.t0)/1000);
+  var score=Math.max(0,100-err*14-(accOk?0:25));
+  var stars=score>=92?5:score>=78?4:score>=58?3:score>=38?2:1;
+  var speed=left>=S.limit/3&&stars>=3;
+  S.combo=stars>=4?S.combo+1:0;
+  if(S.combo>S.maxCombo)S.maxCombo=S.combo;
+  S.allStars.push(stars);
+  S.res={err:err,accOk:accOk,score:score,stars:stars,speed:speed,timeUp:timeUp};
+  showRating();
+}
+
+function showRating(){
+  var r=S.res,c=S.cust;
+  var mood=r.stars>=4?'happy':r.stars===3?'neutral':'sad';
+  setScreen(
+    '<div class="center screen" style="animation:none;gap:12px">'+
+    (r.timeUp?'<p class="detail">時間切れ！ ハサミは勝手に止まった。</p>':'')+
+    '<div class="mirror sm"><svg id="head" viewBox="0 -24 300 324" style="'+hairStyle(c)+'" role="img" aria-label="仕上がり"></svg></div>'+
+    '<div class="stars" aria-label="評価 '+r.stars+'">'+starsHTML(r.stars)+'</div>'+
+    '<div class="score">仕上がり '+r.score+'点</div>'+
+    (S.combo>=2?'<div class="combo">コンボ ×'+S.combo+'</div>':'')+
+    '<div class="review"><p>「'+esc(pick(REV[r.stars]))+'」</p><p class="by">'+esc(c.name)+'の口コミ</p></div>'+
+    '<p class="detail">髪のズレ合計 '+r.err+'段 ／ おまけ '+(r.accOk?'ぴったり':'ちがった')+(r.speed?' ／ スピード賞':'')+'</p>'+
+    '<button class="btn" id="topay">お会計へ</button></div>'
+  );
+  $('#head').innerHTML=headSVG(c,S.lv,S.acc,mood);
+  for(var i=1;i<=r.stars;i++){(function(k){setTimeout(function(){sfx.star(k)},k*160)})(i)}
+  $('#topay').onclick=showPay;
+}
+
+function showPay(){
+  var r=S.res,c=S.cust;
+  var vm=c.vip?2:1;
+  var price=menuPrice()*vm;
+  var adj=0,adjLabel='';
+  if(r.stars===1){adj=-Math.round(price*0.5);adjLabel='ご立腹割引（−50%）'}
+  else if(r.stars===2){adj=-Math.round(price*0.2);adjLabel='不満割引（−20%）'}
+  var m=1+0.25*S.ups.cat;
+  var tip=r10([0,0,100,300,600][r.stars-1]*vm*m);
+  var speed=r.speed?r10(150*m):0;
+  var comboB=S.combo>=2?r10(Math.min(500,(S.combo-1)*100)*m):0;
+  var base=price+adj;
+  var total=base+tip+speed+comboB;
+  var pay=pick(PAYS);
+  var n=pay.unit?Math.max(1,Math.round(total/pay.unit)):0;
+  var d=new Date();
+  var date=d.getFullYear()+'/'+(d.getMonth()+1)+'/'+d.getDate();
+  var rows='<div class="row"><span>カット代'+(c.vip?'（VIP×2）':'')+'</span><span>'+yen(price)+'</span></div>';
+  if(adj)rows+='<div class="row"><span>'+adjLabel+'</span><span>'+yen(adj)+'</span></div>';
+  if(tip)rows+='<div class="row"><span>チップ（★'+r.stars+'）</span><span>'+yen(tip)+'</span></div>';
+  if(speed)rows+='<div class="row"><span>スピード料金</span><span>'+yen(speed)+'</span></div>';
+  if(comboB)rows+='<div class="row"><span>コンボ ×'+S.combo+'</span><span>'+yen(comboB)+'</span></div>';
+  var btns=pay.id==='cash'
+    ? '<button class="btn" id="accept">受け取る</button>'
+    : '<button class="btn" id="accept">それで受け取る（時価・チップ込み）</button><button class="btn ghost" id="cashonly">現金にしてもらう（チップなし '+yen(base)+'）</button>';
+  setScreen(
+    '<h2>お会計</h2>'+
+    '<div class="receipt"><div class="r-h">領収書</div><div class="r-s">ナンセンス理髪店　'+date+'</div><hr>'+
+    rows+'<hr><div class="row tot"><span>合計</span><span>'+yen(total)+'</span></div><hr>'+
+    '<div class="r-pay">'+esc(c.name)+'のお支払い<b>'+esc(pay.fmt(n))+'</b></div></div>'+
+    '<div class="pay-btns" id="payui">'+btns+'</div>'
+  );
+  function settle(received,flav,gain){
+    S.money+=received;S.dayMoney+=received;
+    var up=addPts(gain);
+    S.dayLog.push({name:c.name,stars:r.stars,got:received});
+    paintHud();sfx.coin();
+    if(up)setTimeout(sfx.levelup,350);
+    var last=S.idx>=PER_DAY-1;
+    $('#payui').innerHTML=
+      '<div class="got"><div class="lab">受取額</div><div class="amt">'+yen(received)+'</div>'+
+      '<p class="flav">'+esc(flav)+'</p><p class="pts">+'+gain+'pt</p>'+
+      (up?'<p class="lvup">店ランクアップ！ Lv'+up.lv+'「'+up.name+'」 カット代が上がった</p>':'')+'</div>'+
+      '<button class="btn" id="next">'+(last?'今日の結果を見る':'次のお客さん')+'</button>';
+    $('#next').onclick=function(){S.idx++;if(S.idx>=PER_DAY)showDayEnd();else startCustomer()};
+  }
+  var gain=r.stars*10+(r.speed?5:0)+(S.combo>=2?5:0);
+  $('#accept').onclick=function(){
+    if(pay.id==='cash'){settle(total,pay.after,gain);return}
+    var rate=rnd(pay.rate[0],pay.rate[1]);
+    var got=Math.round(total*rate/10)*10;
+    var ratio=got/total;
+    var mm=ratio>=1.15?'相場が高騰していた！ ':ratio<=0.85?'相場が暴落していた…。 ':'ほぼ時価どおり。 ';
+    settle(got,mm+pay.after,gain);
+  };
+  var co=$('#cashonly');
+  if(co)co.onclick=function(){settle(base,'お客さんは少しふくれて、現金だけ置いていった。',gain)};
+}
+
+function showDayEnd(){
+  clearInterval(S.timer);
+  var goal=GOALS[S.day-1], hit=S.dayMoney>=goal, bonus=0, up=null;
+  if(hit&&!S.bonusDone){
+    bonus=1000+250*(S.day-1);S.money+=bonus;up=addPts(50);S.goalHits++;
+  }
+  S.bonusDone=true;
+  var avg=avgOf(S.dayLog.map(function(l){return l.stars}));
+  S.daySum.push({day:S.day,money:S.dayMoney,goal:goal,hit:hit,avg:avg});
+  S.idx=PER_DAY-1;
+  paintHud();
+  var items=S.dayLog.map(function(l){
+    return '<li><span>'+esc(l.name)+'</span><span class="gs">'+starsText(l.stars)+'</span><span class="gm">'+yen(l.got)+'</span></li>';
+  }).join('');
+  setScreen(
+    '<div class="center screen" style="animation:none;gap:12px">'+
+    '<p class="lab">DAY '+S.day+' 閉店</p>'+
+    '<h2>'+(hit?'目標達成！':'目標に届かず…')+'</h2>'+
+    '<div class="sum"><div><small>今日の売上</small><b>'+yen(S.dayMoney)+'</b></div><div><small>目標</small><b>'+yen(goal)+'</b></div><div><small>平均評価</small><b>'+avg.toFixed(1)+'</b></div></div>'+
+    (hit?'<p class="ok-t">ボーナス '+yen(bonus)+' と +50pt をもらった</p>':'<p class="ng-t">店長がカラスに叱られている。明日がんばろう。</p>')+
+    (up?'<p class="lvup">店ランクアップ！ Lv'+up.lv+'「'+up.name+'」</p>':'')+
+    '<ul class="log">'+items+'</ul>'+
+    '<button class="btn" id="go">'+(S.day<DAYS?'ショップへ':'最終結果へ')+'</button></div>'
+  );
+  if(up)setTimeout(sfx.levelup,200);else if(hit)sfx.coin();else sfx.bad();
+  $('#go').onclick=function(){if(S.day<DAYS)showShop();else showFinale()};
+}
+
+function showShop(){
+  setScreen(
+    '<p class="lab">DAY '+S.day+' の夜</p><h2>ショップ</h2>'+
+    '<p class="detail">財布 <b id="wallet"></b>。道具を強化して、明日に備えよう。</p>'+
+    '<div class="shop" id="shoplist"></div>'+
+    '<button class="btn" id="nextday">DAY '+(S.day+1)+' へ</button>'
+  );
+  renderShop();
+  $('#nextday').onclick=function(){S.day++;showDayIntro()};
+}
+function renderShop(){
+  $('#wallet').textContent=yen(S.money);
+  var list=$('#shoplist');
+  list.innerHTML=UPS.map(function(u){
+    var lvl=S.ups[u.id], maxed=lvl>=u.max, cost=maxed?0:u.cost[lvl];
+    var pips='';for(var i=0;i<u.max;i++){pips+=i<lvl?'●':'○'}
+    var btn=maxed?'<button class="buy" disabled>最大</button>'
+      :'<button class="buy" data-u="'+u.id+'"'+(S.money<cost?' disabled':'')+'>'+yen(cost)+'</button>';
+    return '<div class="up"><div class="info"><div class="nm">'+u.name+'</div><div class="ds">'+u.desc+'</div><div class="pips">'+pips+'</div></div>'+btn+'</div>';
+  }).join('');
+  $$('.buy[data-u]',list).forEach(function(b){
+    b.onclick=function(){
+      var id=b.getAttribute('data-u');
+      var u=UPS.filter(function(x){return x.id===id})[0];
+      var lvl=S.ups[id];if(lvl>=u.max)return;
+      var cost=u.cost[lvl];
+      if(S.money<cost){sfx.bad();return}
+      S.money-=cost;S.ups[id]=lvl+1;
+      sfx.coin();paintHud();renderShop();
+    };
+  });
+}
+
+function showFinale(){
+  clearInterval(S.timer);
+  var avg=avgOf(S.allStars);
+  var lv=lvOf(S.pts);
+  var score=S.pts+Math.floor(S.money/100);
+  var prev=null,isBest=false;
+  try{prev=JSON.parse(localStorage.getItem('nsb-best2')||'null')}catch(e){}
+  if(!prev||score>prev.score){
+    isBest=true;
+    try{localStorage.setItem('nsb-best2',JSON.stringify({score:score,pts:S.pts,money:S.money,lv:lv}))}catch(e){}
+  }
+  var rank=avg>=4.5?'伝説のナンセンス理容師':avg>=3.5?'町の人気カリスマ':avg>=2.5?'ギリギリ営業中の人':'カラスの専属スタイリスト';
+  var items=S.daySum.map(function(d){
+    return '<li><span>DAY '+d.day+'　'+yen(d.money)+' / '+yen(d.goal)+'</span><span class="gs">★'+d.avg.toFixed(1)+'</span><span class="'+(d.hit?'ok-t':'ng-t')+'">'+(d.hit?'達成':'未達')+'</span></li>';
+  }).join('');
+  hudEl.hidden=true;
+  setScreen(
+    '<div class="center screen" style="animation:none;gap:12px">'+
+    '<p class="lab">'+DAYS+'日間の営業が終わりました</p><h2 class="rank">'+rank+'</h2>'+
+    '<div class="stars" aria-label="平均評価">'+starsHTML(Math.round(avg))+'</div>'+
+    '<div class="sum"><div><small>ポイント</small><b>'+S.pts+'pt</b></div><div><small>財布</small><b>'+yen(S.money)+'</b></div><div><small>平均評価</small><b>'+avg.toFixed(1)+'</b></div></div>'+
+    '<div class="panel" style="width:100%">'+
+    '<div class="kv"><span>店ランク</span><b>Lv'+lv+' '+LVN[lv-1]+'</b></div>'+
+    '<div class="kv"><span>目標達成</span><b>'+S.goalHits+' / '+DAYS+'日</b></div>'+
+    '<div class="kv"><span>最大コンボ</span><b>×'+S.maxCombo+'</b></div>'+
+    '<div class="kv"><span>スコア</span><b>'+score+'</b></div></div>'+
+    (isBest?'<p class="lvup">自己ベスト更新！</p>':'')+
+    '<ul class="log">'+items+'</ul>'+
+    '<button class="btn" id="again">もう一回、開店する</button></div>'
+  );
+  sfx.levelup();
+  $('#again').onclick=function(){sfx.snip();newGame()};
+}
+
+$('#snd').onclick=function(){
+  soundOn=!soundOn;
+  this.setAttribute('aria-pressed',String(soundOn));
+  if(soundOn)sfx.snip();
+};
+
+showTitle();
+})();
+</script>
+
+</body>
+</html>

@@ -11,6 +11,8 @@ games/
   golden-egg-chase-king/index.html
   fart-candle-king/index.html
   30-second-panic-king/index.html
+  frypan-ronin/index.html          （three.min.js 同梱）
+  nonsense-barber/index.html
 ```
 
 ## 遊び方

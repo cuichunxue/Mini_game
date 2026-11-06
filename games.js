@@ -13,7 +13,7 @@
  *
  * サイト上の「管理」画面からも追加・削除できます（その場合はこのブラウザだけに保存されます）。
  */
-window.GAMES_VERSION = "2";
+window.GAMES_VERSION = "3";
 
 window.GAMES = [
   {
@@ -42,5 +42,23 @@ window.GAMES = [
     emoji: "⏱️",
     color: "#1d1147",
     accent: "#ffd400"
+  },
+  {
+    id: "frypan-ronin",
+    title: "Frypan Ronin",
+    description: "フライパン一本で台所に押し寄せる敵をぶっ飛ばせ！叩く・蹴る・受ける・避けるのコンボアクション。",
+    path: "games/frypan-ronin/index.html",
+    emoji: "🍳",
+    color: "#1a2027",
+    accent: "#00bfdc"
+  },
+  {
+    id: "nonsense-barber",
+    title: "ナンセンス理髪店",
+    description: "ネギを刺せ？ちょんまげ？無茶な注文に応えて髪を仕上げ、5日間で伝説の店を目指せ！",
+    path: "games/nonsense-barber/index.html",
+    emoji: "💈",
+    color: "#de3340",
+    accent: "#edf3f8"
   }
 ];
