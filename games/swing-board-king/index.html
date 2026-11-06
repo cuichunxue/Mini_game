@@ -1,0 +1,1187 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>SWING BOARD KING</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=M+PLUS+Rounded+1c:wght@500;700;800&display=swap">
+<style>
+/* Layout: full-bleed canvas stage (seaside wooden deck at dusk), HUD pinned top and bottom, menus as sheets over the stage */
+:root{
+  --ink:#10242b;        /* deep teal-black */
+  --sea:#14505c;
+  --amber:#f2a65a;
+  --wood:#d9a066;
+  --coral:#ff5d47;
+  --cream:#fff1d6;
+  --glass:rgba(10,30,36,.72);
+  --glass-line:rgba(255,241,214,.18);
+  --display:"Dela Gothic One","Hiragino Kaku Gothic ProN","Yu Gothic",system-ui,sans-serif;
+  --body:"M PLUS Rounded 1c","Hiragino Maru Gothic ProN","Yu Gothic",system-ui,sans-serif;
+  color-scheme:dark;
+}
+html,body{height:100%;margin:0;overflow:hidden;overscroll-behavior:none}
+body{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));box-sizing:border-box}
+body{
+  background:var(--ink);color:var(--cream);font-family:var(--body);font-weight:700;
+  font-size:15px;line-height:1.5;-webkit-user-select:none;user-select:none;
+  -webkit-tap-highlight-color:transparent;
+}
+#c{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;background:var(--ink)}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offset:2px}
+[hidden]{display:none!important}
+
+/* HUD */
+#hud{position:fixed;inset:0;pointer-events:none;display:flex;flex-direction:column;justify-content:space-between;
+  padding:calc(env(safe-area-inset-top,0px) + 8px) max(16px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 14px) max(16px,env(safe-area-inset-left,0px))}
+#hud button{pointer-events:auto}
+.top{display:grid;grid-template-columns:1fr auto 1fr;align-items:start;gap:8px}
+.chip{display:inline-block;padding:3px 10px;border-radius:99px;background:var(--glass);border:1px solid var(--glass-line);font-size:12px;letter-spacing:.06em}
+#hMode{justify-self:start}
+.timebox{text-align:center;line-height:1}
+#hTime{font-family:var(--display);font-size:clamp(40px,12vw,64px);font-variant-numeric:tabular-nums;text-shadow:0 3px 0 rgba(0,0,0,.35)}
+#hTime small{font-size:.38em;margin-left:2px}
+#pauseBtn{justify-self:end;width:40px;height:40px;border-radius:50%;background:var(--glass);border:1px solid var(--glass-line);font-size:16px}
+.stats{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:6px}
+.stats .chip b{font-family:var(--display);font-weight:400;font-variant-numeric:tabular-nums;margin-left:4px;color:var(--amber)}
+#hCombo.fever{background:var(--coral);border-color:var(--coral);animation:pulse .5s infinite alternate}
+#hCombo.fever b{color:#fff}
+@keyframes pulse{to{transform:scale(1.08)}}
+#meter{position:relative;height:10px;width:min(78vw,360px);margin:8px auto 0;border-radius:99px;background:var(--glass);border:1px solid var(--glass-line);overflow:hidden}
+#meter::before,#meter::after{content:"";position:absolute;top:0;bottom:0;width:19%;background:rgba(255,93,71,.45)}
+#meter::before{left:0}#meter::after{right:0}
+#needle{position:absolute;top:-1px;bottom:-1px;width:6px;left:50%;margin-left:-3px;border-radius:3px;background:var(--cream)}
+#coach{text-align:center;margin-top:10px;min-height:1.5em;font-size:14px;text-shadow:0 2px 6px rgba(0,0,0,.6)}
+#toast{position:fixed;left:0;right:0;top:34%;text-align:center;font-family:var(--display);font-size:clamp(26px,8vw,44px);color:var(--amber);
+  text-shadow:0 3px 0 rgba(0,0,0,.45);pointer-events:none;opacity:0;transform:scale(.8)}
+#toast.show{animation:pop 1.1s ease-out}
+@keyframes pop{0%{opacity:0;transform:scale(.6)}15%{opacity:1;transform:scale(1.08)}70%{opacity:1;transform:scale(1)}100%{opacity:0;transform:translateY(-18px)}}
+#warn{position:fixed;top:44%;font-family:var(--display);font-size:22px;color:var(--coral);text-shadow:0 2px 0 rgba(0,0,0,.5);pointer-events:none;opacity:0;padding:0 18px}
+#warn.l{left:0}#warn.r{right:0}
+#warn.on{opacity:1;animation:blink .25s infinite alternate}
+@keyframes blink{to{opacity:.35}}
+.bottom{display:flex;flex-direction:column;align-items:center;gap:8px}
+#trickBar{display:flex;gap:10px;width:100%;max-width:420px}
+#trickBar button{flex:1;padding:14px 4px;border-radius:16px;background:var(--glass);border:1px solid var(--glass-line);font-size:15px;touch-action:manipulation}
+#trickBar button small{display:block;font-size:11px;opacity:.7;font-weight:500}
+#trickBar button.on,#trickBar button:active{background:var(--amber);color:var(--ink)}
+#aiBox{position:fixed;right:max(16px,env(safe-area-inset-right,0px));top:calc(env(safe-area-inset-top,0px) + 62px);text-align:right;font-size:12px}
+#aiBox b{font-family:var(--display);font-weight:400;font-size:16px;color:var(--amber);font-variant-numeric:tabular-nums}
+
+/* Screens */
+.screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;overflow-y:auto;
+  padding:calc(env(safe-area-inset-top,0px) + 16px) max(16px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 16px) max(16px,env(safe-area-inset-left,0px));
+  background:rgba(8,24,30,.55)}
+.sheet{width:min(100%,440px);display:flex;flex-direction:column;gap:12px;margin:auto}
+.logo{font-family:var(--display);font-size:clamp(34px,10.5vw,54px);line-height:1.02;margin:0;text-shadow:0 4px 0 rgba(0,0,0,.4);text-wrap:balance}
+.logo span{color:var(--amber)}
+.sub{margin:0;font-size:15px;opacity:.9}
+.modes{display:flex;flex-direction:column;gap:10px;margin-top:4px}
+.modeBtn{text-align:left;padding:14px 16px;border-radius:18px;background:var(--glass);border:1px solid var(--glass-line);display:grid;grid-template-columns:1fr auto;gap:2px 12px;align-items:center}
+.modeBtn:active{transform:scale(.98)}
+.modeBtn h2{margin:0;font-family:var(--display);font-weight:400;font-size:21px}
+.modeBtn p{margin:0;font-size:12.5px;opacity:.8;font-weight:500;grid-column:1}
+.modeBtn .rec{grid-column:2;grid-row:1/3;text-align:right;font-size:11px;opacity:.9;line-height:1.3}
+.modeBtn .rec b{display:block;font-family:var(--display);font-weight:400;font-size:20px;color:var(--amber);font-variant-numeric:tabular-nums}
+.modeBtn.main{background:var(--coral);border-color:transparent}
+.modeBtn.main .rec b{color:#fff}
+.how{font-size:13px;font-weight:500;background:var(--glass);border:1px solid var(--glass-line);border-radius:14px;padding:10px 14px}
+.how summary{cursor:pointer;font-weight:700}
+.how ul{margin:8px 0 0;padding-left:1.2em}
+.how li{margin:3px 0}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.btn{flex:1 1 140px;padding:14px 16px;border-radius:16px;background:var(--glass);border:1px solid var(--glass-line);text-align:center;font-size:15px}
+.btn.go{background:var(--coral);border-color:transparent;font-family:var(--display);font-weight:400;font-size:19px}
+.btn.alt{background:var(--amber);color:var(--ink);border-color:transparent}
+.btn:active{transform:scale(.98)}
+.names{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.names label{display:flex;flex-direction:column;gap:4px;font-size:12px;opacity:.9}
+.names input{font:inherit;font-size:16px;padding:10px 12px;border-radius:12px;border:1px solid var(--glass-line);background:rgba(0,0,0,.35);color:var(--cream);min-width:0;-webkit-user-select:text;user-select:text}
+.foot{display:flex;justify-content:space-between;align-items:center;font-size:12px;opacity:.85}
+.foot button{padding:6px 10px;border-radius:99px;border:1px solid var(--glass-line);background:var(--glass)}
+.result{text-align:center;align-items:stretch}
+.rank{font-size:13px;letter-spacing:.14em;color:var(--amber)}
+.big{font-family:var(--display);font-size:clamp(56px,20vw,96px);line-height:1;font-variant-numeric:tabular-nums;text-shadow:0 5px 0 rgba(0,0,0,.4)}
+.big small{font-size:.3em}
+.kv{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.kv div{background:var(--glass);border:1px solid var(--glass-line);border-radius:14px;padding:8px 4px;font-size:11px}
+.kv b{display:block;font-family:var(--display);font-weight:400;font-size:20px;color:var(--amber);font-variant-numeric:tabular-nums}
+.newrec{display:inline-block;align-self:center;background:var(--coral);padding:2px 12px;border-radius:99px;font-size:13px}
+#shareText{width:100%;box-sizing:border-box;min-height:104px;padding:10px 12px;border-radius:14px;border:1px solid var(--glass-line);background:rgba(0,0,0,.35);color:var(--cream);font:inherit;font-size:14px;font-weight:500;resize:none;-webkit-user-select:text;user-select:text}
+a.btn{text-decoration:none;display:block;box-sizing:border-box}
+#countdown{font-family:var(--display);font-size:clamp(70px,28vw,150px);text-shadow:0 6px 0 rgba(0,0,0,.4);color:var(--cream)}
+#readyMsg{font-size:18px;margin:0 0 8px}
+@media (prefers-reduced-motion:reduce){#toast.show,#warn.on,#hCombo.fever{animation:none;opacity:1}}
+
+/* result: put もう一度 / メニューへ right under the score (share text below), compact on short phones */
+.result #oRetry,.result #oMenu{order:1;flex:none;min-height:52px}
+.result #shareText,.result .row{order:2}
+@media (max-height:700px){
+  .result{gap:8px}
+  .result .big{font-size:clamp(46px,15vw,80px)}
+  .result #oRetry{min-height:0;padding-block:12px}
+  #shareText{min-height:72px;font-size:13px}
+}
+</style>
+
+<canvas id="c" aria-label="ゲーム画面"></canvas>
+
+<div id="hud" hidden>
+  <div>
+    <div class="top">
+      <span id="hMode" class="chip">BALANCE KING</span>
+      <div class="timebox"><span id="hTime">0.0<small>秒</small></span></div>
+      <button id="pauseBtn" aria-label="一時停止">❚❚</button>
+    </div>
+    <div class="stats">
+      <span class="chip">神復帰<b id="hRecov">0</b></span>
+      <span class="chip" id="hPtsChip">技<b id="hPts">0</b></span>
+      <span class="chip" id="hCombo">COMBO<b>0</b></span>
+    </div>
+    <div id="meter" aria-hidden="true"><div id="needle"></div></div>
+    <div id="coach"></div>
+  </div>
+  <div class="bottom">
+    <div id="trickBar" hidden>
+      <button id="bJump" type="button">JUMP<small>↑ / Space</small></button>
+      <button id="bLeg" type="button">片足<small>押し続ける ↓</small></button>
+      <button id="bSpin" type="button">360°<small>X</small></button>
+    </div>
+  </div>
+</div>
+<div id="aiBox" hidden><span id="aiLabel">AI</span> <b id="aiTime">0.0</b>秒</div>
+<div id="toast"></div>
+<div id="warn" class="l">◀ 突風！</div>
+
+<section id="menu" class="screen">
+  <div class="sheet">
+    <p class="sub">落ちるな！何秒間ボードに乗っていられる？</p>
+    <h1 class="logo">SWING<br>BOARD <span>KING</span></h1>
+    <p class="sub">バランス王</p>
+    <div class="modes">
+      <button class="modeBtn main" data-mode="balance" type="button">
+        <h2>BALANCE KING</h2><p>耐久王。揺れはどんどん激しくなる</p>
+        <div class="rec">ベスト<b id="recB">--</b></div>
+      </button>
+      <button class="modeBtn" data-mode="trick" type="button">
+        <h2>TRICK KING</h2><p>ジャンプ・片足・360°。技で高得点</p>
+        <div class="rec">ベスト<b id="recT">--</b></div>
+      </button>
+      <button class="modeBtn" data-mode="battle" type="button">
+        <h2>BATTLE KING</h2><p>親子対決。最後まで落ちなかった方が勝ち</p>
+        <div class="rec">戦績<b id="recW">0勝</b></div>
+      </button>
+    </div>
+    <details class="how">
+      <summary>あそびかた</summary>
+      <ul>
+        <li>画面を左右にスワイプ（矢印キー / A D）で体重を移動します。</li>
+        <li>ボードが右に傾いたら体重を左へ。傾きメーターの赤いゾーンに入ると転倒寸前です。</li>
+        <li>赤いゾーンから立て直すと「神バランス復帰」。得点が3倍になります。</li>
+        <li>突風の前には警告が出ます。先に体重をずらして備えましょう。</li>
+        <li>TRICK KINGでは JUMP（↑）、片足（↓長押し）、360°（X）が使えます。</li>
+      </ul>
+    </details>
+    <div class="foot"><span>ベスト記録はこの端末に保存されます</span><button id="sndBtn" type="button">音 ON</button></div>
+  </div>
+</section>
+
+<section id="battle" class="screen" hidden>
+  <div class="sheet">
+    <h1 class="logo" style="font-size:clamp(28px,8vw,40px)">BATTLE <span>KING</span></h1>
+    <p class="sub">同じ突風・同じ条件で勝負します。</p>
+    <div class="names">
+      <label>1人目<input id="n1" value="パパ" maxlength="8" autocomplete="off"></label>
+      <label>2人目<input id="n2" value="娘" maxlength="8" autocomplete="off"></label>
+    </div>
+    <div class="row">
+      <button class="btn go" id="bHot" type="button">親子で交代プレイ</button>
+      <button class="btn go" id="bAI" type="button" style="background:var(--sea)">AIと対決</button>
+    </div>
+    <button class="btn" id="bBack" type="button">もどる</button>
+  </div>
+</section>
+
+<section id="ready" class="screen" hidden style="background:rgba(8,24,30,.35)">
+  <div class="sheet" style="align-items:center;text-align:center">
+    <p id="readyMsg"></p>
+    <div id="countdown"></div>
+    <button class="btn go" id="readyGo" type="button" hidden style="flex:none;min-width:200px">スタート</button>
+  </div>
+</section>
+
+<section id="pause" class="screen" hidden>
+  <div class="sheet">
+    <h1 class="logo" style="font-size:36px">PAUSE</h1>
+    <button class="btn go" id="pResume" type="button">つづける</button>
+    <button class="btn" id="pRetry" type="button">はじめから</button>
+    <button class="btn" id="pMenu" type="button">メニューへ</button>
+  </div>
+</section>
+
+<section id="over" class="screen" hidden>
+  <div class="sheet result">
+    <div class="rank" id="oRank"></div>
+    <div class="big" id="oTime">0.0<small>秒</small></div>
+    <span class="newrec" id="oNew" hidden>NEW RECORD</span>
+    <p class="sub" id="oSub"></p>
+    <div class="kv">
+      <div>神バランス復帰<b id="oRecov">0</b></div>
+      <div>技の得点<b id="oPts">0</b></div>
+      <div>総合スコア<b id="oScore">0</b></div>
+    </div>
+    <textarea id="shareText" readonly aria-label="投稿文"></textarea>
+    <div class="row">
+      <button class="btn alt" id="oCopy" type="button">X投稿文をコピー</button>
+      <a class="btn alt" id="oX" href="https://twitter.com/intent/tweet" target="_blank" rel="noopener">Xに投稿</a>
+    </div>
+    <button class="btn go" id="oRetry" type="button">もう一度</button>
+    <button class="btn" id="oMenu" type="button">メニューへ</button>
+  </div>
+</section>
+<script>
+/* ===== Physics core (no DOM) ===== */
+const LIM = 0.62;          // fall angle (rad)
+const BR = 1.6;            // board bottom radius (world units)
+const BRT = 1.46;          // board top surface radius
+const BL = 1.15;           // half length
+const AIRT = 0.62;         // jump duration
+const SPINT = 0.75;        // spin duration
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+class Sim {
+  constructor(seed, opts) {
+    opts = opts || {};
+    this.seed = seed;
+    this.tricks = !!opts.tricks;
+    this.reset();
+  }
+  reset() {
+    this.rnd = mulberry32(this.seed + 7);
+    this.grnd = mulberry32(this.seed ^ 0x9e3779b9);   // gusts only: identical for every player
+    this.t = 0; this.th = 0.03; this.w = 0;
+    this.px = 0; this.pv = 0; this.tgt = 0;
+    this.air = 0; this.leg = false; this.legAcc = 0; this.legBonus = 0;
+    this.spin = 0; this.spinAng = 0; this.pending = null;
+    this.alive = true; this.fall = null;
+    this.danger = false; this.dangerT = 0;
+    this.recov = 0; this.pts = 0; this.combo = 0; this.comboT = 0; this.fever = false;
+    this.jumps = 0; this.spins = 0; this.maxCombo = 0;
+    this.slow = 0; this.crouch = 0.1; this.events = []; this.sweat = 0;
+    this.gustT = 5; this.gustDir = 1; this.gustMag = 0; this.warned = false; this.gustFlash = 0;
+    this.windPhase = this.grnd() * 6.28;
+    this.nextGust();
+  }
+  diff() {
+    const x = Math.max(0, this.t - 2.5);
+    return Math.min(1.9, x / 36);
+  }
+  nextGust() {
+    const d = this.diff();
+    this.gustT = Math.max(1.5, 4.4 - 2.4 * Math.min(d, 1.4)) + this.grnd() * 1.3;
+    if (this.t < 2) this.gustT = 5;
+    this.gustDir = this.grnd() < 0.5 ? -1 : 1;
+    this.gustMagR = 0.6 + 0.8 * this.grnd();
+    this.warned = false;
+  }
+  get score() { return Math.floor(this.t * 10) + this.pts; }
+  scoreMult() { return this.fever ? 2 : 1; }
+  addCombo(label, pts, big) {
+    this.combo++; this.maxCombo = Math.max(this.maxCombo, this.combo); this.comboT = 8;
+    if (this.combo >= 3) this.fever = true;
+    const p = Math.round(pts * this.scoreMult());
+    this.pts += p;
+    this.events.push({ type: big ? 'god' : 'trick', text: label, pts: p });
+  }
+  doJump() {
+    if (!this.tricks || !this.alive || this.air > 0 || this.spin > 0) return false;
+    this.air = AIRT; this.jumps++; return true;
+  }
+  doSpin() {
+    if (!this.tricks || !this.alive || this.air > 0 || this.spin > 0) return false;
+    this.spin = SPINT; this.spinAng = 0; this.spinTgt = this.tgt; return true;
+  }
+  setLeg(on) { if (this.tricks) this.leg = !!on && this.air <= 0 && this.spin <= 0; }
+
+  step(dt) {
+    if (!this.alive) { this.stepFall(dt); return; }
+    this.t += dt;
+    const d = this.diff();
+
+    // gusts (warning first)
+    this.gustT -= dt;
+    if (!this.warned && this.gustT < 0.85) { this.warned = true; this.events.push({ type: 'warn', dir: this.gustDir }); }
+    if (this.gustT <= 0) {
+      this.w += this.gustDir * (0.4 + 1.05 * Math.min(d, 1.5)) * this.gustMagR;
+      this.gustFlash = 0.6; this.events.push({ type: 'gust', dir: this.gustDir });
+      this.nextGust();
+    }
+    this.gustFlash = Math.max(0, this.gustFlash - dt);
+    const windF = Math.sin(this.t * 0.9 + this.windPhase) * Math.sin(this.t * 0.37 + 1.3) * 1.7 * d;
+
+    // player weight shift (inertia)
+    let tg = clamp(this.tgt, -1, 1);
+    if (this.spin > 0) tg = clamp(this.spinTgt, -1, 1);
+    this.pv += ((tg - this.px) * 70 - this.pv * 11.5) * dt;
+    this.px = clamp(this.px + this.pv * dt, -1.1, 1.1);
+
+    // tricks
+    if (this.air > 0) {
+      this.air -= dt;
+      if (this.air <= 0) {      // landing
+        this.air = 0;
+        this.w += (this.rnd() < 0.5 ? -1 : 1) * (0.25 + 0.55 * Math.min(d, 1.2));
+        this.pending = { label: 'JUMP!', pts: 120 + Math.round(180 * Math.abs(this.th) / LIM), timer: 0.5 };
+        this.sweat = 0.6;
+      }
+    }
+    if (this.spin > 0) {
+      this.spin -= dt;
+      this.spinAng = (1 - Math.max(0, this.spin) / SPINT) * Math.PI * 2;
+      if (this.spin <= 0) {
+        this.spin = 0; this.spinAng = 0; this.spins++;
+        this.pending = { label: '360°!', pts: 260 + Math.round(240 * Math.abs(this.th) / LIM), timer: 0.4 };
+      }
+    }
+    if (this.leg) {
+      this.legAcc += dt; this.legBonus += dt;
+      if (this.legBonus >= 3) { this.legBonus -= 3; this.addCombo('片足 3秒!', 300, false); }
+      this.pts += 0; this.legPts = (this.legPts || 0) + dt * 30;
+      if (this.legPts >= 10) { this.pts += Math.floor(this.legPts) * this.scoreMult(); this.legPts -= Math.floor(this.legPts); }
+    } else this.legBonus = 0;
+    if (this.pending) {
+      this.pending.timer -= dt;
+      if (this.pending.timer <= 0) { this.addCombo(this.pending.label, this.pending.pts, false); this.pending = null; }
+    }
+
+    // board dynamics
+    const lift = this.air > 0 ? 0.12 : 1;
+    const pxe = this.px * lift * (this.leg ? 1.3 : 1);
+    const kI = -3.2 + 8.0 * Math.min(d, 1) + 2.0 * Math.max(0, d - 1) + (this.leg ? 1.2 : 0) + (this.spin > 0 ? 1.0 : 0);
+    const a = 8 * pxe + kI * this.th - 1.1 * this.w + windF;
+    this.w += a * dt;
+    this.th += this.w * dt;
+
+    // god recovery
+    const r = Math.abs(this.th) / LIM;
+    if (!this.danger && r > 0.8) { this.danger = true; this.dangerT = this.t; }
+    if (this.danger) {
+      if (r < 0.3) {
+        this.danger = false;
+        if (this.t - this.dangerT < 3) {
+          this.recov++; this.slow = 0.3;
+          this.addCombo('神バランス！', 100 * 3, true);
+        }
+      } else if (this.t - this.dangerT > 3.5) this.danger = false;
+    }
+    // combo expiry
+    if (this.combo > 0) {
+      this.comboT -= dt;
+      if (this.comboT <= 0) { this.combo = 0; this.fever = false; }
+    }
+    this.slow = Math.max(0, this.slow - dt);
+    this.sweat = Math.max(0, this.sweat - dt);
+    const tc = Math.min(1, Math.abs(this.w) / 2.4) * 0.5 + (this.spin > 0 ? 0.1 : 0);
+    this.crouch += (tc - this.crouch) * Math.min(1, dt * 10);
+
+    if (r >= 1) this.startFall();
+  }
+
+  // geometry helpers (world: y up is negative, ground y = 0)
+  O() { return { x: BR * this.th, y: -BR }; }
+  local(lx, ly) {
+    const c = Math.cos(this.th), s = Math.sin(this.th), o = this.O();
+    return { x: o.x + lx * c - ly * s, y: o.y + lx * s + ly * c };
+  }
+  ytop(x) { return Math.sqrt(Math.max(0.01, BRT * BRT - x * x)); }
+  feet() {
+    const c = clamp(this.px, -1, 1) * 0.62, sw = 0.3;
+    const a = this.local(c - sw, this.ytop(c - sw)), b = this.local(c + sw, this.ytop(c + sw));
+    return [a, b];
+  }
+  hipPos() {
+    const f = this.feet();
+    const mx = (f[0].x + f[1].x) / 2, my = (f[0].y + f[1].y) / 2;
+    const legLen = 0.92 * (1 - this.crouch * 0.28);
+    const h = this.air > 0 ? Math.sin(Math.PI * (1 - this.air / AIRT)) * 1.05 : 0;
+    return { x: mx - this.th * 0.12, y: my - legLen - h };
+  }
+  startFall() {
+    this.alive = false;
+    const h = this.hipPos();
+    const side = this.th > 0 ? 1 : -1;
+    this.fall = { x: h.x, y: h.y, vx: side * (1.8 + Math.abs(this.w) * 1.1), vy: -3.2, rot: this.th * 0.6, rv: side * (3 + Math.abs(this.w) * 2),
+      bounces: 0, landed: false, t: 0, side };
+    this.events.push({ type: 'fall' });
+  }
+  stepFall(dt) {
+    const f = this.fall; if (!f) return;
+    f.t += dt;
+    // board keeps rolling and settles
+    this.w *= Math.pow(0.15, dt); this.th += this.w * dt;
+    if (!f.landed) {
+      f.vy += 17 * dt; f.x += f.vx * dt; f.y += f.vy * dt; f.rot += f.rv * dt;
+      const matTop = -0.28;
+      if (f.y > matTop - 0.25 && f.vy > 0) {
+        f.y = matTop - 0.25; f.vy *= -0.45; f.vx *= 0.65; f.rv *= 0.6; f.bounces++;
+        this.events.push({ type: 'bounce' });
+        if (f.bounces >= 3 || Math.abs(f.vy) < 1.1) { f.landed = true; f.vx = 0; f.vy = 0; }
+      }
+    } else { f.rot += (Math.round(f.rot / Math.PI) * Math.PI - f.rot) * Math.min(1, dt * 4); }
+  }
+}
+
+
+/* ===== AI rival ===== */
+class RivalAI {
+  constructor(sim, skill) {
+    this.sim = sim; this.skill = skill; this.hist = []; this.noise = 0; this.nt = 0; this.rnd = mulberry32(sim.seed * 3 + 11);
+    this.delay = 0.12 + (1 - skill) * 0.2;
+  }
+  update(dt) {
+    const s = this.sim; if (!s.alive) return;
+    this.hist.push({ t: s.t, th: s.th, w: s.w });
+    while (this.hist.length > 2 && this.hist[1].t < s.t - this.delay) this.hist.shift();
+    const o = this.hist[0];
+    this.nt -= dt;
+    if (this.nt <= 0) { this.nt = 0.25 + this.rnd() * 0.4; this.noiseT = (this.rnd() * 2 - 1); }
+    this.noise += ((this.noiseT || 0) - this.noise) * Math.min(1, dt * 4);
+    const d = s.diff();
+    const amp = (1 - this.skill) * 0.9 * (0.35 + d * 0.9);
+    // pre-lean against an announced gust
+    let pre = 0;
+    if (s.warned && s.gustT > 0) pre = -s.gustDir * 0.12 * this.skill;
+    const cmd = -(0.45 * o.th + 0.45 * o.w) + this.noise * amp + pre;
+    s.tgt = clamp(cmd, -1, 1);
+  }
+}
+if (!CanvasRenderingContext2D.prototype.roundRect) CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h) { this.rect(x, y, w, h); };
+/* ===== Rendering (Canvas 2D, pseudo-3D) ===== */
+const cv = document.getElementById('c');
+const ctx = cv.getContext('2d');
+let W = 0, H = 0, DPR = 1, S = 100, GY = 0, HY = 0;
+function resize() {
+  DPR = Math.min(2, window.devicePixelRatio || 1);
+  W = window.innerWidth; H = window.innerHeight;
+  cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+  S = Math.min(W / 4.6, H / 5.6);
+  GY = H * 0.78; HY = H * 0.46;
+}
+window.addEventListener('resize', resize);
+resize();
+
+const WOOD = ['#e8b57a', '#d9a066', '#b97d45'];
+/* background: dusk sky, sea, wooden deck in perspective */
+function drawBackground(t, windFlash) {
+  const c = ctx; c.setTransform(DPR, 0, 0, DPR, 0, 0);
+  const g = c.createLinearGradient(0, 0, 0, HY);
+  g.addColorStop(0, '#0b2f38'); g.addColorStop(0.55, '#2c6a70'); g.addColorStop(1, '#f2a65a');
+  c.fillStyle = g; c.fillRect(0, 0, W, HY + 2);
+  // sun
+  const sx = W * 0.72, sy = HY - S * 0.35, sr = S * 0.62;
+  const sg = c.createRadialGradient(sx, sy, sr * 0.2, sx, sy, sr * 2.4);
+  sg.addColorStop(0, 'rgba(255,226,154,.95)'); sg.addColorStop(0.35, 'rgba(255,170,100,.35)'); sg.addColorStop(1, 'rgba(255,170,100,0)');
+  c.fillStyle = sg; c.fillRect(0, 0, W, HY);
+  c.fillStyle = '#ffe29a'; c.beginPath(); c.arc(sx, sy, sr, 0, 7); c.fill();
+  // sea band
+  const sea = c.createLinearGradient(0, HY - S * 0.28, 0, HY);
+  sea.addColorStop(0, '#1b6b73'); sea.addColorStop(1, '#134e5a');
+  c.fillStyle = sea; c.fillRect(0, HY - S * 0.28, W, S * 0.28 + 1);
+  c.fillStyle = 'rgba(255,226,154,.55)';
+  for (let i = 0; i < 7; i++) {
+    const yy = HY - S * 0.26 + i * S * 0.038, ww = S * (0.9 - i * 0.09) * (1 + 0.1 * Math.sin(t * 1.5 + i));
+    c.fillRect(sx - ww / 2, yy, ww, 2);
+  }
+  // deck
+  const dg = c.createLinearGradient(0, HY, 0, H);
+  dg.addColorStop(0, '#6e4a33'); dg.addColorStop(1, '#a8714a');
+  c.fillStyle = dg; c.fillRect(0, HY, W, H - HY);
+  c.strokeStyle = 'rgba(30,16,8,.45)'; c.lineWidth = 1.5;
+  const vx = W / 2;
+  for (let i = -14; i <= 14; i++) {
+    c.beginPath(); c.moveTo(vx + i * S * 0.1, HY); c.lineTo(vx + i * S * 1.1, H); c.stroke();
+  }
+  for (let k = 1; k <= 11; k++) {
+    const yy = HY + (H - HY) * Math.pow(k / 11, 1.9);
+    c.beginPath(); c.moveTo(0, yy); c.lineTo(W, yy); c.stroke();
+  }
+  c.fillStyle = 'rgba(255,226,154,.07)'; c.fillRect(0, HY, W, 3);
+  if (windFlash > 0) {   // gust streaks
+    c.strokeStyle = 'rgba(255,241,214,' + (0.5 * Math.min(1, windFlash * 2)) + ')'; c.lineWidth = 2;
+    for (let i = 0; i < 8; i++) {
+      const yy = H * (0.2 + 0.5 * ((i * 0.37 + t * 0.2) % 1)), xx = ((t * 900 * windFlash * windDir + i * 190) % (W + 200) + W + 200) % (W + 200) - 100;
+      c.beginPath(); c.moveTo(xx, yy); c.lineTo(xx - windDir * S * 0.9, yy); c.stroke();
+    }
+  }
+}
+let windDir = 1;
+
+/* board: bowed wooden plank with thickness and depth */
+const DEPTH = { x: 0.26, y: -0.11 };
+function drawBoard(c, sim) {
+  const th = sim.th, o = sim.O();
+  const N = 26;
+  const T = (x, y) => sim.local(x, y);
+  const topF = [], botF = [];
+  for (let i = 0; i <= N; i++) {
+    const x = -BL + (2 * BL * i) / N;
+    topF.push(T(x, Math.sqrt(BRT * BRT - x * x)));
+    botF.push(T(x, Math.sqrt(BR * BR - x * x)));
+  }
+  const sh = p => ({ x: p.x + DEPTH.x, y: p.y + DEPTH.y });
+  // contact shadow
+  c.fillStyle = 'rgba(20,10,5,.35)';
+  c.beginPath(); c.ellipse(o.x + 0.12, 0.02, 1.0, 0.16, 0, 0, 7); c.fill();
+  // back face
+  c.beginPath();
+  topF.forEach((p, i) => { const q = sh(p); i ? c.lineTo(q.x, q.y) : c.moveTo(q.x, q.y); });
+  for (let i = N; i >= 0; i--) { const q = sh(botF[i]); c.lineTo(q.x, q.y); }
+  c.closePath(); c.fillStyle = WOOD[2]; c.fill();
+  // underside (bottom strip)
+  c.beginPath();
+  botF.forEach((p, i) => i ? c.lineTo(p.x, p.y) : c.moveTo(p.x, p.y));
+  for (let i = N; i >= 0; i--) { const q = sh(botF[i]); c.lineTo(q.x, q.y); }
+  c.closePath(); c.fillStyle = '#8f5d33'; c.fill();
+  // top surface strip (what the rider stands on)
+  c.beginPath();
+  topF.forEach((p, i) => i ? c.lineTo(p.x, p.y) : c.moveTo(p.x, p.y));
+  for (let i = N; i >= 0; i--) { const q = sh(topF[i]); c.lineTo(q.x, q.y); }
+  c.closePath();
+  const tg = c.createLinearGradient(o.x - 1, o.y, o.x + 1, o.y);
+  tg.addColorStop(0, '#f6cf9a'); tg.addColorStop(0.5, '#e8b57a'); tg.addColorStop(1, '#f6cf9a');
+  c.fillStyle = tg; c.fill();
+  // grip tape stripes on the top surface
+  c.strokeStyle = 'rgba(80,45,20,.25)'; c.lineWidth = 0.025;
+  for (let k = 1; k <= 3; k++) {
+    const f = k / 4; c.beginPath();
+    topF.forEach((p, i) => { const q = { x: p.x + DEPTH.x * f, y: p.y + DEPTH.y * f }; i ? c.lineTo(q.x, q.y) : c.moveTo(q.x, q.y); });
+    c.stroke();
+  }
+  // front face
+  c.beginPath();
+  topF.forEach((p, i) => i ? c.lineTo(p.x, p.y) : c.moveTo(p.x, p.y));
+  for (let i = N; i >= 0; i--) c.lineTo(botF[i].x, botF[i].y);
+  c.closePath();
+  const fg = c.createLinearGradient(o.x - 1.2, 0, o.x + 1.2, 0);
+  fg.addColorStop(0, WOOD[1]); fg.addColorStop(0.5, WOOD[0]); fg.addColorStop(1, WOOD[1]);
+  c.fillStyle = fg; c.fill();
+  c.strokeStyle = '#6a4224'; c.lineWidth = 0.05; c.stroke();
+  // wood grain
+  c.strokeStyle = 'rgba(120,70,30,.35)'; c.lineWidth = 0.02;
+  for (let k = 1; k <= 2; k++) {
+    const r = BRT + (BR - BRT) * (k / 3);
+    c.beginPath();
+    for (let i = 0; i <= N; i++) {
+      const x = -BL + (2 * BL * i) / N, p = T(x, Math.sqrt(r * r - x * x));
+      i ? c.lineTo(p.x, p.y) : c.moveTo(p.x, p.y);
+    }
+    c.stroke();
+  }
+  // end caps highlight
+  c.strokeStyle = 'rgba(255,241,214,.5)'; c.lineWidth = 0.035; c.beginPath();
+  topF.forEach((p, i) => i ? c.lineTo(p.x, p.y) : c.moveTo(p.x, p.y)); c.stroke();
+}
+
+/* soft landing mat */
+function drawMat(c, x, side) {
+  const mx = x + side * 0.9;
+  c.fillStyle = 'rgba(20,10,5,.3)';
+  c.beginPath(); c.ellipse(mx + 0.1, 0.05, 1.35, 0.2, 0, 0, 7); c.fill();
+  c.fillStyle = '#ff8fa3'; c.strokeStyle = '#c4566d'; c.lineWidth = 0.05;
+  c.beginPath(); c.roundRect(mx - 1.2, -0.3, 2.4, 0.3, 0.14); c.fill(); c.stroke();
+  c.strokeStyle = 'rgba(255,255,255,.5)'; c.lineWidth = 0.03;
+  c.beginPath(); c.moveTo(mx - 0.9, -0.2); c.lineTo(mx + 0.9, -0.2); c.stroke();
+}
+
+/* ===== Character: front-view rider with shoulders, 2-joint arms, expressive face ===== */
+const INK = '#2a1a14';
+function limb(c, pts, wid, col, outline) {
+  c.lineCap = 'round'; c.lineJoin = 'round';
+  c.beginPath(); c.moveTo(pts[0].x, pts[0].y);
+  for (let i = 1; i < pts.length; i++) c.lineTo(pts[i].x, pts[i].y);
+  c.strokeStyle = outline; c.lineWidth = wid + 0.07; c.stroke();
+  c.strokeStyle = col; c.lineWidth = wid; c.stroke();
+}
+function blob(c, pts, fill, lw) {
+  c.beginPath(); pts.forEach((p, i) => i ? c.lineTo(p.x, p.y) : c.moveTo(p.x, p.y)); c.closePath();
+  c.lineJoin = 'round'; c.fillStyle = fill; c.fill(); c.strokeStyle = INK; c.lineWidth = lw || 0.05; c.stroke();
+}
+const lerpP = (a, b, t) => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
+
+/* arm: shoulder -> elbow -> hand. a = angle from straight down, outward positive (PI/2 = horizontal). */
+function armPts(s, a, dir) {
+  const U = 0.3, F = 0.27;
+  const e = { x: s.x + dir * Math.sin(a) * U, y: s.y + Math.cos(a) * U };
+  const bend = 0.5 - 0.4 * clamp((a - 0.9) / 1.2, 0, 1);
+  const b = a - bend;
+  return [e, { x: e.x + dir * Math.sin(b) * F, y: e.y + Math.cos(b) * F }];
+}
+
+function buildPose(sim) {
+  const f = sim.feet(), th = sim.th, w = sim.w;
+  const off = { x: DEPTH.x * 0.5, y: DEPTH.y * 0.5 };
+  let fL = { x: f[0].x + off.x, y: f[0].y + off.y }, fR = { x: f[1].x + off.x, y: f[1].y + off.y };
+  const h0 = sim.hipPos(), hip = { x: h0.x + off.x, y: h0.y + off.y };
+  const air = sim.air > 0, ph = air ? 1 - sim.air / AIRT : 0;
+  const lift = air ? Math.sin(Math.PI * ph) * 1.05 : 0;
+  if (air) { fL.y -= lift * 0.8; fR.y -= lift * 0.8; }
+  const oneLeg = sim.leg && !air;
+  if (oneLeg) { fR = { x: fR.x + 0.16, y: fR.y - 0.5 }; }
+  const lean = -th * 0.2 + sim.px * 0.1;
+  const sh = { x: hip.x + lean, y: hip.y - 0.66 + sim.crouch * 0.06 };
+  const tilt = clamp(w * 0.015, -0.05, 0.05);
+  const shL = { x: sh.x - 0.21, y: sh.y + tilt }, shR = { x: sh.x + 0.21, y: sh.y - tilt };
+  const neck = { x: sh.x + lean * 0.1, y: sh.y - 0.1 };
+  const head = { x: neck.x + lean * 0.35, y: neck.y - 0.22 };
+  const hipL = { x: hip.x - 0.09, y: hip.y }, hipR = { x: hip.x + 0.09, y: hip.y };
+  const kb = 0.07 + sim.crouch * 0.45 + (air && ph > 0.15 && ph < 0.85 ? 0.22 : 0);
+  const mid = (a, b, dx) => ({ x: (a.x + b.x) / 2 + dx, y: (a.y + b.y) / 2 + 0.02 });
+  const kL = mid(hipL, fL, -kb), kR = mid(hipR, fR, oneLeg ? 0.3 : kb);
+
+  // arms: counter-balance with the board, smoothed so they never jitter
+  const st = sim._arm || (sim._arm = { aL: 1, aR: 1 });
+  let base = 0.95 + sim.crouch * 0.35 + Math.min(1, Math.abs(th) / LIM) * 0.55;
+  if (air) base = 2.5; else if (oneLeg) base = 1.5;
+  if (sim.spin > 0) base = 0.55;
+  const dth = clamp(th * 0.9, -0.8, 0.8);
+  const tR = clamp(base + dth + w * 0.07, 0.15, 2.9), tL = clamp(base - dth - w * 0.07, 0.15, 2.9);
+  st.aR += (tR - st.aR) * 0.25; st.aL += (tL - st.aL) * 0.25;
+  const [eL, hL] = armPts(shL, st.aL, -1), [eR, hR] = armPts(shR, st.aR, 1);
+
+  const P = { hip, hipL, hipR, kL, kR, fL, fR, sh, shL, shR, neck, head, eL, hL, eR, hR,
+    face: true, mood: Math.abs(th) / LIM, happy: air || sim.fever || oneLeg, ang: th, look: clamp(th * 1.5, -1, 1), sway: clamp(-w * 0.06, -0.15, 0.15), sx: 1 };
+  if (sim.spin > 0) {
+    const cs = Math.cos(sim.spinAng); P.face = cs > 0; P.sx = Math.max(0.2, Math.abs(cs));
+    for (const k of ['hipL', 'hipR', 'kL', 'kR', 'fL', 'fR', 'sh', 'shL', 'shR', 'neck', 'head', 'eL', 'hL', 'eR', 'hR'])
+      P[k] = { x: hip.x + (P[k].x - hip.x) * cs, y: P[k].y };
+    P.happy = true;
+  }
+  return P;
+}
+
+function buildFlail(sim) {
+  const f = sim.fall, r = f.rot, cs = Math.cos(r), sn = Math.sin(r), tt = f.t * 14;
+  const R = (x, y) => ({ x: f.x + x * cs - y * sn, y: f.y + x * sn + y * cs });
+  const wob = Math.sin(tt) * (f.landed ? 0.08 : 0.3);
+  return {
+    hip: R(0, 0), hipL: R(-0.09, 0), hipR: R(0.09, 0),
+    kL: R(-0.34, 0.26 + wob * 0.3), kR: R(0.32, 0.3 - wob * 0.3),
+    fL: R(-0.6, 0.55 + wob), fR: R(0.6, 0.5 - wob),
+    sh: R(0, -0.66), shL: R(-0.21, -0.66), shR: R(0.21, -0.66), neck: R(0, -0.76), head: R(0.02, -0.98),
+    eL: R(-0.5, -0.8 - wob), hL: R(-0.78, -1.05 - wob), eR: R(0.5, -0.8 + wob), hR: R(0.78, -1.05 + wob),
+    face: true, mood: 1.5, happy: false, ang: r * 0.3, look: 0, sway: 0.12, sx: 1
+  };
+}
+
+function drawEye(c, x, y, sx, P, closed, happy, side) {
+  if (happy) { c.strokeStyle = INK; c.lineWidth = 0.035; c.beginPath(); c.arc(x, y + 0.03, 0.05 * sx + 0.01, Math.PI * 1.1, Math.PI * 1.9); c.stroke(); return; }
+  if (closed) {
+    c.strokeStyle = INK; c.lineWidth = 0.035; c.beginPath();
+    if (P.mood > 1.3) { c.moveTo(x - 0.05 * side, y - 0.04); c.lineTo(x + 0.04 * side, y); c.lineTo(x - 0.05 * side, y + 0.04); }
+    else { c.moveTo(x - 0.05, y + 0.01); c.lineTo(x + 0.05, y + 0.01); }
+    c.stroke(); return;
+  }
+  c.fillStyle = '#fff'; c.strokeStyle = INK; c.lineWidth = 0.025;
+  c.beginPath(); c.ellipse(x, y, 0.058 * sx + 0.01, 0.068, 0, 0, 7); c.fill(); c.stroke();
+  c.fillStyle = INK; c.beginPath(); c.arc(x + P.look * 0.02 * sx, y + 0.01, P.mood > 0.7 ? 0.026 : 0.036, 0, 7); c.fill();
+  c.fillStyle = '#fff'; c.beginPath(); c.arc(x + P.look * 0.02 * sx + 0.012, y - 0.012, 0.011, 0, 7); c.fill();
+}
+
+function drawPerson(c, P, sty, blink) {
+  const sx = P.sx || 1;
+  const shoe = f => {
+    c.save(); c.translate(f.x, f.y); c.rotate(P.ang);
+    c.fillStyle = sty.shoe; c.strokeStyle = INK; c.lineWidth = 0.045;
+    c.beginPath(); c.ellipse(0.0, -0.05, 0.17, 0.08, 0, 0, 7); c.fill(); c.stroke();
+    c.strokeStyle = sty.band; c.lineWidth = 0.03; c.beginPath(); c.moveTo(-0.13, -0.02); c.lineTo(0.13, -0.02); c.stroke();
+    c.restore();
+  };
+  // ponytail (behind everything)
+  if (sty.pony) {
+    const side = P.face ? 1 : -1, hx = P.head.x, hy = P.head.y;
+    const b = { x: hx + side * 0.22 * sx, y: hy - 0.08 };
+    const m = { x: b.x + side * (0.12 + P.sway), y: b.y + 0.17 }, e = { x: m.x + P.sway * 1.4, y: m.y + 0.2 };
+    limb(c, [b, m, e], 0.12, sty.hair, INK);
+    c.fillStyle = sty.band; c.beginPath(); c.arc(b.x, b.y + 0.02, 0.05, 0, 7); c.fill();
+  }
+  // legs
+  limb(c, [P.hipL, P.kL, P.fL], 0.19, sty.pants, INK);
+  limb(c, [P.hipR, P.kR, P.fR], 0.19, sty.pants, INK);
+  for (const [k, f] of [[P.kL, P.fL], [P.kR, P.fR]]) limb(c, [lerpP(k, f, 0.8), f], 0.19, 'rgba(255,255,255,.28)', 'rgba(0,0,0,0)');
+  shoe(P.fL); shoe(P.fR);
+  // neck + torso
+  limb(c, [{ x: P.sh.x, y: P.sh.y - 0.03 }, P.neck], 0.11, sty.skin, INK);
+  const tL = { x: P.shL.x - 0.05, y: P.shL.y - 0.02 }, tR = { x: P.shR.x + 0.05, y: P.shR.y - 0.02 };
+  const bL = { x: P.hipL.x - 0.09 * sx, y: P.hip.y + 0.05 }, bR = { x: P.hipR.x + 0.09 * sx, y: P.hip.y + 0.05 };
+  blob(c, [tL, tR, bR, bL], sty.shirt, 0.055);
+  c.fillStyle = 'rgba(255,255,255,.26)';
+  c.beginPath(); const a1 = lerpP(tL, bL, 0.3), b1 = lerpP(tR, bR, 0.3), b2 = lerpP(tR, bR, 0.46), a2 = lerpP(tL, bL, 0.46);
+  c.moveTo(a1.x, a1.y); c.lineTo(b1.x, b1.y); c.lineTo(b2.x, b2.y); c.lineTo(a2.x, a2.y); c.closePath(); c.fill();
+  c.fillStyle = 'rgba(0,0,0,.16)'; c.beginPath();   // side shading
+  const s1 = lerpP(tR, bR, 0), s2 = lerpP(tR, bR, 1), s3 = lerpP(lerpP(tL, tR, 0.78), lerpP(bL, bR, 0.78), 1), s4 = lerpP(tL, tR, 0.78);
+  c.moveTo(s1.x, s1.y); c.lineTo(s2.x, s2.y); c.lineTo(s3.x, s3.y); c.lineTo(s4.x, s4.y); c.closePath(); c.fill();
+  c.strokeStyle = '#1b232b'; c.lineWidth = 0.06; c.lineCap = 'butt';
+  const be1 = lerpP(tL, bL, 0.93), be2 = lerpP(tR, bR, 0.93); c.beginPath(); c.moveTo(be1.x, be1.y); c.lineTo(be2.x, be2.y); c.stroke();
+  c.fillStyle = sty.skin; c.strokeStyle = INK; c.lineWidth = 0.03; c.beginPath();
+  c.moveTo(P.neck.x - 0.07 * sx, P.neck.y + 0.02); c.lineTo(P.neck.x + 0.07 * sx, P.neck.y + 0.02); c.lineTo(P.neck.x, P.neck.y + 0.11); c.closePath(); c.fill(); c.stroke();
+  // shoulders + arms (sleeve then forearm then hand)
+  for (const [s, e, h] of [[P.shL, P.eL, P.hL], [P.shR, P.eR, P.hR]]) {
+    c.fillStyle = sty.shirt; c.strokeStyle = INK; c.lineWidth = 0.045; c.beginPath(); c.arc(s.x, s.y + 0.02, 0.1, 0, 7); c.fill(); c.stroke();
+    limb(c, [e, h], 0.105, sty.skin, INK);
+    limb(c, [s, lerpP(s, e, 0.92)], 0.15, sty.shirt, INK);
+    c.fillStyle = sty.shirt; c.beginPath(); c.arc(s.x, s.y + 0.02, 0.085, 0, 7); c.fill();
+    c.fillStyle = sty.skin; c.strokeStyle = INK; c.lineWidth = 0.04; c.beginPath(); c.arc(h.x, h.y, 0.085, 0, 7); c.fill(); c.stroke();
+    c.beginPath(); c.arc(h.x + (h.x - e.x) * 0.0, h.y - 0.05, 0.035, 0, 7); c.fill();
+  }
+  // head
+  const hx = P.head.x, hy = P.head.y, rx = 0.25 * Math.max(0.5, sx), ry = 0.27;
+  if (!P.face) {   // back of head
+    c.fillStyle = sty.hair; c.strokeStyle = INK; c.lineWidth = 0.05; c.beginPath(); c.ellipse(hx, hy, rx, ry, 0, 0, 7); c.fill(); c.stroke();
+    return;
+  }
+  c.fillStyle = sty.skin; c.strokeStyle = INK; c.lineWidth = 0.05;
+  for (const sd of [-1, 1]) { c.beginPath(); c.arc(hx + sd * rx * 0.97, hy + 0.04, 0.055, 0, 7); c.fill(); c.stroke(); }
+  c.beginPath(); c.ellipse(hx, hy, rx, ry, 0, 0, 7); c.fill(); c.stroke();
+  // hair + fringe
+  c.fillStyle = sty.hair; c.strokeStyle = INK; c.lineWidth = 0.045; c.beginPath();
+  c.ellipse(hx, hy - 0.025, rx * 1.04, ry * 1.0, 0, Math.PI, 0);
+  c.lineTo(hx + rx * 0.92, hy + 0.05); c.lineTo(hx + rx * 0.62, hy - 0.08); c.lineTo(hx + rx * 0.25, hy - 0.02);
+  c.lineTo(hx - rx * 0.15, hy - 0.1); c.lineTo(hx - rx * 0.55, hy - 0.03); c.lineTo(hx - rx * 0.92, hy + 0.05);
+  c.closePath(); c.fill(); c.stroke();
+  c.strokeStyle = sty.band; c.lineWidth = 0.06; c.lineCap = 'round'; c.beginPath();
+  c.moveTo(hx - rx * 0.99, hy - 0.11); c.quadraticCurveTo(hx, hy - 0.2, hx + rx * 0.99, hy - 0.11); c.stroke();
+  // face
+  const ex = 0.1 * Math.max(0.5, sx), ey = hy + 0.04;
+  const closed = blink || P.mood > 1.3;
+  drawEye(c, hx - ex, ey, sx, P, closed, P.happy && !closed, -1);
+  drawEye(c, hx + ex, ey, sx, P, closed, P.happy && !closed, 1);
+  c.strokeStyle = INK; c.lineWidth = 0.03; c.lineCap = 'round';
+  const wr = P.mood > 0.65 ? Math.min(1, (P.mood - 0.65) * 2.5) * 0.045 : 0;     // worried brows
+  for (const sd of [-1, 1]) {
+    c.beginPath(); c.moveTo(hx + sd * (ex + 0.06), ey - 0.1 + wr * 0.4); c.lineTo(hx + sd * (ex - 0.05), ey - 0.1 - wr * 1.1 + (P.happy ? -0.025 : 0)); c.stroke();
+  }
+  c.fillStyle = 'rgba(255,110,110,.35)';
+  for (const sd of [-1, 1]) { c.beginPath(); c.ellipse(hx + sd * (ex + 0.07), ey + 0.1, 0.05, 0.032, 0, 0, 7); c.fill(); }
+  const my = hy + 0.15;
+  c.strokeStyle = INK; c.lineWidth = 0.03;
+  if (P.mood > 1.2) { c.fillStyle = '#7a1f1f'; c.beginPath(); c.ellipse(hx, my, 0.06 * Math.max(0.6, sx), 0.07, 0, 0, 7); c.fill(); c.stroke(); }
+  else if (P.happy) { c.fillStyle = '#7a1f1f'; c.beginPath(); c.moveTo(hx - 0.09 * sx, my - 0.03); c.quadraticCurveTo(hx, my + 0.12, hx + 0.09 * sx, my - 0.03); c.closePath(); c.fill(); c.stroke(); }
+  else if (P.mood > 0.65) { c.beginPath(); c.moveTo(hx - 0.06 * sx, my + 0.01); c.quadraticCurveTo(hx - 0.02, my - 0.02, hx, my + 0.01); c.quadraticCurveTo(hx + 0.02, my + 0.04, hx + 0.06 * sx, my + 0.0); c.stroke(); }
+  else { c.beginPath(); c.arc(hx, my - 0.05, 0.07 * Math.max(0.6, sx), 0.35, Math.PI - 0.35); c.stroke(); }
+  if (P.mood > 0.7 && P.mood < 1.3) { c.fillStyle = '#7fd6ff'; c.strokeStyle = INK; c.lineWidth = 0.015; c.beginPath(); c.ellipse(hx + rx * 1.05, hy - 0.12, 0.03, 0.05, 0.3, 0, 7); c.fill(); c.stroke(); }
+}
+
+const STYLES = {
+  solo: { skin: '#f2c49b', shirt: '#1f9a98', pants: '#2c3e5c', shoe: '#fff1d6', hair: '#2a1a14', band: '#ff5d47' },
+  p1: { skin: '#f2c49b', shirt: '#3a6fd8', pants: '#2c3e5c', shoe: '#fff1d6', hair: '#2a1a14', band: '#ffe29a' },
+  p2: { skin: '#f6cfa9', shirt: '#ff7fa8', pants: '#5b4a8a', shoe: '#fff1d6', hair: '#4a2a1c', band: '#ff5d47', pony: true },
+  ai: { skin: '#e9b98f', shirt: '#f2a65a', pants: '#3c4a52', shoe: '#10242b', hair: '#10242b', band: '#1f9a98' }
+};
+
+/* draw one scene (board + rider) at an offset and scale */
+function drawRider(sim, ox, sty, scale, tShow, fev, gy) {
+  const c = ctx;
+  c.save();
+  c.setTransform(DPR * S * scale, 0, 0, DPR * S * scale, DPR * ox, DPR * (gy === undefined ? GY : gy));
+  if (!sim.alive && sim.fall) drawMat(c, sim.O().x, sim.fall.side);
+  drawBoard(c, sim);
+  const blink = (tShow % 3.2) < 0.12;
+  if (sim.alive) drawPerson(c, buildPose(sim), sty, blink);
+  else if (sim.fall) drawPerson(c, buildFlail(sim), sty, false);
+  if (fev && sim.alive) {   // fever aura
+    c.globalAlpha = 0.5; c.strokeStyle = '#ffe29a'; c.lineWidth = 0.05;
+    const h = sim.hipPos(); c.beginPath(); c.ellipse(h.x, h.y - 0.45, 0.7 + 0.05 * Math.sin(tShow * 12), 1.2, 0, 0, 7); c.stroke();
+  }
+  c.restore();
+}
+/* ===== Game controller, UI, input, storage, share ===== */
+const $ = id => document.getElementById(id);
+const screens = ['menu', 'battle', 'ready', 'pause', 'over'];
+function show(name) { screens.forEach(s => { $(s).hidden = s !== name; }); }
+
+/* storage */
+const KEY = 'swingboardking.v1';
+let rec = { balance: { best: 0, recov: 0 }, trick: { bestScore: 0, bestTime: 0 }, battle: { w: 0, l: 0 }, plays: 0 };
+try { const r = JSON.parse(localStorage.getItem(KEY) || 'null'); if (r) rec = Object.assign(rec, r); } catch (e) { }
+function saveRec() { try { localStorage.setItem(KEY, JSON.stringify(rec)); } catch (e) { } }
+function paintRecords() {
+  $('recB').textContent = rec.balance.best ? rec.balance.best.toFixed(1) + '秒' : '--';
+  $('recT').textContent = rec.trick.bestScore ? rec.trick.bestScore + '点' : '--';
+  $('recW').textContent = rec.battle.w + '勝' + rec.battle.l + '敗';
+}
+
+/* sound */
+let AC = null, sndOn = true;
+function beep(f, d, type, v, to) {
+  if (!sndOn) return;
+  try {
+    AC = AC || new (window.AudioContext || window.webkitAudioContext)();
+    if (AC.state === 'suspended') AC.resume();
+    const o = AC.createOscillator(), g = AC.createGain(), t = AC.currentTime;
+    o.type = type || 'sine'; o.frequency.setValueAtTime(f, t); if (to) o.frequency.exponentialRampToValueAtTime(to, t + d);
+    g.gain.setValueAtTime(v || 0.07, t); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+    o.connect(g); g.connect(AC.destination); o.start(t); o.stop(t + d + 0.02);
+  } catch (e) { }
+}
+const sfx = {
+  god() { beep(523, .12, 'triangle', .09); setTimeout(() => beep(784, .18, 'triangle', .09), 90); setTimeout(() => beep(1047, .25, 'triangle', .08), 190); },
+  trick() { beep(660, .1, 'square', .04); setTimeout(() => beep(880, .14, 'square', .04), 80); },
+  fall() { beep(220, .5, 'sawtooth', .08, 55); },
+  bounce() { beep(180, .12, 'sine', .08, 90); },
+  warn() { beep(440, .08, 'square', .03); },
+  tick() { beep(600, .08, 'sine', .05); },
+  go() { beep(900, .25, 'triangle', .08); }
+};
+
+/* game state */
+let mode = 'balance';           // balance | trick | battle
+let btype = 'ai';               // ai | hot
+let names = ['パパ', '娘'];
+let state = 'menu';             // menu | ready | play | pause | end
+let sim = null, simAI = null, ai = null, demo = null, demoAI = null;
+let seed = 1, runId = 0, round = 0, hotRes = [], endTimer = 0, endReason = '';
+let tShow = 0, windFlash = 0, warnT = 0, shake = 0, godFlash = 0;
+const input = { tgt: 0 };
+const keys = { l: 0, r: 0, leg: false };
+let legBtn = false;
+let drag = null;
+
+function styleFor() { return mode === 'battle' && btype === 'hot' ? (round === 0 ? STYLES.p1 : STYLES.p2) : STYLES.solo; }
+
+function newDemo() {
+  demo = new Sim((Math.random() * 1e9) | 0, {});
+  demoAI = new RivalAI(demo, 0.9);
+}
+newDemo();
+
+/* ---------- flow ---------- */
+function toMenu() {
+  runId++; state = 'menu'; sim = null; simAI = null; ai = null;
+  $('hud').hidden = true; $('aiBox').hidden = true; $('toast').classList.remove('show'); $('warn').classList.remove('on');
+  paintRecords(); show('menu'); newDemo();
+}
+function startMode(m) {
+  mode = m;
+  if (m === 'battle') { show('battle'); return; }
+  round = 0; seed = (Math.random() * 1e9) | 0; beginRun(false);
+}
+function startBattle(type) {
+  btype = type; round = 0; hotRes = [];
+  names = [($('n1').value || 'パパ').trim().slice(0, 8), ($('n2').value || '娘').trim().slice(0, 8)];
+  seed = (Math.random() * 1e9) | 0; beginRun(false);
+}
+function beginRun(sameSeed) {
+  runId++;
+  const id = runId;
+  if (!sameSeed && !(mode === 'battle' && btype === 'hot' && round > 0)) seed = (Math.random() * 1e9) | 0;
+  sim = new Sim(seed, { tricks: mode === 'trick' });
+  simAI = null; ai = null;
+  if (mode === 'battle' && btype === 'ai') {
+    simAI = new Sim(seed, { tricks: false });
+    ai = new RivalAI(simAI, 0.55 + Math.random() * 0.28);
+  }
+  input.tgt = 0; drag = null; keys.l = keys.r = 0; keys.leg = false; legBtn = false;
+  endTimer = 0; endReason = ''; windFlash = 0; warnT = 0; godFlash = 0;
+  state = 'ready';
+  const label = mode === 'battle' ? 'BATTLE KING' : mode === 'trick' ? 'TRICK KING' : 'BALANCE KING';
+  $('hMode').textContent = label;
+  $('trickBar').hidden = mode !== 'trick';
+  $('hPtsChip').hidden = mode !== 'trick';
+  $('hud').hidden = false;
+  $('aiBox').hidden = !(mode === 'battle' && btype === 'ai');
+  if (!$('aiBox').hidden) $('aiLabel').textContent = 'AI';
+  $('coach').textContent = '';
+  const hot = mode === 'battle' && btype === 'hot';
+  if (hot) {
+    $('hMode').textContent = 'BATTLE  ' + names[round];
+    $('readyMsg').textContent = names[round] + 'の番！' + (round ? '（' + names[0] + 'は' + hotRes[0].t.toFixed(1) + '秒）' : '');
+    $('readyGo').hidden = false; $('countdown').textContent = '';
+    show('ready');
+    $('readyGo').onclick = () => { $('readyGo').hidden = true; countdown(id); };
+  } else {
+    $('readyMsg').textContent = '';
+    $('readyGo').hidden = true; show('ready'); countdown(id);
+  }
+}
+function countdown(id) {
+  const seq = ['3', '2', '1', 'GO!'];
+  let i = 0;
+  const tick = () => {
+    if (id !== runId) return;
+    $('countdown').textContent = seq[i];
+    i === 3 ? sfx.go() : sfx.tick();
+    i++;
+    if (i < seq.length) setTimeout(tick, 520);
+    else setTimeout(() => { if (id !== runId) return; $('countdown').textContent = ''; $('ready').hidden = true; state = 'play'; }, 380);
+  };
+  tick();
+}
+function pauseGame() { if (state !== 'play') return; state = 'pause'; show('pause'); }
+function resumeGame() { if (state !== 'pause') return; $('pause').hidden = true; state = 'play'; }
+
+/* ---------- toast / events ---------- */
+let toastTimer = 0;
+function toast(text, color) {
+  const el = $('toast'); el.textContent = text; el.style.color = color || '';
+  el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
+}
+function handleEvents(s) {
+  const ev = s.events; s.events = [];
+  for (const e of ev) {
+    if (e.type === 'god') { toast('神バランス！ +' + e.pts, '#ffe29a'); sfx.god(); godFlash = 0.9; }
+    else if (e.type === 'trick') { toast(e.text + ' +' + e.pts, '#7fe3c8'); sfx.trick(); }
+    else if (e.type === 'warn') {
+      const w = $('warn'); w.className = e.dir > 0 ? 'r on' : 'l on'; w.textContent = e.dir > 0 ? '突風！ ▶' : '◀ 突風！'; warnT = 0.85; sfx.warn();
+    }
+    else if (e.type === 'gust') { windFlash = 0.7; windDir = e.dir; }
+    else if (e.type === 'fall') { sfx.fall(); shake = 0.35; }
+    else if (e.type === 'bounce') sfx.bounce();
+  }
+}
+
+/* ---------- update ---------- */
+function coachText(t) {
+  if (mode === 'trick' && t < 3) return 'スワイプで体重移動。JUMP・片足・360°で得点！';
+  if (t < 3) return '左右スワイプで体重移動。傾いた方と反対へ！';
+  if (t < 10) return '少し揺れてきた。バランスを取ろう';
+  if (t < 20) return '揺れが激しくなる。突風の警告に注意！';
+  if (t < 30) return '赤ゾーンから立て直すと神復帰で3倍！';
+  return '高難度ゾーン。まだまだ行ける！';
+}
+function readInput(dt) {
+  if (drag) { /* position set in pointermove */ }
+  else if (keys.l || keys.r) input.tgt = clamp(input.tgt + (keys.r - keys.l) * 2.6 * dt, -1, 1);
+  else input.tgt *= Math.exp(-2.6 * dt);
+  sim.tgt = input.tgt;
+  sim.setLeg(keys.leg || legBtn);
+}
+function update(dt) {
+  tShow += dt;
+  windFlash = Math.max(0, windFlash - dt); shake = Math.max(0, shake - dt); godFlash = Math.max(0, godFlash - dt);
+  if (warnT > 0) { warnT -= dt; if (warnT <= 0) $('warn').classList.remove('on'); }
+  if (state === 'menu' || state === 'ready' && !sim) {
+    demoAI.update(dt); demo.step(dt); demo.events = [];
+    if (!demo.alive && demo.fall.t > 1.6) newDemo();
+    if (demo.t > 14) newDemo();
+    return;
+  }
+  if (!sim) return;
+  if (state === 'play') {
+    readInput(dt);
+    let rem = dt * (sim.slow > 0 ? 0.35 : 1);
+    while (rem > 1e-6) {
+      const h = Math.min(1 / 120, rem);
+      sim.step(h);
+      if (ai) { ai.update(h); simAI.step(h); }
+      rem -= h;
+    }
+    handleEvents(sim);
+    if (simAI) simAI.events = [];
+    // end conditions
+    if (!endReason) {
+      if (!sim.alive) endReason = 'fall';
+      else if (simAI && !simAI.alive) endReason = 'aifall';
+      if (endReason) endTimer = endReason === 'aifall' ? 1.1 : 1.5;
+    } else {
+      endTimer -= dt;
+      if (endReason === 'aifall' && sim.alive) { /* player keeps balancing while AI tumbles */ }
+      if (endTimer <= 0) finishRun();
+    }
+  } else if (state === 'ready') {
+    sim.step(0);    // idle
+  } else if (state === 'end') {
+    sim.step(dt); if (simAI) simAI.step(dt);
+  }
+  if (sim.alive === false && state === 'pause') { /* nothing */ }
+  paintHUD();
+}
+function paintHUD() {
+  if (!sim) return;
+  $('hTime').innerHTML = sim.t.toFixed(1) + '<small>秒</small>';
+  $('hRecov').textContent = sim.recov;
+  $('hPts').textContent = sim.pts;
+  const cb = $('hCombo'); cb.innerHTML = (sim.fever ? 'FEVER ×2 ' : 'COMBO') + '<b>' + sim.combo + '</b>'; cb.classList.toggle('fever', sim.fever);
+  const r = clamp(sim.th / LIM, -1, 1);
+  $('needle').style.left = (50 + r * 48) + '%';
+  $('needle').style.background = Math.abs(r) > 0.8 ? '#ff5d47' : '';
+  $('coach').textContent = state === 'play' ? coachText(sim.t) : $('coach').textContent;
+  if (simAI) $('aiTime').textContent = simAI.t.toFixed(1) + (simAI.alive ? '' : '（転倒）');
+}
+
+/* ---------- results ---------- */
+function rankFor(t) {
+  if (t < 10) return 'ふらふらルーキー';
+  if (t < 20) return 'バランス見習い';
+  if (t < 35) return 'ボード乗り';
+  if (t < 50) return 'バランスマスター';
+  if (t < 70) return '神バランス';
+  return 'BALANCE KING 👑';
+}
+function finishRun() {
+  state = 'end';
+  $('hud').hidden = true; $('aiBox').hidden = true; $('warn').classList.remove('on'); $('toast').classList.remove('show');
+  rec.plays++;
+  const t = sim.t, score = sim.score;
+  let rank = '', sub = '', isNew = false, bigT = t, share = '';
+  const tag = ' #SWINGBOARDKING';
+  const hot = mode === 'battle' && btype === 'hot';
+  if (hot && round === 0) {
+    hotRes.push({ name: names[0], t, recov: sim.recov, score });
+    round = 1; saveRec(); beginRun(true); return;
+  }
+  if (mode === 'balance') {
+    isNew = t > rec.balance.best + 1e-6;
+    if (isNew) rec.balance.best = t;
+    rec.balance.recov = Math.max(rec.balance.recov, sim.recov);
+    rank = rankFor(t); sub = '神バランス復帰 ' + sim.recov + '回 ・ 最高コンボ ' + sim.maxCombo;
+    share = '🏄 ' + t.toFixed(1) + '秒！\nBALANCE KING 👑\n神バランス復帰：' + sim.recov + '回\nあなたは何秒耐えられる？' + tag;
+  } else if (mode === 'trick') {
+    isNew = score > rec.trick.bestScore;
+    if (isNew) { rec.trick.bestScore = score; rec.trick.bestTime = t; }
+    rank = rankFor(t); sub = 'JUMP ' + sim.jumps + '回 ・ 360° ' + sim.spins + '回 ・ 片足 ' + sim.legAcc.toFixed(1) + '秒';
+    share = '🏄 ' + score + '点！（' + t.toFixed(1) + '秒）\nTRICK KING 👑\n神バランス復帰：' + sim.recov + '回\nあなたは何点取れる？' + tag;
+  } else if (hot) {
+    hotRes.push({ name: names[1], t, recov: sim.recov, score });
+    const a = hotRes[0], b = hotRes[1];
+    let win = null;
+    if (Math.abs(a.t - b.t) < 0.05) { rank = 'ひきわけ！'; win = null; }
+    else { win = a.t > b.t ? a : b; rank = win.name + 'の勝ち！'; }
+    bigT = win ? win.t : a.t;
+    sub = a.name + ' ' + a.t.toFixed(1) + '秒  /  ' + b.name + ' ' + b.t.toFixed(1) + '秒';
+    share = '🏄 BATTLE KING 👑\n' + (win ? win.name + 'が' + win.t.toFixed(1) + '秒で勝利！' : 'ひきわけ！') + '\n' + sub + '\nあなたは何秒耐えられる？' + tag;
+    round = 0;
+  } else {
+    const win = endReason === 'aifall';
+    if (win) rec.battle.w++; else rec.battle.l++;
+    rank = win ? 'YOU WIN!' : 'YOU LOSE...';
+    sub = 'あなた ' + t.toFixed(1) + '秒  /  AI ' + simAI.t.toFixed(1) + '秒';
+    share = '🏄 BATTLE KING 👑\nAIと対決：' + (win ? '勝ち！' : '負け…') + '\n' + sub + '\nあなたは何秒耐えられる？' + tag;
+  }
+  saveRec();
+  $('oRank').textContent = rank;
+  $('oTime').innerHTML = bigT.toFixed(1) + '<small>秒</small>';
+  $('oNew').hidden = !isNew;
+  $('oSub').textContent = sub;
+  $('oRecov').textContent = hot ? Math.max(hotRes[0].recov, hotRes[1].recov) : sim.recov;
+  $('oPts').textContent = sim.pts;
+  $('oScore').textContent = score;
+  $('shareText').value = share;
+  $('oX').href = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(share);
+  $('oCopy').textContent = 'X投稿文をコピー';
+  show('over');
+  if (isNew || endReason === 'aifall') sfx.god();
+}
+$('oRetry').onclick = () => { round = 0; hotRes = []; beginRun(false); };
+$('oMenu').onclick = toMenu;
+$('oCopy').onclick = async () => {
+  const ta = $('shareText'); const txt = ta.value;
+  try { await navigator.clipboard.writeText(txt); $('oCopy').textContent = 'コピーしました'; }
+  catch (e) { ta.focus(); ta.select(); try { document.execCommand('copy'); $('oCopy').textContent = 'コピーしました'; } catch (e2) { $('oCopy').textContent = '文字を長押ししてコピー'; } }
+};
+
+/* ---------- render ---------- */
+function render() {
+  drawBackground(tShow, windFlash);
+  const c = ctx;
+  if (!sim || state === 'menu') {
+    drawRider(demo, W / 2, STYLES.solo, 1, tShow, false);
+  } else {
+    const fev = sim.fever;
+    drawRider(sim, W / 2, styleFor(), 1, tShow, fev);
+    if (simAI) {   // AI mini panel
+      const pw = S * 1.7, ph = S * 1.2, px = W - pw - Math.max(16, 0), py = H * 0.26;
+      c.setTransform(DPR, 0, 0, DPR, 0, 0);
+      c.fillStyle = 'rgba(10,30,36,.62)'; c.strokeStyle = 'rgba(255,241,214,.25)'; c.lineWidth = 1;
+      c.beginPath(); c.roundRect(px, py, pw, ph, 14); c.fill(); c.stroke();
+      c.save(); c.beginPath(); c.roundRect(px, py, pw, ph, 14); c.clip();
+      drawRider(simAI, px + pw / 2, STYLES.ai, 0.42, tShow, false, py + ph - 10);
+      c.restore();
+      const ab = $('aiBox'); ab.style.top = (py + 6) + 'px'; ab.style.right = (W - px - pw + 12) + 'px';
+    }
+    if (sim.slow > 0 || godFlash > 0) {  // slow-mo vignette
+      c.setTransform(DPR, 0, 0, DPR, 0, 0);
+      const a = Math.min(1, Math.max(sim.slow, godFlash) * 1.2) * 0.55;
+      const g = c.createRadialGradient(W / 2, H * 0.6, Math.min(W, H) * 0.25, W / 2, H * 0.6, Math.max(W, H) * 0.75);
+      g.addColorStop(0, 'rgba(255,226,154,0)'); g.addColorStop(1, 'rgba(255,170,60,' + a + ')');
+      c.fillStyle = g; c.fillRect(0, 0, W, H);
+    }
+    if (sim.fever) {
+      c.setTransform(DPR, 0, 0, DPR, 0, 0);
+      c.strokeStyle = 'rgba(255,93,71,' + (0.35 + 0.2 * Math.sin(tShow * 10)) + ')'; c.lineWidth = 8;
+      c.strokeRect(0, 0, W, H);
+    }
+  }
+  cv.style.transform = shake > 0 ? 'translate(' + ((Math.random() - 0.5) * 10 * shake * 3) + 'px,' + ((Math.random() - 0.5) * 8 * shake * 3) + 'px)' : '';
+}
+
+let lastTs = 0;
+function frame(ts) {
+  requestAnimationFrame(frame);
+  const dt = Math.min(0.05, Math.max(0, (ts - lastTs) / 1000)); lastTs = ts;
+  update(dt); render();
+}
+requestAnimationFrame(ts => { lastTs = ts; frame(ts); });
+
+/* ---------- input ---------- */
+cv.addEventListener('pointerdown', e => {
+  if (state !== 'play' && state !== 'ready') return;
+  try { cv.setPointerCapture(e.pointerId); } catch (er) { }
+  drag = { id: e.pointerId, x0: e.clientX, base: input.tgt };
+  if (AC && AC.state === 'suspended') AC.resume();
+});
+cv.addEventListener('pointermove', e => {
+  if (drag && e.pointerId === drag.id) input.tgt = clamp(drag.base + (e.clientX - drag.x0) / (W * 0.2), -1, 1);
+});
+const endDrag = e => { if (drag && e.pointerId === drag.id) drag = null; };
+cv.addEventListener('pointerup', endDrag); cv.addEventListener('pointercancel', endDrag); cv.addEventListener('lostpointercapture', endDrag);
+
+window.addEventListener('keydown', e => {
+  const k = e.key;
+  if (k === 'ArrowLeft' || k === 'a' || k === 'A') { keys.l = 1; e.preventDefault(); }
+  else if (k === 'ArrowRight' || k === 'd' || k === 'D') { keys.r = 1; e.preventDefault(); }
+  else if (k === 'ArrowUp' || k === ' ' || k === 'w' || k === 'W') { if (state === 'play' && sim) sim.doJump(); e.preventDefault(); }
+  else if (k === 'ArrowDown' || k === 'z' || k === 'Z' || k === 's' || k === 'S') { keys.leg = true; e.preventDefault(); }
+  else if (k === 'x' || k === 'X') { if (state === 'play' && sim) sim.doSpin(); }
+  else if (k === 'p' || k === 'P' || k === 'Escape') { state === 'play' ? pauseGame() : resumeGame(); }
+  else if (k === 'Enter' && state === 'end' && !$('over').hidden) $('oRetry').click();
+});
+window.addEventListener('keyup', e => {
+  const k = e.key;
+  if (k === 'ArrowLeft' || k === 'a' || k === 'A') keys.l = 0;
+  else if (k === 'ArrowRight' || k === 'd' || k === 'D') keys.r = 0;
+  else if (k === 'ArrowDown' || k === 'z' || k === 'Z' || k === 's' || k === 'S') keys.leg = false;
+});
+document.addEventListener('visibilitychange', () => { if (document.hidden) pauseGame(); });
+window.addEventListener('blur', () => { keys.l = keys.r = 0; keys.leg = false; });
+
+/* trick buttons */
+const press = (el, fn) => el.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); fn(); });
+press($('bJump'), () => { if (state === 'play' && sim) sim.doJump(); });
+press($('bSpin'), () => { if (state === 'play' && sim) sim.doSpin(); });
+$('bLeg').addEventListener('pointerdown', e => { e.preventDefault(); legBtn = true; $('bLeg').classList.add('on'); try { $('bLeg').setPointerCapture(e.pointerId); } catch (er) { } });
+['pointerup', 'pointercancel', 'lostpointercapture'].forEach(n => $('bLeg').addEventListener(n, () => { legBtn = false; $('bLeg').classList.remove('on'); }));
+
+/* menu wiring */
+document.querySelectorAll('.modeBtn').forEach(b => b.addEventListener('click', () => { beep(700, .08, 'triangle', .05); startMode(b.dataset.mode); }));
+$('bAI').onclick = () => startBattle('ai');
+$('bHot').onclick = () => startBattle('hot');
+$('bBack').onclick = () => show('menu');
+$('pauseBtn').onclick = pauseGame;
+$('pResume').onclick = resumeGame;
+$('pRetry').onclick = () => { round = 0; hotRes = []; beginRun(false); };
+$('pMenu').onclick = toMenu;
+$('sndBtn').onclick = () => { sndOn = !sndOn; $('sndBtn').textContent = sndOn ? '音 ON' : '音 OFF'; if (sndOn) beep(700, .08, 'triangle', .05); };
+paintRecords(); show('menu');
+</script>

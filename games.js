@@ -13,7 +13,7 @@
  *
  * サイト上の「管理」画面からも追加・削除できます（その場合はこのブラウザだけに保存されます）。
  */
-window.GAMES_VERSION = "17";
+window.GAMES_VERSION = "18";
 
 /* 管理画面のパスワード（SHA-256 ハッシュ。パスワードそのものは書かない）
  * 変更するには: "mini-game-arcade:" + 新しいパスワード を SHA-256 にかけた値に置き換える */
@@ -334,5 +334,14 @@ window.GAMES = [
     emoji: "🌳",
     color: "#2f7d4a",
     accent: "#ffe27a"
+  },
+  {
+    id: "swing-board-king",
+    title: "SWING BOARD KING",
+    description: "揺れるボードの上で体重移動！何秒乗っていられる？耐久・トリック・親子対決の3モード。",
+    path: "games/swing-board-king/index.html",
+    emoji: "🛹",
+    color: "#7b3fa0",
+    accent: "#ffd23f"
   }
 ];
