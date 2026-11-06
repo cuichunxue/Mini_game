@@ -13,7 +13,7 @@
  *
  * サイト上の「管理」画面からも追加・削除できます（その場合はこのブラウザだけに保存されます）。
  */
-window.GAMES_VERSION = "19";
+window.GAMES_VERSION = "20";
 
 /* 管理画面のパスワード（SHA-256 ハッシュ。パスワードそのものは書かない）
  * 変更するには: "mini-game-arcade:" + 新しいパスワード を SHA-256 にかけた値に置き換える */
@@ -343,5 +343,14 @@ window.GAMES = [
     emoji: "🛹",
     color: "#7b3fa0",
     accent: "#ffd23f"
+  },
+  {
+    id: "hurdles-400m",
+    title: "400mハードル 決勝",
+    description: "スタジアムのトラックを一人称で疾走！10台のハードルを跳び越え、スタミナを残して表彰台を狙え。",
+    path: "games/hurdles-400m/index.html",
+    emoji: "🏃",
+    color: "#b5382c",
+    accent: "#ffe066"
   }
 ];
