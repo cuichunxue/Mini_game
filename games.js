@@ -13,7 +13,7 @@
  *
  * サイト上の「管理」画面からも追加・削除できます（その場合はこのブラウザだけに保存されます）。
  */
-window.GAMES_VERSION = "12";
+window.GAMES_VERSION = "13";
 
 window.GAMES = [
   {
@@ -231,5 +231,59 @@ window.GAMES = [
     emoji: "🤸",
     color: "#43b3ff",
     accent: "#ffd23f"
+  },
+  {
+    id: "cliff-fly",
+    title: "CLIFF FLY",
+    description: "長押しで助走、崖ぎわで跳んで滑空！風と上昇気流にのって、どこまで遠くへ飛べるか挑戦。",
+    path: "games/cliff-fly/index.html",
+    emoji: "🪂",
+    color: "#3a7bd5",
+    accent: "#ffd23f"
+  },
+  {
+    id: "gyro-spin-king",
+    title: "GYRO SPIN KING",
+    description: "巨大リングの中で回転！30秒で何回転できる？速すぎるとバランスを失う人間ジャイロ回転王。",
+    path: "games/gyro-spin-king/index.html",
+    emoji: "🎡",
+    color: "#5b2a86",
+    accent: "#ffcf4a"
+  },
+  {
+    id: "slap-king-usa",
+    title: "SLAP KING USA",
+    description: "力をためて、狙って、一気にスワイプ！自分の一撃で会場全体を爆発させろ。",
+    path: "games/slap-king-usa/index.html",
+    emoji: "🇺🇸",
+    color: "#1d3a8a",
+    accent: "#e8344e"
+  },
+  {
+    id: "flap",
+    title: "FLAP! ハエたたき",
+    description: "たった30秒。飛び回るハエを何匹たたける？コンボと命中率で称号が決まる。",
+    path: "games/flap/index.html",
+    emoji: "🪰",
+    color: "#d8483f",
+    accent: "#fff3c4"
+  },
+  {
+    id: "toro-king",
+    title: "TORO KING",
+    description: "突進する猛牛をギリギリでかわせ！マントで誘導しながら何回連続で避けられるか。",
+    path: "games/toro-king/index.html",
+    emoji: "🐂",
+    color: "#b3201f",
+    accent: "#ffcc33"
+  },
+  {
+    id: "dodge-king",
+    title: "DODGE KING",
+    description: "避けろ！キャッチしろ！投げ返せ！連勝するほど速くなるドッジボール王。",
+    path: "games/dodge-king/index.html",
+    emoji: "🏐",
+    color: "#1f6f8b",
+    accent: "#ff7a3d"
   }
 ];
