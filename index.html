@@ -227,7 +227,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:48px}
   </form>
 </dialog>
 
-<script src="games.js?v=8"></script>
+<script src="games.js?v=9"></script>
 <script>
 (() => {
   "use strict";
@@ -606,7 +606,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:48px}
     if (!w || !d || w.__arcadeAudio || w.location.href === "about:blank") return;
     const ctxs = new Set(); // AudioContexts the game creates from now on
     w.__arcadeAudio = ctxs;
-    const hasSession = setPlaybackSession(w);
+    setPlaybackSession(w);
 
     for (const name of ["AudioContext", "webkitAudioContext"]) {
       const Orig = w[name];
@@ -619,15 +619,17 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:48px}
     let silent = null;
     const unlock = () => {
       for (const c of ctxs) if (c.state !== "running" && c.state !== "closed") c.resume().catch(() => {});
-      if (!hasSession && !silent) {
-        // Fallback for older iOS: a looping silent <audio> switches the page to "playback",
-        // so Web Audio is not muted by the ringer switch.
+      if (!silent) {
+        // A looping silent <audio> switches the page to "playback", so Web Audio is not muted
+        // by the ringer switch. navigator.audioSession alone is not honored inside iframes on iOS.
         silent = d.createElement("audio");
         silent.src = getSilentUrl();
         silent.loop = true;
         silent.setAttribute("playsinline", "");
         silent.setAttribute("x-webkit-airplay", "deny");
         silent.dataset.arcadeSilent = "1";
+        silent.style.display = "none";
+        (d.body || d.documentElement).appendChild(silent);
         silent.play().catch(() => { silent = null; });
       }
     };

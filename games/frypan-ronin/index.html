@@ -1101,8 +1101,9 @@ const sndBtn=$('snd'),sndTxt=$('sndTxt');
 function setSndUI(){const on=SFX.live;sndBtn.classList.toggle('off',!on);sndBtn.setAttribute('aria-pressed',on?'true':'false');sndTxt.textContent=on?'音 オン':'音 オフ';}
 sndBtn.addEventListener('click',e=>{e.stopPropagation();SFX.toggle();setSndUI();});
 let unlocked=false;
-const firstGesture=()=>{if(unlocked)return;unlocked=true;SFX.unlock();setSndUI();};
-['pointerdown','keydown','touchstart'].forEach(ev=>addEventListener(ev,e=>{if(e.target===sndBtn||(e.target&&e.target.closest&&e.target.closest('#snd')))return;firstGesture();},{capture:true,passive:true}));
+// iOS only lets audio start on touchend/click, so keep trying on every gesture (unlock() is idempotent)
+const firstGesture=()=>{SFX.unlock();if(!unlocked){unlocked=true;setSndUI();}};
+['pointerdown','keydown','touchstart','touchend','click'].forEach(ev=>addEventListener(ev,e=>{if(e.target===sndBtn||(e.target&&e.target.closest&&e.target.closest('#snd')))return;firstGesture();},{capture:true,passive:true}));
 const zone=$('stickZone'),knob=$('knob');let sid=null,sx=0,sy=0;
 zone.addEventListener('pointerdown',e=>{sid=e.pointerId;sx=e.clientX;sy=e.clientY;zone.setPointerCapture(sid);manual();});
 zone.addEventListener('pointermove',e=>{if(e.pointerId!==sid)return;let dx=e.clientX-sx,dy=e.clientY-sy;const l=Math.hypot(dx,dy),m=46;if(l>m){dx*=m/l;dy*=m/l;}
