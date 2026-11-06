@@ -100,6 +100,11 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--room);color:var(
   font-family:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic","Noto Sans JP",system-ui,sans-serif;font-weight:700}
 .btn{font-size:14px;line-height:1.1;text-align:center;letter-spacing:.02em}
 #bAtk{font-size:18px}
+
+#offscreen{position:fixed;inset:0;pointer-events:none;z-index:4}
+.offarrow{position:absolute;left:0;top:0;width:0;height:0;border-top:13px solid transparent;border-bottom:13px solid transparent;border-left:24px solid rgba(196,18,47,.85);filter:drop-shadow(0 1px 2px rgba(0,0,0,.35));display:none}
+.offarrow.danger{border-left-color:#ff1f3d;animation:offblink .25s steps(2) infinite}
+@keyframes offblink{50%{opacity:.35}}
 </style>
 
 </head>
@@ -1350,7 +1355,7 @@ function updateEnemy(e,dt){
       if(e.squash){tg=POSE.stagger;rate=30;const s=e.T.scale,k=1-Math.exp(-dt*20);e.root.scale.set(lerp(e.root.scale.x,s*1.8,k),lerp(e.root.scale.y,s*.12,k),lerp(e.root.scale.z,s*1.8,k));}
       if(e.rocket){tg=POSE.stagger;e.root.rotation.z+=dt*14;
         if(e.homer&&!e.twinkled&&Math.random()<.7)spawnBlood(chestOf(e),new V(),1,.4); /* confetti streak behind the ball */
-        if(!e.twinkled&&e.t>(e.homer?1.7:1.05)){e.twinkled=true;const c=chestOf(e);flash(c,0xfff6b0,e.homer?5:3.2,.6);popText('キラーン☆',c,'word',e.homer?2:1.3);SFX.twinkle();e.root.visible=false;if(e.homer){homeRun(e);if(homerCam.e===e)homerCam.t=.9;}}}
+        if(!e.twinkled&&e.t>(e.homer?1.7:1.05)){e.twinkled=true;const c=chestOf(e);flash(c,0xfff6b0,e.homer?5:3.2,.6);popText('キラーン☆',c,'word',e.homer?2:1.3);SFX.twinkle();e.root.visible=false;if(e.homer){homeRun(e);if(homerCam.e===e)homerCam.t=.5;}}}
       if(e.bleed>0){e.bleed-=dt;const n=new V();e.J.neck.getWorldPosition(n);spawnBlood(n,new V(rand(-1,1),0,rand(-1,1)).normalize(),2,1.6);}
       if(e.t>3.6)e.y-=dt*.35;
       break;}
@@ -1390,23 +1395,53 @@ function updateCamera(dtR){
   const tYaw=pl.yaw+side+(auto?.55*Math.sin(now*.11):0);
   cam.yaw+=angDiff(cam.yaw,tYaw)*(1-Math.exp(-dtR*(rate+(side?1.2:0))));
   const kt=mv==='karatake',sl=mv==='slide',close=kt||pl.state==='parry';
-  const dist=close?5.2:sl?6.2:7.2,h=close?2.1:sl?2.6:3.2;
+  /* Portrait phones see only ~30° sideways with a 55° vertical FOV, so enemies beside the player
+     drop out of view. Pull the camera back/up (and widen a bit) the narrower the screen is. */
+  const narrow=Math.min(2.2,Math.max(1,1.15/camera.aspect)),pk=Math.pow(narrow,.5);
+  const dist=(close?5.2:sl?6.2:7.2)*pk,h=(close?2.1:sl?2.6:3.2)*Math.pow(pk,1.25);
   const want=new V(pp.x-Math.sin(cam.yaw)*dist,h,pp.z-Math.cos(cam.yaw)*dist);
   camera.position.lerp(want,1-Math.exp(-dtR*5));
   const f=fwdOf(pl.yaw),lk=new V(pp.x+f.x*1.2,1.05+pp.y*.5+pl.P.bodyY*.4,pp.z+f.z*1.2);
   /* follow the ball until it twinkles, then hold a beat; independent of slow-motion timing */
   const he=homerCam.e;let hc=false;
   if(he){if(he.twinkled){homerCam.t-=dtR;if(homerCam.t<=0)homerCam.e=null;}hc=!!homerCam.e;}
-  if(hc){const c=chestOf(he);lk.lerp(c,he.twinkled?.6:.85);
+  if(hc){const c=chestOf(he),w=he.twinkled?.25:.42;lk.x+=(c.x-lk.x)*w;lk.z+=(c.z-lk.z)*w;lk.y+=(Math.min(c.y,lk.y+2)-lk.y)*w*.4;
     homerMark.visible=!he.twinkled;homerMark.position.copy(c);homerMark.material.rotation+=dtR*4;}
   else homerMark.visible=false;
+  /* touch controls cover the bottom of the screen: on tall screens aim lower so the player sits above centre */
+  lk.y-=(narrow-1)*1.1;
   cam.look.lerp(lk,1-Math.exp(-dtR*(hc?9:7)));
   trauma=Math.max(0,trauma-dtR*1.7);
   const sh=RM?0:trauma*trauma*.45;
   camera.position.x+=rand(-1,1)*sh;camera.position.y+=rand(-1,1)*sh;
   camera.lookAt(cam.look);
-  const tf=hc?70:sl?66:close?50:55;cam.fov+=(tf-cam.fov)*(1-Math.exp(-dtR*6));
+  const tf=(hc?70:sl?66:close?50:55)+(narrow-1)*4;cam.fov+=(tf-cam.fov)*(1-Math.exp(-dtR*6));
   camera.fov=cam.fov;camera.updateProjectionMatrix();
+}
+
+/* ---------- off-screen enemy arrows ----------
+   Nearby enemies outside the view get a red arrow on the screen edge pointing at them
+   (bigger and blinking when they are winding up an attack). */
+const offWrap=document.createElement('div');offWrap.id='offscreen';document.body.appendChild(offWrap);
+const offPool=[];const _op=new V();
+function updateOffscreen(){
+  camera.updateMatrixWorld();
+  let n=0;const W=innerWidth,H=innerHeight,m=34,pp=player.root.position;
+  for(const e of enemies){
+    if(!alive(e)||!e.root.visible||e.rocket)continue;
+    const ep=e.root.position,d=Math.hypot(ep.x-pp.x,ep.z-pp.z);if(d>9)continue;
+    _op.set(ep.x,ep.y+1.1*e.root.scale.y,ep.z).project(camera);
+    const behind=_op.z>1;let x=_op.x,y=_op.y;
+    if(!behind&&Math.abs(x)<.92&&Math.abs(y)<.9)continue; // visible on screen
+    if(behind){x=-x;y=-y;if(Math.abs(x)<1e-3&&Math.abs(y)<1e-3)y=-1;}
+    const k=1/Math.max(Math.abs(x),Math.abs(y));x*=k;y*=k; // push to the screen edge
+    const sx=Math.min(W-m,Math.max(m,(x+1)/2*W)),sy=Math.min(H-m,Math.max(m+60,(1-y)/2*H));
+    let a=offPool[n];if(!a){a=document.createElement('div');a.className='offarrow';offWrap.appendChild(a);offPool[n]=a;}
+    const ang=Math.atan2(-y,x)*180/Math.PI,danger=e.state==='atk';
+    a.style.transform=`translate(${sx}px,${sy}px) translate(-50%,-50%) rotate(${ang}deg) scale(${danger?1.25:Math.max(.75,1.1-d/12)})`;
+    a.classList.toggle('danger',danger);a.style.display='block';n++;
+  }
+  for(let i=n;i<offPool.length;i++)offPool[i].style.display='none';
 }
 
 /* ---------- nonsense events ---------- */
@@ -1459,6 +1494,7 @@ function frame(){
   floor.position.set(Math.round(pp.x/4)*4,0,Math.round(pp.z/4)*4);
   sun.position.set(pp.x+5,12,pp.z+7);sun.target.position.set(pp.x,0,pp.z);
   updateCamera(dtR);
+  updateOffscreen();
   renderer.render(scene,camera);
   requestAnimationFrame(frame);
 }

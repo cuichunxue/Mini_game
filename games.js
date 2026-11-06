@@ -13,7 +13,7 @@
  *
  * サイト上の「管理」画面からも追加・削除できます（その場合はこのブラウザだけに保存されます）。
  */
-window.GAMES_VERSION = "9";
+window.GAMES_VERSION = "10";
 
 window.GAMES = [
   {
