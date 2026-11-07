@@ -220,7 +220,7 @@ button:focus-visible,.node:focus-visible{outline:2px solid var(--gold);outline-o
 const cv=document.getElementById('cv'),cx=cv.getContext('2d');
 const $=id=>document.getElementById(id);
 if(matchMedia('(pointer:coarse)').matches) document.documentElement.classList.add('coarse');
-let W=0,H=0,DPR=1,GROUND=0;
+let W=0,H=0,DPR=1,GROUND=0,CEIL=40;
 
 /* ---------- journey ---------- */
 const STAGES=[
@@ -299,8 +299,11 @@ function openMap(){
 }
 
 /* ---------- canvas setup ---------- */
-function resize(){DPR=Math.min(2,window.devicePixelRatio||1);const r=cv.getBoundingClientRect();W=r.width;H=r.height;cv.width=W*DPR;cv.height=H*DPR;cx.setTransform(DPR,0,0,DPR,0,0);GROUND=H-Math.max(56,H*0.09);makeScene()}
-addEventListener('resize',resize);
+function resize(){DPR=Math.min(2,window.devicePixelRatio||1);const r=cv.getBoundingClientRect();W=r.width;H=r.height;cv.width=W*DPR;cv.height=H*DPR;cx.setTransform(DPR,0,0,DPR,0,0);GROUND=H-Math.max(56,H*0.09);
+  /* arcade: keep the ronin below the HUD corners so he never hides under 体力 / 撃破点 */
+  try{const hb=Math.max(document.getElementById('hudL').getBoundingClientRect().bottom,document.getElementById('hudR').getBoundingClientRect().bottom)-r.top;CEIL=Math.min(Math.max(40,hb+26),GROUND*0.45)}catch(e){CEIL=40}
+  makeScene()}
+addEventListener('resize',resize);if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>{if(W)resize()});
 
 /* ---------- audio ---------- */
 let AC=null,soundOn=true;
@@ -439,6 +442,10 @@ cv.addEventListener('pointerdown',e=>{
 addEventListener('pointermove',e=>{if(e.pointerId!==stickId)return;let dx=e.clientX-sx,dy=e.clientY-sy;const d=Math.hypot(dx,dy),m=40;if(d>m){dx*=m/d;dy*=m/d}tv.x=dx/m;tv.y=dy/m;knob.style.transform=`translate(${dx}px,${dy}px)`});
 const endStick=e=>{if(e.pointerId!==stickId)return;stickId=null;tv.x=tv.y=0;stick.style.display='none'};
 addEventListener('pointerup',endStick);addEventListener('pointercancel',endStick);
+/* arcade: never leave the stick stuck if iOS drops a pointerup (all fingers lifted / tab hidden) */
+const resetStick=()=>{stickId=null;tv.x=tv.y=0;stick.style.display='none'};
+addEventListener('touchend',e=>{if(!e.touches||e.touches.length===0)resetStick()},true);addEventListener('touchcancel',e=>{if(!e.touches||e.touches.length===0)resetStick()},true);
+addEventListener('blur',resetStick);document.addEventListener('visibilitychange',()=>{if(document.hidden)resetStick()});
 const tb=(id,fn)=>$(id).addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();if(S&&S.running)fn()});
 tb('tJ',()=>attack());tb('tK',()=>dash());tb('tL',()=>haki());
 
@@ -530,7 +537,7 @@ function update(rdt){
   }
   p.x+=p.vx*dt;p.y+=p.vy*dt;
   if(p.x<16){p.x=16;p.vx=0}if(p.x>W-16){p.x=W-16;p.vx=0}
-  if(p.y<40){p.y=40;p.vy=Math.max(0,p.vy)}
+  if(p.y<CEIL){p.y=CEIL;p.vy=Math.max(0,p.vy)}
   if(p.y>GROUND-22){p.y=GROUND-22;p.vy=0}
   p.atkT-=dt;p.chainT-=dt;p.dashCd-=dt;p.inv-=dt;
   p.trail.unshift([p.x,p.y]);if(p.trail.length>14)p.trail.pop();
