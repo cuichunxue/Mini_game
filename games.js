@@ -13,7 +13,7 @@
  *
  * サイト上の「管理」画面からも追加・削除できます（その場合はこのブラウザだけに保存されます）。
  */
-window.GAMES_VERSION = "27";
+window.GAMES_VERSION = "28";
 
 /* 管理画面のパスワード（SHA-256 ハッシュ。パスワードそのものは書かない）
  * 変更するには: "mini-game-arcade:" + 新しいパスワード を SHA-256 にかけた値に置き換える */
@@ -388,5 +388,14 @@ window.GAMES = [
     emoji: "🌀",
     color: "#8a1f6a",
     accent: "#ffd23f"
+  },
+  {
+    id: "cliff-descent-king",
+    title: "CLIFF DESCENT KING",
+    description: "乗客18人を乗せたバスで断崖絶壁を下れ！ブレーキは踏むほど熱くなる。LOWギアと補助ブレーキを使いこなす物理運転ゲーム。",
+    path: "games/cliff-descent-king/index.html",
+    emoji: "🚌",
+    color: "#3a4a52",
+    accent: "#ffb020"
   }
 ];

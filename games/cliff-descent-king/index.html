@@ -1,0 +1,889 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>CLIFF DESCENT KING</title>
+<meta name="theme-color" content="#0e1a22">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=M+PLUS+1p:wght@500;800&family=Chakra+Petch:wght@600;700&display=swap">
+<style>
+[hidden]{display:none!important}
+:root{
+  --ink:#f3f6f4; --mute:#a9bcc4; --panel:rgba(10,20,28,.72); --line:rgba(255,255,255,.18);
+  --ok:#5fdc9b; --warn:#ffc83d; --hot:#ff8a3d; --bad:#ff4d4d; --acc:#ffb020;
+  --disp:"Dela Gothic One","Hiragino Sans","Yu Gothic",system-ui,sans-serif;
+  --body:"M PLUS 1p","Hiragino Sans","Yu Gothic",system-ui,sans-serif;
+  --num:"Chakra Petch",ui-monospace,Menlo,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden;background:#0e1a22;color:var(--ink);font-family:var(--body);
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:none;overscroll-behavior:none}
+#app{position:fixed;inset:0}
+#cv{position:absolute;inset:0;width:100%;height:100%;display:block}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+
+/* ---------- HUD ---------- */
+#hud{position:absolute;left:0;right:0;top:0;pointer-events:none;padding:calc(env(safe-area-inset-top,0px) + 8px) max(10px,env(safe-area-inset-right,0px)) 0 max(10px,env(safe-area-inset-left,0px));
+  display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:start}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px 10px}
+.lbl{font:700 9px var(--num);letter-spacing:.14em;color:var(--mute)}
+#spd{font:700 30px/1 var(--num);font-variant-numeric:tabular-nums}
+#spd small{font-size:11px;color:var(--mute);margin-left:3px}
+#gearTxt{font:700 11px var(--num);margin-top:2px}
+#gearTxt b{padding:1px 6px;border-radius:4px;background:#2a3a44}
+#gearTxt b.on{background:var(--acc);color:#1a1200}
+#mid{display:flex;flex-direction:column;align-items:center;gap:6px}
+#curve{font:800 12px var(--body);text-align:center;border-radius:10px;padding:5px 10px;background:var(--panel);border:1px solid var(--line);white-space:nowrap}
+#curve b{font:400 15px var(--disp);display:block}
+#curve.danger{border-color:var(--bad);color:#ffd0d0;animation:blink .5s steps(2) infinite}
+@keyframes blink{50%{opacity:.55}}
+#pax{font-size:15px;letter-spacing:-1px;background:var(--panel);border-radius:999px;padding:2px 10px;border:1px solid var(--line)}
+#tempBox{min-width:128px}
+#tempBar{height:8px;border-radius:4px;background:rgba(255,255,255,.15);overflow:hidden;margin:4px 0 2px}
+#tempBar i{display:block;height:100%;width:0;background:var(--ok);transition:background .2s}
+#tempTxt{font:700 13px var(--num)}
+#dist{font:700 13px var(--num);margin-top:4px}
+#hint{position:absolute;left:50%;top:30%;transform:translateX(-50%);max-width:92%;text-align:center;pointer-events:none;
+  background:rgba(8,16,22,.84);border:1px solid var(--acc);border-radius:12px;padding:8px 14px;font:800 14px var(--body);line-height:1.5;opacity:0;transition:opacity .3s}
+#hint.on{opacity:1}
+#warn{position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 0 0 rgba(255,40,40,0);transition:box-shadow .15s}
+#warn.on{box-shadow:inset 0 0 70px 18px rgba(255,40,40,.55)}
+#flash{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);font:400 clamp(26px,8vw,48px) var(--disp);text-shadow:0 4px 0 #000;pointer-events:none;opacity:0;white-space:nowrap}
+
+/* ---------- controls ---------- */
+#ctrl{position:absolute;left:0;right:0;bottom:0;pointer-events:none;
+  padding:0 max(12px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 12px) max(12px,env(safe-area-inset-left,0px));
+  display:flex;justify-content:space-between;align-items:flex-end}
+#wheelZone{pointer-events:auto;width:150px;height:150px;position:relative;touch-action:none}
+#wheel{position:absolute;inset:6px;border-radius:50%;border:10px solid #2b2f33;box-shadow:0 0 0 2px rgba(255,255,255,.35),inset 0 0 0 2px rgba(255,255,255,.15);background:rgba(10,20,28,.35)}
+#wheel::before{content:"";position:absolute;left:50%;top:50%;width:84%;height:12px;margin:-6px 0 0 -42%;background:#2b2f33;border-radius:6px}
+#wheel::after{content:"";position:absolute;left:50%;top:50%;width:12px;height:46%;margin:0 0 0 -6px;background:#2b2f33;border-radius:6px}
+#wheel i{position:absolute;left:50%;top:-12px;width:10px;height:14px;margin-left:-5px;background:var(--acc);border-radius:3px}
+#wheelLbl{position:absolute;left:0;right:0;bottom:-2px;text-align:center;font:700 10px var(--num);letter-spacing:.12em;color:var(--mute)}
+#right{pointer-events:auto;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto auto;gap:8px;width:190px}
+.tg{height:46px;border-radius:10px;border:2px solid var(--line);background:var(--panel);font:700 14px var(--num);letter-spacing:.06em;touch-action:none}
+.tg small{display:block;font:500 9px var(--body);color:var(--mute);letter-spacing:0}
+.tg.on{background:var(--acc);color:#1a1200;border-color:var(--acc)}
+.tg.on small{color:#3a2a00}
+#bBrake{grid-column:1/-1;height:86px;border-radius:14px;border:3px solid #ff6a5a;background:linear-gradient(180deg,#b3261e,#7a1610);font:400 22px var(--disp);letter-spacing:.06em;touch-action:none}
+#bBrake small{display:block;font:500 10px var(--body);opacity:.85}
+#bBrake.on{background:linear-gradient(180deg,#ff5a46,#c62a1c);transform:translateY(2px)}
+#sys{position:absolute;right:max(10px,env(safe-area-inset-right,0px));top:calc(env(safe-area-inset-top,0px) + 92px);display:flex;flex-direction:column;gap:6px;pointer-events:auto}
+#sys button{width:38px;height:38px;border-radius:10px;border:1px solid var(--line);background:var(--panel);font:700 14px var(--num)}
+
+/* ---------- screens ---------- */
+.ov{position:absolute;inset:0;z-index:10;overflow-y:auto;touch-action:pan-y;display:flex;flex-direction:column;
+  padding:calc(env(safe-area-inset-top,0px) + 16px) max(16px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 16px) max(16px,env(safe-area-inset-left,0px));
+  background:linear-gradient(180deg,rgba(8,14,20,.55),rgba(8,14,20,.94) 50%)}
+.ov .in{margin:auto;width:100%;max-width:560px;display:flex;flex-direction:column;gap:12px}
+.logo{margin:0;font:400 clamp(32px,9vw,54px)/1 var(--disp);letter-spacing:.01em;text-shadow:0 4px 0 #000}
+.logo span{color:var(--acc);display:block}
+.tag{margin:0;color:var(--mute);font-size:14px;line-height:1.6}
+.tag b{color:var(--ink)}
+.stages{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:8px}
+.st{text-align:left;border:1px solid var(--line);background:rgba(255,255,255,.05);border-radius:12px;padding:10px 12px;display:grid;grid-template-columns:1fr auto;gap:2px 10px}
+.st b{font:400 17px var(--disp)} .st small{grid-column:1;color:var(--mute);font-size:12px;line-height:1.45}
+.st .lv{font:700 11px var(--num);color:var(--acc)} .st .rk{grid-row:1/4;grid-column:2;align-self:center;font:400 28px var(--disp);color:var(--acc)}
+.st:hover{border-color:var(--acc)}
+.howto{background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:13px;line-height:1.7}
+.howto b{color:var(--acc)}
+.btn{display:block;width:100%;border:0;border-radius:12px;padding:13px;font:400 18px var(--disp);background:var(--acc);color:#1a1200;box-shadow:0 4px 0 #8a5a00}
+.btn.sub{background:rgba(255,255,255,.08);color:var(--ink);box-shadow:none;border:1px solid var(--line);font:800 14px var(--body)}
+.row{display:flex;gap:8px;flex-wrap:wrap} .row>*{flex:1 1 140px}
+h2{margin:0;font:400 26px var(--disp)}
+.cause{background:rgba(255,77,77,.12);border:1px solid var(--bad);border-radius:12px;padding:12px;text-align:center}
+.cause b{display:block;font:400 22px var(--disp);color:#ffb0a8}
+.cause p{margin:6px 0 0;font-size:14px}
+.cause p b{display:inline;font:800 15px var(--body);color:var(--acc)}
+.rank{font:400 80px/1 var(--disp);text-align:center;color:var(--acc);text-shadow:0 5px 0 #000}
+.total{text-align:center;font:700 22px var(--num)}
+.bars{display:flex;flex-direction:column;gap:6px}
+.bar{display:grid;grid-template-columns:90px 1fr 64px;gap:8px;align-items:center;font-size:13px}
+.bar .t{height:8px;background:rgba(255,255,255,.12);border-radius:4px;overflow:hidden}
+.bar .t i{display:block;height:100%;background:var(--acc)}
+.bar .n{font:700 13px var(--num);text-align:right}
+.data{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;font-size:13px}
+.data div{display:flex;justify-content:space-between;border-bottom:1px solid var(--line);padding:3px 0}
+.data b{font-family:var(--num)}
+.note{margin:0;font-size:12px;color:var(--mute);text-align:center}
+#replayTag{position:absolute;top:calc(env(safe-area-inset-top,0px) + 12px);left:50%;transform:translateX(-50%);z-index:9;font:700 14px var(--num);letter-spacing:.3em;color:#fff;background:#b3261e;padding:4px 12px;border-radius:4px}
+#err{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:24px;z-index:20;background:#0e1a22}
+@media (orientation:portrait){
+  #wheelZone{width:136px;height:136px}
+  #right{width:170px}
+  #bBrake{height:78px}
+}
+@media (max-height:460px){
+  #wheelZone{width:122px;height:122px}
+  #right{display:flex;width:auto;gap:8px;align-items:flex-end}
+  .tg{width:66px;height:62px;font-size:13px}
+  .tg small{font-size:8px}
+  #bBrake{width:118px;height:84px}
+  #spd{font-size:24px}
+  #sys{top:calc(env(safe-area-inset-top,0px) + 8px);right:calc(max(10px,env(safe-area-inset-right,0px)) + 150px);flex-direction:row}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <canvas id="cv"></canvas>
+  <div id="warn"></div>
+  <div id="hud" hidden>
+    <div class="box"><div class="lbl">SPEED</div><div id="spd">0<small>km/h</small></div><div id="gearTxt"><b id="gL">LOW</b> <b id="gH" class="on">HIGH</b> <b id="gA">AUX</b></div></div>
+    <div id="mid"><div id="curve" hidden></div><div id="pax">😀😀😀</div></div>
+    <div class="box" id="tempBox"><div class="lbl">BRAKE TEMP</div><div id="tempBar"><i></i></div><div id="tempTxt">20% 正常</div><div class="lbl" style="margin-top:4px">DISTANCE</div><div id="dist">0.0 km</div></div>
+  </div>
+  <div id="hint"></div>
+  <div id="flash"></div>
+  <div id="sys" hidden><button id="bPause" type="button" aria-label="一時停止">II</button><button id="bSound" type="button" aria-label="音">♪</button></div>
+  <div id="ctrl" hidden>
+    <div id="wheelZone" aria-label="ハンドル（左右にドラッグ）"><div id="wheel"><i></i></div><div id="wheelLbl">STEER</div></div>
+    <div id="right">
+      <button class="tg" id="bGear" type="button">LOW<small>ギア切替</small></button>
+      <button class="tg" id="bAux" type="button">AUX<small>補助ブレーキ</small></button>
+      <button id="bBrake" type="button">BRAKE<small>長押し</small></button>
+    </div>
+  </div>
+  <div id="replayTag" hidden>REPLAY</div>
+
+  <section class="ov" id="scrTitle">
+    <div class="in">
+      <h1 class="logo">CLIFF DESCENT<span>KING</span></h1>
+      <p class="tag">ブレーキを踏めば熱くなる。踏まなければ止まらない。<b>乗客18人の命</b>を乗せて、断崖絶壁を下れ。</p>
+      <div class="howto">
+        <b>ハンドル</b> 左下を左右にドラッグ（← →）　<b>BRAKE</b> 長押し（↓ / Space）<br>
+        <b>LOW</b> ギアでエンジンブレーキ（G）　<b>AUX</b> 補助ブレーキは熱くならない（X）<br>
+        フットブレーキは使うほど熱くなり、<b>70%を超えると効きが落ちる</b>。長い坂は LOW と AUX で。
+      </div>
+      <div class="stages" id="stages"></div>
+      <p class="note">スマホは横画面がおすすめ ・ 最高記録はこの端末に保存</p>
+    </div>
+  </section>
+
+  <section class="ov" id="scrPause" hidden>
+    <div class="in" style="max-width:380px">
+      <h2>一時停止</h2>
+      <button class="btn" id="bResume" type="button">再開</button>
+      <button class="btn sub" id="bRetryP" type="button">最初からやり直す（R）</button>
+      <button class="btn sub" id="bSound2" type="button">音：ON</button>
+      <button class="btn sub" id="bToTitleP" type="button">ステージ選択へ</button>
+    </div>
+  </section>
+
+  <section class="ov" id="scrFail" hidden>
+    <div class="in" style="max-width:440px">
+      <h2 style="text-align:center" id="failTitle">転落…</h2>
+      <div class="cause"><b id="failCause"></b><p>ヒント：<b id="failHint"></b></p></div>
+      <div class="data" id="failData"></div>
+      <button class="btn" id="bRetry" type="button">もう一度（R）</button>
+      <div class="row"><button class="btn sub" id="bReplay" type="button">▶ 直前3秒のリプレイ</button><button class="btn sub" id="bPractice" type="button">難所の手前から練習</button></div>
+      <button class="btn sub" id="bToTitleF" type="button">ステージ選択へ</button>
+    </div>
+  </section>
+
+  <section class="ov" id="scrResult" hidden>
+    <div class="in" style="max-width:460px">
+      <p class="note" id="resStage"></p>
+      <h2 style="text-align:center" id="resTitle">村に到着！</h2>
+      <div class="rank" id="resRank">S</div>
+      <div class="total" id="resTotal">0 / 100</div>
+      <p class="note" id="resBest"></p>
+      <div class="bars" id="resBars"></div>
+      <div class="data" id="resData"></div>
+      <p class="note" id="resEvents"></p>
+      <button class="btn" id="bNext" type="button">次のステージへ</button>
+      <div class="row"><button class="btn sub" id="bAgain" type="button">もう一度</button><button class="btn sub" id="bToTitleR" type="button">ステージ選択へ</button></div>
+    </div>
+  </section>
+</div>
+
+<script src="../shared/three.min.js"></script>
+<script>window.THREE||document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>')</script>
+<script>
+(() => {
+'use strict';
+/* =====================================================================
+   CLIFF DESCENT KING
+   modules (single file, sections named after the spec):
+   stageManager · roadGenerator · vehiclePhysics · brakeSystem · collisionSystem
+   cameraController · inputController · scoring · audio · ui · game
+   ===================================================================== */
+const $ = id => document.getElementById(id);
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+const lerp = (a, b, t) => a + (b - a) * t;
+const G = 9.81, DT = 1 / 60, D2R = Math.PI / 180;
+function webglOK() { try { const c = document.createElement('canvas'); return !!(window.WebGLRenderingContext && (c.getContext('webgl') || c.getContext('experimental-webgl'))); } catch (e) { return false; } }
+if (!window.THREE || !webglOK()) {
+  document.body.insertAdjacentHTML('beforeend', '<div id="err"><div><h2>3D表示を開始できません</h2><p class="tag">このブラウザまたは端末は WebGL に対応していないか、無効になっています。<br>最新の Chrome / Safari / Edge でお試しください。</p></div></div>');
+  return;
+}
+
+/* =========================== stageManager =========================== */
+// seg: s = straight {len, g(grade, + = downhill)}, c = curve {ang(deg, + = right), R}
+// w = road width, flags: bridge, village, cp (practice checkpoint), sign, goat, cars, chicken
+const STAGES = [
+  { id: 1, name: 'FIRST DESCENT', jp: '初めての下り坂', lv: '初級', mu: .50, fog: null, posts: true, sky: 0x9fc9e8,
+    desc: '広めの道路と緩いカーブ。ハンドルとブレーキを覚えよう。', h0: 90, valley: [0, 1],
+    segs: [{ s: 60, g: .04, w: 7.6, sign: 'ようこそ 断崖ルートへ' }, { s: 80, g: .05, w: 7.6 }, { c: 18, R: 150, g: .05, w: 7.6 }, { c: -22, R: 150, g: .05, w: 7.6 },
+      { s: 120, g: .06, w: 7.4, sign: 'この先 ヘアピン　減速！', cp: 1 }, { c: 180, R: 30, g: .04, w: 7.6 }, { s: 230, g: .07, w: 7.4, goat: 120, cp: 1 },
+      { c: -180, R: 30, g: .04, w: 7.6 }, { s: 140, g: .065, w: 7.4, sign: 'ブレーキは友達。' }, { c: -14, R: 160, g: .06, w: 7.4 }, { c: 14, R: 160, g: .06, w: 7.4 },
+      { s: 150, g: .05, w: 7.4, chicken: 1 }, { s: 70, g: 0, w: 8, village: 1 }] },
+  { id: 2, name: 'BRAKE HELL', jp: 'ブレーキ地獄', lv: '中級', mu: .46, fog: null, posts: true, sky: 0xb7c6d6,
+    desc: '12%の長い急坂と5連続ヘアピン。ブレーキ熱の管理が主役。', h0: 90, valley: [0, 1],
+    segs: [{ s: 40, g: .06, w: 6.8 }, { s: 330, g: .12, w: 6.8, sign: '急勾配12%　LOWギアを使え', cp: 1 }, { c: 40, R: 90, g: .10, w: 6.8 }, { s: 60, g: .11, w: 6.8 },
+      { c: 180, R: 23, g: .06, w: 7, cp: 1 }, { s: 150, g: .11, w: 6.6, sing: 1 }, { c: -180, R: 23, g: .06, w: 7 }, { s: 150, g: .11, w: 6.6, sign: 'ヘアピン地獄へようこそ' },
+      { c: 180, R: 21, g: .06, w: 7, cp: 1 }, { s: 140, g: .12, w: 6.6, chicken: 1 }, { c: -180, R: 21, g: .06, w: 7 }, { s: 140, g: .11, w: 6.6 },
+      { c: 180, R: 23, g: .06, w: 7, cp: 1 }, { s: 200, g: .10, w: 6.8, sign: '村まで あと少し' }, { s: 70, g: 0, w: 8, village: 1 }] },
+  { id: 3, name: 'FOG BRIDGE', jp: '霧の吊り橋', lv: '上級', mu: .40, fog: [0xaab4ba, 6, 78], posts: true, sky: 0xaab4ba,
+    desc: '濃霧・濡れた路面・狭い橋・対向車。先読みと慎重な運転を。', h0: 90, valley: [0, 1],
+    segs: [{ s: 60, g: .05, w: 6.4 }, { s: 140, g: .08, w: 6.4, sign: '霧に注意　対向車あり' }, { c: -25, R: 110, g: .08, w: 6.4 }, { c: 25, R: 110, g: .08, w: 6.4 },
+      { s: 140, g: .07, w: 6.4, cars: [60], cp: 1 }, { s: 130, g: .02, w: 4.6, bridge: 1, sign: '狭い橋　すれ違い不可' }, { s: 150, g: .08, w: 6.4, cars: [110] },
+      { c: 180, R: 26, g: .05, w: 6.8, cp: 1 }, { s: 240, g: .08, w: 6.4, cars: [40, 170] }, { c: -180, R: 26, g: .05, w: 6.8, cp: 1 }, { s: 150, g: .08, w: 6.4, sing: 1 },
+      { c: 30, R: 100, g: .07, w: 6.4 }, { s: 150, g: .07, w: 6.4 }, { s: 70, g: 0, w: 8, village: 1 }] },
+  { id: 4, name: 'LAST CURVE', jp: '最後のカーブ', lv: '最終', mu: .46, fog: null, posts: false, sky: 0xd9a77a,
+    desc: '最大勾配14%と連続急カーブ。習得した技術をすべて使え。', h0: 90, valley: [0, 1],
+    segs: [{ s: 40, g: .06, w: 6.2 }, { s: 220, g: .14, w: 6.2, sign: '最大勾配14%', cp: 1 }, { c: 55, R: 42, g: .12, w: 6.4 }, { c: -65, R: 36, g: .12, w: 6.4 }, { c: 50, R: 42, g: .12, w: 6.4 },
+      { s: 100, g: .13, w: 6.2, goat: 50, cp: 1 }, { c: 180, R: 19, g: .07, w: 6.8, cp: 1 }, { s: 160, g: .13, w: 6.2, sign: 'ラストカーブまで あと2つ' }, { c: -180, R: 19, g: .07, w: 6.8, cp: 1 },
+      { s: 160, g: .14, w: 6.2, sing: 1 }, { c: 180, R: 18, g: .07, w: 6.8, cp: 1 }, { s: 200, g: .12, w: 6.2 }, { c: -30, R: 80, g: .08, w: 6.4 }, { s: 70, g: 0, w: 8, village: 1 }] }
+];
+
+/* =========================== roadGenerator =========================== */
+// Integrate segments into a raw polyline, smooth it through a Catmull-Rom spline and
+// resample every SP metres; compute tangent, right normal, curvature, grade and cliff side.
+const SP = 2;
+function buildRoad(st) {
+  let x = 0, z = 0, y = 0, h = st.h0 * D2R; const raw = [], meta = [];
+  const push = seg => { raw.push(new THREE.Vector3(x, y, z)); meta.push(seg); };
+  push(st.segs[0]);
+  for (const seg of st.segs) {
+    if (seg.s) { const n = Math.round(seg.s / SP); for (let i = 0; i < n; i++) { x += Math.sin(h) * SP; z += Math.cos(h) * SP; y -= seg.g * SP; push(seg); } }
+    else { const L = Math.abs(seg.c) * D2R * seg.R, n = Math.max(2, Math.round(L / SP)), dh = -seg.c * D2R / n, ds = L / n;
+      for (let i = 0; i < n; i++) { h += dh; x += Math.sin(h) * ds; z += Math.cos(h) * ds; y -= seg.g * ds; push(seg); } }
+  }
+  const ctrl = raw.filter((_, i) => i % 4 === 0 || i === raw.length - 1);
+  const curve = new THREE.CatmullRomCurve3(ctrl, false, 'centripetal');
+  const len = curve.getLength(), N = Math.floor(len / SP);
+  const P = curve.getSpacedPoints(N);
+  const R = { N: P.length, len: (P.length - 1) * SP, x: [], y: [], z: [], tx: [], tz: [], rx: [], rz: [], k: [], g: [], w: [], side: [], seg: [], sign: [] };
+  for (let i = 0; i < P.length; i++) {
+    const m = meta[Math.min(meta.length - 1, Math.round(i / (P.length - 1) * (meta.length - 1)))];
+    const a = P[Math.max(0, i - 1)], b = P[Math.min(P.length - 1, i + 1)];
+    let tx = b.x - a.x, tz = b.z - a.z; const tl = Math.hypot(tx, tz) || 1; tx /= tl; tz /= tl;
+    R.x.push(P[i].x); R.y.push(P[i].y); R.z.push(P[i].z); R.tx.push(tx); R.tz.push(tz); R.rx.push(-tz); R.rz.push(tx);
+    R.w.push(m.w); R.seg.push(m);
+  }
+  for (let i = 0; i < R.N; i++) {
+    const a = Math.max(0, i - 2), b = Math.min(R.N - 1, i + 2);
+    const ha = Math.atan2(R.tx[a], R.tz[a]), hb = Math.atan2(R.tx[b], R.tz[b]);
+    let dh = hb - ha; while (dh > Math.PI) dh -= 2 * Math.PI; while (dh < -Math.PI) dh += 2 * Math.PI;
+    R.k.push(-dh / ((b - a) * SP)); // + = right turn
+    R.g.push(-(R.y[Math.min(R.N - 1, i + 1)] - R.y[Math.max(0, i - 1)]) / (2 * SP)); // + = downhill
+  }
+  // cliff side: valley side on straights, outer side in sharp curves (+1 right, -1 left, 0 both, 2 flat)
+  let prev = 1; const [vx, vz] = st.valley;
+  for (let i = 0; i < R.N; i++) {
+    const m = R.seg[i];
+    let s;
+    if (m.village) s = 2; else if (m.bridge) s = 0;
+    else { const d = R.rx[i] * vx + R.rz[i] * vz; if (Math.abs(R.k[i]) > 1 / 50) s = R.k[i] > 0 ? -1 : 1; else if (Math.abs(d) > .3) s = Math.sign(d); else s = prev; }
+    if (s === 1 || s === -1) prev = s; R.side.push(s);
+  }
+  R.cps = []; let lastSeg = null;
+  for (let i = 0; i < R.N; i++) { const m = R.seg[i]; if (m !== lastSeg) { if (m.cp) R.cps.push(Math.max(0, i * SP - 50)); lastSeg = m; } }
+  R.minY = Math.min(...R.y);
+  return R;
+}
+function roadAt(Rd, s) { // interpolated sample
+  const f = clamp(s / SP, 0, Rd.N - 1.001), i = Math.floor(f), t = f - i;
+  return { i, x: lerp(Rd.x[i], Rd.x[i + 1], t), y: lerp(Rd.y[i], Rd.y[i + 1], t), z: lerp(Rd.z[i], Rd.z[i + 1], t), tx: Rd.tx[i], tz: Rd.tz[i], rx: Rd.rx[i], rz: Rd.rz[i], w: Rd.w[i], side: Rd.side[i], g: Rd.g[i], k: Rd.k[i] };
+}
+
+/* ---------- 3D scene ---------- */
+const cv = $('cv');
+const renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true, powerPreference: 'high-performance' });
+let quality = Math.min(2, window.devicePixelRatio || 1);
+renderer.setPixelRatio(quality);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(62, 1, .3, 4000);
+function resize() { const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.fov = w < h ? 74 : 60; camera.updateProjectionMatrix(); }
+addEventListener('resize', resize); resize();
+const hemi = new THREE.HemisphereLight(0xdfefff, 0x5a4a3a, .95); scene.add(hemi);
+const sun = new THREE.DirectionalLight(0xfff2dc, .85); sun.position.set(-300, 500, -200); scene.add(sun);
+
+function canvasTex(w, h, draw, rep) { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new THREE.CanvasTexture(c); if (rep) { t.wrapS = t.wrapT = THREE.RepeatWrapping; } t.anisotropy = 4; return t; }
+const roadTex = canvasTex(256, 256, (g, w, h) => {
+  g.fillStyle = '#4a4e52'; g.fillRect(0, 0, w, h);
+  for (let i = 0; i < 1800; i++) { g.fillStyle = `rgba(${Math.random() < .5 ? 255 : 0},${Math.random() < .5 ? 255 : 0},${Math.random() < .5 ? 255 : 0},.05)`; g.fillRect(Math.random() * w, Math.random() * h, 2, 2); }
+  g.fillStyle = '#f2f2ea'; g.fillRect(6, 0, 7, h); g.fillRect(w - 13, 0, 7, h);
+  g.fillStyle = '#f2c230'; g.fillRect(w / 2 - 4, 0, 8, h * .55);
+}, true);
+const rockTex = canvasTex(128, 128, (g, w, h) => {
+  g.fillStyle = '#7a6e62'; g.fillRect(0, 0, w, h);
+  for (let i = 0; i < 260; i++) { const c = 90 + Math.random() * 70; g.fillStyle = `rgb(${c},${c * .92},${c * .82})`; g.fillRect(Math.random() * w, Math.random() * h, 3 + Math.random() * 10, 2 + Math.random() * 5); }
+  g.strokeStyle = 'rgba(40,30,25,.5)'; for (let i = 0; i < 14; i++) { g.beginPath(); g.moveTo(Math.random() * w, 0); g.lineTo(Math.random() * w, h); g.stroke(); }
+}, true);
+const MAT = {
+  road: new THREE.MeshLambertMaterial({ map: roadTex }),
+  rock: new THREE.MeshLambertMaterial({ map: rockTex, side: THREE.DoubleSide }),
+  cliff: new THREE.MeshLambertMaterial({ map: rockTex, color: 0x9a8a7a, side: THREE.DoubleSide }),
+  grass: new THREE.MeshLambertMaterial({ color: 0x5f7f45, side: THREE.DoubleSide }),
+  valley: new THREE.MeshLambertMaterial({ color: 0x3f5a3a }),
+  post: new THREE.MeshLambertMaterial({ color: 0xf2f2ee }),
+  tree: new THREE.MeshLambertMaterial({ color: 0x2f5a32 }),
+  trunk: new THREE.MeshLambertMaterial({ color: 0x5a3e2a }),
+  rail: new THREE.MeshLambertMaterial({ color: 0xc8ccd0 }),
+  mountain: new THREE.MeshLambertMaterial({ color: 0x6f7f72, flatShading: true })
+};
+let world = null; // THREE.Group of the current stage
+function ribbon(rows, mat, vRepeat) { // rows: [[{x,y,z,u}...], ...] per sample
+  const n = rows.length, m = rows[0].length, pos = new Float32Array(n * m * 3), uv = new Float32Array(n * m * 2), idx = [];
+  for (let i = 0; i < n; i++) for (let j = 0; j < m; j++) { const p = rows[i][j], o = (i * m + j); pos[o * 3] = p.x; pos[o * 3 + 1] = p.y; pos[o * 3 + 2] = p.z; uv[o * 2] = p.u; uv[o * 2 + 1] = i * SP / vRepeat; }
+  for (let i = 0; i < n - 1; i++) for (let j = 0; j < m - 1; j++) { const a = i * m + j, b = a + 1, c = a + m, d = c + 1; idx.push(a, c, b, b, c, d); }
+  const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2)); geo.setIndex(idx); geo.computeVertexNormals();
+  return new THREE.Mesh(geo, mat);
+}
+function textSign(text, w = 8, h = 2.4) {
+  const t = canvasTex(512, 154, (g, W, H) => { g.fillStyle = '#ffd23f'; g.fillRect(0, 0, W, H); g.strokeStyle = '#1a1a1a'; g.lineWidth = 12; g.strokeRect(6, 6, W - 12, H - 12);
+    g.fillStyle = '#1a1a1a'; g.font = '800 58px "M PLUS 1p","Hiragino Sans",sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, W / 2, H / 2 + 2, W - 40); });
+  const grp = new THREE.Group();
+  const board = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshLambertMaterial({ map: t, side: THREE.DoubleSide })); board.position.y = 3.6; grp.add(board);
+  for (const sx of [-w / 2 + .5, w / 2 - .5]) { const p = new THREE.Mesh(new THREE.BoxGeometry(.25, 3, .25), MAT.trunk); p.position.set(sx, 1.4, 0); grp.add(p); }
+  return grp;
+}
+function buildWorld(st, Rd) {
+  if (world) { scene.remove(world); world.traverse(o => { if (o.geometry) o.geometry.dispose(); }); }
+  world = new THREE.Group(); scene.add(world);
+  scene.background = new THREE.Color(st.sky);
+  scene.fog = st.fog ? new THREE.Fog(st.fog[0], st.fog[1], st.fog[2]) : new THREE.Fog(st.sky, 160, 900);
+  hemi.intensity = st.fog ? .8 : .95;
+  // road surface
+  const rows = [], left = [], right = [];
+  for (let i = 0; i < Rd.N; i++) {
+    const x = Rd.x[i], y = Rd.y[i] + .02, z = Rd.z[i], hw = Rd.w[i] / 2, rx = Rd.rx[i], rz = Rd.rz[i];
+    rows.push([{ x: x - rx * hw, y, z: z - rz * hw, u: 0 }, { x: x + rx * hw, y, z: z + rz * hw, u: 1 }]);
+    const prof = sgn => { // sgn: -1 left, +1 right
+      const side = Rd.side[i], ex = x + rx * hw * sgn, ez = z + rz * hw * sgn, ox = rx * sgn, oz = rz * sgn;
+      if (side === 2) return [{ x: ex, y: y - .02, z: ez, u: 0 }, { x: ex + ox * 18, y: y - .2, z: ez + oz * 18, u: .5 }, { x: ex + ox * 60, y: y - 1, z: ez + oz * 60, u: 1 }];
+      const cliff = side === 0 || side === sgn;
+      if (cliff) return [{ x: ex + ox * .3, y: y - .05, z: ez + oz * .3, u: 0 }, { x: ex + ox * 1.6, y: y - 3, z: ez + oz * 1.6, u: .12 }, { x: ex + ox * 7, y: y - 75, z: ez + oz * 7, u: 1 }];
+      return [{ x: ex + ox * .2, y: y + .1, z: ez + oz * .2, u: 0 }, { x: ex + ox * 1.2, y: y + 3.2, z: ez + oz * 1.2, u: .3 }, { x: ex + ox * 9, y: y + 6.5, z: ez + oz * 9, u: 1 }];
+    };
+    left.push(prof(-1)); right.push(prof(1));
+  }
+  world.add(ribbon(rows, MAT.road, 16));
+  world.add(ribbon(left, MAT.rock, 10)); world.add(ribbon(right, MAT.rock, 10));
+  // valley floor + distant mountains
+  const vf = new THREE.Mesh(new THREE.PlaneGeometry(9000, 9000), MAT.valley); vf.rotation.x = -Math.PI / 2; vf.position.set(Rd.x[Rd.N >> 1], Rd.minY - 160, Rd.z[Rd.N >> 1]); world.add(vf);
+  const cx = Rd.x[Rd.N >> 1], cz = Rd.z[Rd.N >> 1];
+  for (let i = 0; i < 14; i++) {
+    const a = i / 14 * Math.PI * 2 + .3, r = 1300 + (i % 3) * 300, hgt = 500 + (i * 137 % 400);
+    const m = new THREE.Mesh(new THREE.ConeGeometry(350 + (i * 53 % 200), hgt, 7), MAT.mountain); m.position.set(cx + Math.cos(a) * r, Rd.minY - 160 + hgt / 2, cz + Math.sin(a) * r); world.add(m);
+  }
+  // guard posts on cliff edges, trees on the mountain side
+  const postPos = [], treePos = [];
+  for (let i = 0; i < Rd.N; i += 4) {
+    const hw = Rd.w[i] / 2, side = Rd.side[i];
+    for (const sgn of [-1, 1]) {
+      const cliff = side === 0 || side === sgn;
+      if (side === 2) continue;
+      if (cliff && (st.posts || Rd.seg[i].bridge)) postPos.push([Rd.x[i] + Rd.rx[i] * (hw + .25) * sgn, Rd.y[i] + .35, Rd.z[i] + Rd.rz[i] * (hw + .25) * sgn]);
+      if (!cliff && (i * 7919) % 3 === 0) { const o = hw + 5 + ((i * 31) % 5); treePos.push([Rd.x[i] + Rd.rx[i] * o * sgn, Rd.y[i] + 4.5 + (o - hw - 5) * .4, Rd.z[i] + Rd.rz[i] * o * sgn, .8 + ((i * 13) % 7) / 10]); }
+    }
+  }
+  const dm = new THREE.Object3D();
+  if (postPos.length) { const pm = new THREE.InstancedMesh(new THREE.BoxGeometry(.22, .7, .22), MAT.post, postPos.length); postPos.forEach((p, k) => { dm.position.set(...p); dm.rotation.set(0, 0, 0); dm.scale.set(1, 1, 1); dm.updateMatrix(); pm.setMatrixAt(k, dm.matrix); }); world.add(pm); }
+  if (treePos.length) {
+    const tm = new THREE.InstancedMesh(new THREE.ConeGeometry(2.2, 7, 6), MAT.tree, treePos.length);
+    treePos.forEach((p, k) => { dm.position.set(p[0], p[1] + 3.5 * p[3], p[2]); dm.scale.set(p[3], p[3], p[3]); dm.updateMatrix(); tm.setMatrixAt(k, dm.matrix); }); world.add(tm);
+  }
+  // bridge: rails + piers
+  for (let i = 0; i < Rd.N; i++) if (Rd.seg[i].bridge && i % 6 === 0) {
+    for (const sgn of [-1, 1]) { const hw = Rd.w[i] / 2 + .3, x = Rd.x[i] + Rd.rx[i] * hw * sgn, z = Rd.z[i] + Rd.rz[i] * hw * sgn;
+      const pier = new THREE.Mesh(new THREE.BoxGeometry(.5, 70, .5), MAT.rail); pier.position.set(x, Rd.y[i] - 35, z); world.add(pier); }
+  }
+  // signs
+  let lastSeg = null;
+  for (let i = 0; i < Rd.N; i++) {
+    const m = Rd.seg[i]; if (m === lastSeg) continue; lastSeg = m;
+    if (m.sign) { const j = Math.min(Rd.N - 1, i + 8), side = Rd.side[j], sgn = side === 1 ? -1 : 1, hw = Rd.w[j] / 2;
+      const sg = textSign(m.sign); sg.position.set(Rd.x[j] + Rd.rx[j] * (hw + 2) * sgn, Rd.y[j], Rd.z[j] + Rd.rz[j] * (hw + 2) * sgn); sg.rotation.y = Math.atan2(-Rd.tx[j], -Rd.tz[j]); world.add(sg); }
+  }
+  // village at the end
+  village = []; const e = Rd.N - 1;
+  for (let k = 0; k < 8; k++) {
+    const along = -10 - k * 9, sgn = k % 2 ? 1 : -1, off = Rd.w[e] / 2 + 6 + (k % 3) * 4;
+    const j = Math.max(0, e + Math.round(along / SP)), x = Rd.x[j] + Rd.rx[j] * off * sgn, z = Rd.z[j] + Rd.rz[j] * off * sgn;
+    const house = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.BoxGeometry(6, 4, 6), new THREE.MeshLambertMaterial({ color: [0xe8dcc8, 0xd8c4a8, 0xf0e6d6][k % 3] })); body.position.y = 2; house.add(body);
+    const roof = new THREE.Mesh(new THREE.ConeGeometry(5.2, 3, 4), new THREE.MeshLambertMaterial({ color: [0x8a3a2a, 0x3a4a6a, 0x5a3a2a][k % 3] })); roof.position.y = 5.5; roof.rotation.y = Math.PI / 4; house.add(roof);
+    house.position.set(x, Rd.y[j], z); world.add(house);
+  }
+  for (let k = 0; k < 10; k++) {
+    const j = Math.max(0, e - 6 - k * 2), sgn = k % 2 ? 1 : -1, off = Rd.w[j] / 2 + 1.6;
+    const v = new THREE.Group(); const b = new THREE.Mesh(new THREE.CylinderGeometry(.3, .35, 1.2, 6), new THREE.MeshLambertMaterial({ color: [0xd94a3a, 0x3a7ad9, 0xf2c230, 0x5aa04a][k % 4] })); b.position.y = .6; v.add(b);
+    const hd = new THREE.Mesh(new THREE.SphereGeometry(.26, 8, 6), new THREE.MeshLambertMaterial({ color: 0xf0c8a0 })); hd.position.y = 1.45; v.add(hd);
+    v.position.set(Rd.x[j] + Rd.rx[j] * off * sgn, Rd.y[j], Rd.z[j] + Rd.rz[j] * off * sgn); world.add(v); village.push(v);
+  }
+  const gate = textSign('ようこそ 村へ！ GOAL', 9, 2.2); gate.position.set(Rd.x[e - 12], Rd.y[e - 12] + 2, Rd.z[e - 12]); gate.rotation.y = Math.atan2(-Rd.tx[e - 12], -Rd.tz[e - 12]); world.add(gate);
+}
+let village = [];
+
+/* ---------- vehicles (low-poly) ---------- */
+function makeBus() {
+  const g = new THREE.Group(), body = new THREE.Group(); g.add(body);
+  const paint = new THREE.MeshLambertMaterial({ color: 0xf2efe6 }), stripe = new THREE.MeshLambertMaterial({ color: 0xd94a2a }), glass = new THREE.MeshLambertMaterial({ color: 0x1e2c36 }), dark = new THREE.MeshLambertMaterial({ color: 0x222222 });
+  const main = new THREE.Mesh(new THREE.BoxGeometry(2.4, 2.5, 9.6), paint); main.position.y = 1.75; body.add(main);
+  const roof = new THREE.Mesh(new THREE.BoxGeometry(2.3, .25, 9.2), new THREE.MeshLambertMaterial({ color: 0xdcd8cc })); roof.position.y = 3.1; body.add(roof);
+  const s1 = new THREE.Mesh(new THREE.BoxGeometry(2.42, .35, 9.62), stripe); s1.position.y = 1.2; body.add(s1);
+  const win = new THREE.Mesh(new THREE.BoxGeometry(2.44, .9, 8.2), glass); win.position.set(0, 2.35, -.4); body.add(win);
+  const ws = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.2, .1), glass); ws.position.set(0, 2.2, 4.81); body.add(ws);
+  const rear = new THREE.Mesh(new THREE.BoxGeometry(2.0, .8, .1), glass); rear.position.set(0, 2.4, -4.81); body.add(rear);
+  const lightM = new THREE.MeshBasicMaterial({ color: 0xfff6c8 }), tailM = new THREE.MeshBasicMaterial({ color: 0xff2a1a });
+  for (const sx of [-.85, .85]) { const hl = new THREE.Mesh(new THREE.BoxGeometry(.4, .25, .08), lightM); hl.position.set(sx, 1.0, 4.82); body.add(hl);
+    const tl = new THREE.Mesh(new THREE.BoxGeometry(.35, .3, .08), tailM); tl.position.set(sx, 1.0, -4.82); body.add(tl); g.userData.tail = g.userData.tail || []; g.userData.tail.push(tl); }
+  const wheels = [];
+  for (const [wx, wz] of [[-1.1, 3.1], [1.1, 3.1], [-1.1, -3.0], [1.1, -3.0]]) { const w = new THREE.Mesh(new THREE.CylinderGeometry(.55, .55, .4, 12), dark); w.rotation.z = Math.PI / 2; w.position.set(wx, .55, wz); g.add(w); wheels.push(w); }
+  const shadow = new THREE.Mesh(new THREE.PlaneGeometry(3, 10.5), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: .32, depthWrite: false })); shadow.rotation.x = -Math.PI / 2; shadow.position.y = .05; g.add(shadow);
+  g.userData.body = body; g.userData.wheels = wheels;
+  return g;
+}
+function makeCar() {
+  const g = new THREE.Group();
+  const b = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.1, 4.2), new THREE.MeshLambertMaterial({ color: 0x2a5ab0 })); b.position.y = .85; g.add(b);
+  const c = new THREE.Mesh(new THREE.BoxGeometry(1.6, .7, 2.2), new THREE.MeshLambertMaterial({ color: 0x1e2c36 })); c.position.set(0, 1.7, -.2); g.add(c);
+  const glow = canvasTex(64, 64, (x, w, h) => { const r = x.createRadialGradient(32, 32, 0, 32, 32, 32); r.addColorStop(0, 'rgba(255,250,220,1)'); r.addColorStop(.3, 'rgba(255,240,180,.6)'); r.addColorStop(1, 'rgba(255,240,180,0)'); x.fillStyle = r; x.fillRect(0, 0, w, h); });
+  for (const sx of [-.6, .6]) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glow, fog: false, depthWrite: false, transparent: true, blending: THREE.AdditiveBlending })); s.scale.set(2.2, 2.2, 1); s.position.set(sx, .9, 2.2); g.add(s); }
+  return g;
+}
+function makeGoat() {
+  const g = new THREE.Group(), white = new THREE.MeshLambertMaterial({ color: 0xf2efe6 }), dark = new THREE.MeshLambertMaterial({ color: 0x4a3a2a });
+  const b = new THREE.Mesh(new THREE.BoxGeometry(.6, .6, 1.2), white); b.position.y = .9; g.add(b);
+  const hd = new THREE.Mesh(new THREE.BoxGeometry(.35, .4, .5), white); hd.position.set(0, 1.35, .7); g.add(hd);
+  for (const sx of [-.12, .12]) { const h = new THREE.Mesh(new THREE.ConeGeometry(.05, .3, 4), dark); h.position.set(sx, 1.65, .6); h.rotation.x = -.5; g.add(h); }
+  for (const [lx, lz] of [[-.2, .4], [.2, .4], [-.2, -.4], [.2, -.4]]) { const l = new THREE.Mesh(new THREE.BoxGeometry(.12, .6, .12), dark); l.position.set(lx, .3, lz); g.add(l); }
+  return g;
+}
+const bus = makeBus(); scene.add(bus);
+
+/* =========================== audio =========================== */
+const AU = { ctx: null };
+function audioInit() {
+  if (!AU.ctx) {
+    try {
+      const C = window.AudioContext || window.webkitAudioContext, c = AU.ctx = new C();
+      AU.master = c.createGain(); AU.master.gain.value = SV.mute ? 0 : .8; AU.master.connect(c.destination);
+      const n = c.sampleRate * 2, b = c.createBuffer(1, n, c.sampleRate), d = b.getChannelData(0); for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1; AU.noise = b;
+      const mk = (type, f) => { const o = c.createOscillator(); o.type = type; o.frequency.value = f; o.start(); return o; };
+      const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 500; AU.eng = { o1: mk('sawtooth', 50), o2: mk('square', 25), lp, g: c.createGain() };
+      AU.eng.o1.connect(lp); AU.eng.o2.connect(lp); lp.connect(AU.eng.g); AU.eng.g.gain.value = 0; AU.eng.g.connect(AU.master);
+      const loop = (f0, type, q) => { const s = c.createBufferSource(); s.buffer = b; s.loop = true; s.start(); const f = c.createBiquadFilter(); f.type = type; f.frequency.value = f0; f.Q.value = q; const g = c.createGain(); g.gain.value = 0; s.connect(f); f.connect(g); g.connect(AU.master); return { f, g }; };
+      AU.squeal = loop(3400, 'bandpass', 8); AU.skid = loop(900, 'bandpass', 1.5); AU.wind = loop(500, 'lowpass', .5);
+    } catch (e) { AU.ctx = null; }
+  }
+  if (AU.ctx && AU.ctx.state !== 'running') { try { AU.ctx.resume(); } catch (e) {} }
+}
+const live = () => AU.ctx && AU.ctx.state === 'running' && !SV.mute;
+function beep(f, dur = .12, type = 'square', vol = .08, delay = 0) { if (!live()) return; const c = AU.ctx, t = c.currentTime + delay, o = c.createOscillator(), g = c.createGain(); o.type = type; o.frequency.value = f; g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.0001, t + dur); o.connect(g); g.connect(AU.master); o.start(t); o.stop(t + dur + .02); }
+function thump(vol = .6, dur = .5, f = 300) { if (!live()) return; const c = AU.ctx, t = c.currentTime, s = c.createBufferSource(), fl = c.createBiquadFilter(), g = c.createGain(); s.buffer = AU.noise; fl.type = 'lowpass'; fl.frequency.value = f; g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.0001, t + dur); s.connect(fl); fl.connect(g); g.connect(AU.master); s.start(t); s.stop(t + dur + .05); }
+function cheer() { if (!live()) return; const c = AU.ctx, t = c.currentTime, s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain(); s.buffer = AU.noise; f.type = 'bandpass'; f.frequency.value = 1500; f.Q.value = .6; g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.35, t + .3); g.gain.exponentialRampToValueAtTime(.0001, t + 3); s.connect(f); f.connect(g); g.connect(AU.master); s.start(t); s.stop(t + 3.1);
+  for (let i = 0; i < 14; i++) setTimeout(() => thump(.25, .05, 3000), 200 + i * 140 + Math.random() * 60); [523, 659, 784, 1047].forEach((n, i) => beep(n, .3, 'triangle', .08, i * .12)); }
+function song() { [392, 440, 494, 523, 494, 440, 392, 330, 392, 440, 392].forEach((n, i) => beep(n, .28, 'triangle', .05, i * .32)); }
+function setEngineSound() {
+  if (!AU.ctx || !AU.eng) return; const c = AU.ctx, t = c.currentTime, on = live() && game.mode === 'drive';
+  const rpm = (S ? S.v : 0) * (S && S.low ? 9 : 4.5) + 22;
+  AU.eng.o1.frequency.setTargetAtTime(rpm, t, .1); AU.eng.o2.frequency.setTargetAtTime(rpm / 2, t, .1); AU.eng.lp.frequency.setTargetAtTime(300 + rpm * 6, t, .1);
+  AU.eng.g.gain.setTargetAtTime(on ? .09 + (S.low ? .05 : 0) + (S.aux ? .04 : 0) : 0, t, .15);
+  AU.squeal.g.gain.setTargetAtTime(on && S.v > 2 ? S.P * clamp((S.T - 35) / 60, 0, 1) * .12 : 0, t, .08);
+  AU.skid.g.gain.setTargetAtTime(on && S.slip > .2 ? Math.min(.25, S.slip * .3) : 0, t, .06);
+  AU.wind.g.gain.setTargetAtTime(on ? Math.min(.12, S.v / 200) : 0, t, .2); AU.wind.f.frequency.setTargetAtTime(300 + S.v * 25, t, .2);
+}
+
+/* =========================== save =========================== */
+const SKEY = 'cdk_v1';
+let SV = { best: {}, mute: false, plays: 0 };
+try { const s = JSON.parse(localStorage.getItem(SKEY)); if (s) SV = Object.assign(SV, s); } catch (e) {}
+const save = () => { try { localStorage.setItem(SKEY, JSON.stringify(SV)); } catch (e) {} };
+
+/* =========================== inputController =========================== */
+const IN = { steer: 0, kSteer: 0, brake: false, kBrake: false, wheelOn: false };
+const KEYS = new Set();
+addEventListener('keydown', e => {
+  if (e.repeat) { if (['ArrowLeft', 'ArrowRight', 'ArrowDown', 'Space'].includes(e.code)) e.preventDefault(); return; }
+  audioInit(); KEYS.add(e.code);
+  if (game.mode === 'drive') {
+    if (['ArrowLeft', 'ArrowRight', 'ArrowDown', 'ArrowUp', 'Space'].includes(e.code)) e.preventDefault();
+    if (e.code === 'KeyG' || e.code === 'ShiftLeft' || e.code === 'ShiftRight') toggleGear();
+    if (e.code === 'KeyX') toggleAux();
+    if (e.code === 'Escape' || e.code === 'KeyP') pause();
+  }
+  if (e.code === 'KeyR' && (game.mode === 'drive' || game.mode === 'fail' || game.mode === 'pause')) restart();
+  if (e.code === 'Escape' && game.mode === 'pause') resume();
+});
+addEventListener('keyup', e => KEYS.delete(e.code));
+addEventListener('blur', () => { KEYS.clear(); IN.brake = false; IN.wheelOn = false; IN.steer = 0; });
+{ // steering wheel: horizontal drag → steering angle, self-centres on release
+  const z = $('wheelZone'), wh = $('wheel'); let pid = null, x0 = 0;
+  z.addEventListener('pointerdown', e => { e.preventDefault(); audioInit(); pid = e.pointerId; x0 = e.clientX; try { z.setPointerCapture(pid); } catch (er) {} IN.wheelOn = true; IN.steer = 0; });
+  z.addEventListener('pointermove', e => { if (e.pointerId !== pid) return; IN.steer = clamp((e.clientX - x0) / 70, -1, 1); });
+  const end = e => { if (e.pointerId !== pid) return; pid = null; IN.wheelOn = false; IN.steer = 0; };
+  z.addEventListener('pointerup', end); z.addEventListener('pointercancel', end); z.addEventListener('lostpointercapture', end);
+  IN.wheelEl = wh;
+}
+{ const b = $('bBrake');
+  b.addEventListener('pointerdown', e => { e.preventDefault(); audioInit(); IN.brake = true; b.classList.add('on'); try { b.setPointerCapture(e.pointerId); } catch (er) {} });
+  const end = () => { IN.brake = false; b.classList.remove('on'); };
+  b.addEventListener('pointerup', end); b.addEventListener('pointercancel', end); b.addEventListener('lostpointercapture', end); }
+$('bGear').addEventListener('pointerdown', e => { e.preventDefault(); audioInit(); toggleGear(); });
+$('bAux').addEventListener('pointerdown', e => { e.preventDefault(); audioInit(); toggleAux(); });
+document.addEventListener('touchmove', e => { if (game.mode === 'drive') e.preventDefault(); }, { passive: false });
+document.addEventListener('gesturestart', e => e.preventDefault());
+function readInput(dt) {
+  const kl = KEYS.has('ArrowLeft') || KEYS.has('KeyA'), kr = KEYS.has('ArrowRight') || KEYS.has('KeyD');
+  const want = (kr ? 1 : 0) - (kl ? 1 : 0);
+  IN.kSteer = want ? clamp(IN.kSteer + want * dt * 2.6, -1, 1) : IN.kSteer * Math.pow(.02, dt);
+  const steer = IN.wheelOn ? IN.steer : IN.kSteer;
+  const brake = IN.brake || KEYS.has('ArrowDown') || KEYS.has('KeyS') || KEYS.has('Space');
+  return { steer, brake };
+}
+
+/* =========================== vehiclePhysics + brakeSystem =========================== */
+// engine & exhaust (AUX) braking scale with speed (∝ rpm), so each grade has a natural holding speed per gear
+const BUS = { L: 5.6, half: 1.2, len: 9.6, bMax: 5.4, engLow: .13, engHigh: .035, aux: .07, drag: .00055, roll: .11, kh: 1.6, kc: .010, Tamb: 18 };
+function brakeEff(T) { return T < 70 ? 1 : T < 85 ? lerp(1, .6, (T - 70) / 15) : T < 100 ? lerp(.6, .22, (T - 85) / 15) : .12; }
+function brakeState(T) { return T < 50 ? ['正常', 'var(--ok)'] : T < 70 ? ['温度上昇', 'var(--warn)'] : T < 85 ? ['過熱', 'var(--hot)'] : T < 100 ? ['フェード', 'var(--bad)'] : ['限界', 'var(--bad)']; }
+let S = null; // driving state
+let Rd = null, ST = null;
+function newState(sStart = 0) {
+  const r = roadAt(Rd, sStart);
+  S = { t: 0, s: sStart, i: r.i, x: r.x + r.rx * (-r.w / 4), z: r.z + r.rz * (-r.w / 4), y: r.y, h: Math.atan2(r.tx, r.tz), v: sStart ? 7 : 3, P: 0, delta: 0, T: BUS.Tamb, maxT: BUS.Tamb,
+    low: false, aux: false, slip: 0, slipT: -9, d: 0, edge: 0, edgeEvt: 0, edgeArmed: true, contacts: 0, skids: 0, skidArmed: true, major: 0, events: [], rec: [], recT: 0,
+    hints: {}, practice: sStart > 0, goatHit: false, wallT: 0, roll: 0, pitch: 0, fallT: 0, fallDir: 0, falling: false, cause: null, arrive: 0, sang: false, chicken: false, goatOk: false, maxV: 0 };
+  // hazards
+  HZ.forEach(o => world.remove(o.obj)); HZ.length = 0;
+  let lastSeg = null;
+  for (let i = 0; i < Rd.N; i++) {
+    const m = Rd.seg[i]; if (m === lastSeg) continue; lastSeg = m;
+    const s0 = i * SP;
+    if (m.goat != null) { const o = { k: 'goat', s: s0 + m.goat, state: 'wait', d: 0, t: 0, obj: makeGoat() }; world.add(o.obj); HZ.push(o); }
+    if (m.cars) for (const c of m.cars) { const o = { k: 'car', trig: s0 + c - 150, s: s0 + c, state: 'wait', obj: makeCar() }; o.obj.visible = false; world.add(o.obj); HZ.push(o); }
+    if (m.sing) HZ.push({ k: 'sing', s: s0 + 30 });
+    if (m.chicken) HZ.push({ k: 'chicken', s: s0 + 40 });
+  }
+  BR = null; for (let i = 0; i < Rd.N; i++) if (Rd.seg[i].bridge) { if (!BR) BR = [i * SP, i * SP]; BR[1] = i * SP; }
+  if (S.s > 0) HZ.forEach(o => { if (o.s < S.s + 20) o.state = 'done'; });
+}
+const HZ = []; let BR = null;
+function toggleGear() {
+  if (game.mode !== 'drive') return;
+  if (!S.low && S.v * 3.6 > 55) { flash('速度が高すぎてLOWに入らない（55km/h以下）', 'var(--warn)'); beep(180, .2); return; }
+  S.low = !S.low; beep(S.low ? 300 : 500, .08, 'square', .06); hint(S.low ? 'LOW：エンジンブレーキが強く効く' : 'HIGH：エンジンブレーキ弱め', 1.4, true);
+}
+function toggleAux() { if (game.mode !== 'drive') return; S.aux = !S.aux; beep(S.aux ? 220 : 440, .1, 'sawtooth', .05); if (S.aux) hint('AUX：補助ブレーキはブレーキを熱くしない', 1.6, true); }
+
+function physics(dt) {
+  const inp = readInput(dt), r = roadAt(Rd, S.s);
+  S.t += dt;
+  // brake pedal (ramps — no instant lock)
+  S.P = inp.brake ? Math.min(1, S.P + dt * 4) : Math.max(0, S.P - dt * 6);
+  // --- longitudinal: a = g·sinθ − a_brake − a_engine − a_aux − a_drag
+  const sinT = r.g / Math.sqrt(1 + r.g * r.g);
+  const aBrake = S.P * BUS.bMax * brakeEff(S.T) * (S.v > .1 ? 1 : 0);
+  const aEng = (S.low ? BUS.engLow : BUS.engHigh) * S.v;
+  const aAux = S.aux ? BUS.aux * S.v : 0;
+  const aDrag = BUS.drag * S.v * S.v + BUS.roll;
+  let a = G * sinT - aBrake - aEng - aAux - aDrag;
+  if (S.v < 2.2 && !inp.brake) a = Math.max(a, .8); // idle creep so the bus never stalls on gentle grades
+  if (S.arrive) a = -3.2;
+  S.v = Math.max(0, S.v + a * dt); S.maxV = Math.max(S.maxV, S.v);
+  // --- brake temperature: T += (k_h·P·v − k_c·(T − T_amb))·Δt
+  S.T = clamp(S.T + (BUS.kh * S.P * S.v - BUS.kc * (S.T - BUS.Tamb)) * dt, BUS.Tamb, 100); S.maxT = Math.max(S.maxT, S.T);
+  // --- steering & grip (understeer beyond μg)
+  const dMax = lerp(.62, .2, clamp(S.v / 22, 0, 1));
+  S.delta = lerp(S.delta, inp.steer * dMax, clamp(dt * 5, 0, 1));
+  let yawRate = S.v * Math.tan(-S.delta) / BUS.L;   // + steer = right (heading decreases for right turns)
+  // mu = effective lateral limit of a loaded coach (tyre grip and roll-over margin), wet road lower
+  const aLatMax = ST.mu * G, aLat = Math.abs(S.v * yawRate);
+  S.slip = 0;
+  if (aLat > aLatMax && S.v > 1) { S.slip = (aLat - aLatMax) / aLatMax; yawRate = Math.sign(yawRate) * aLatMax / S.v; S.slipT = S.t; }
+  if (S.slip > .12 && S.skidArmed) { S.skids++; S.skidArmed = false; }
+  if (S.slip < .03) S.skidArmed = true;
+  S.h += yawRate * dt;
+  S.x += Math.sin(S.h) * S.v * dt; S.z += Math.cos(S.h) * S.v * dt;
+  // road tracking
+  let i = S.i;
+  for (let k = 0; k < 40; k++) {
+    const j = Math.min(Rd.N - 2, i), px = S.x - Rd.x[j], pz = S.z - Rd.z[j], sx = Rd.x[j + 1] - Rd.x[j], sz = Rd.z[j + 1] - Rd.z[j];
+    const t = (px * sx + pz * sz) / (sx * sx + sz * sz);
+    if (t > 1 && i < Rd.N - 2) i++; else if (t < 0 && i > 0) i--; else break;
+  }
+  S.i = i;
+  { const j = i, px = S.x - Rd.x[j], pz = S.z - Rd.z[j], sx = Rd.x[j + 1] - Rd.x[j], sz = Rd.z[j + 1] - Rd.z[j], t = clamp((px * sx + pz * sz) / (sx * sx + sz * sz), 0, 1);
+    S.s = (j + t) * SP; S.d = px * Rd.rx[j] + pz * Rd.rz[j]; S.y = lerp(Rd.y[j], Rd.y[j + 1], t); }
+  const rr = roadAt(Rd, S.s);
+  S.pitch = lerp(S.pitch, Math.atan(rr.g), dt * 4); S.roll = lerp(S.roll, clamp(S.v * yawRate * .025, -.12, .12), dt * 4);
+  collisions(rr, dt);
+  // record for replay (30 Hz, last 3.5 s)
+  S.recT += dt; if (S.recT >= 1 / 30) { S.recT = 0; S.rec.push({ x: S.x, y: S.y, z: S.z, h: S.h, p: S.pitch, r: S.roll, v: S.v, fx: 0 }); if (S.rec.length > 105) S.rec.shift(); }
+  hazards(dt);
+  tutorial(rr);
+  if (S.s >= Rd.len - 24 && !S.arrive) { S.arrive = S.t; S.events.push('村人が拍手で出迎え'); cheer(); village.forEach(v => v.userData.jump = true); }
+  if (S.arrive && S.v < .3 && S.t - S.arrive > 1) finishStage();
+}
+
+/* =========================== collisionSystem =========================== */
+function collisions(r, dt) {
+  const hw = r.w / 2, side = r.side, ad = Math.abs(S.d), sgn = Math.sign(S.d) || 1;
+  const cliffHere = side === 0 || side === sgn;
+  S.edge = 0;
+  if (side === 2) return;
+  if (cliffHere) {
+    if (ad > hw - BUS.half - .5) S.edge = 1;                          // near the edge: warning
+    if (ad > hw - BUS.half + .25) { S.edge = 2; if (S.edgeArmed) { S.edgeEvt++; S.edgeArmed = false; beep(1200, .06, 'square', .07); } } // tyres past the edge
+    if (ad > hw + .35) return startFall(sgn);                         // more than half the bus off the road
+  } else if (ad > hw - BUS.half - .1) {                               // mountain wall: scrape
+    const pen = ad - (hw - BUS.half - .1);
+    S.x -= r.rx * pen * sgn; S.z -= r.rz * pen * sgn;
+    const roadH = Math.atan2(r.tx, r.tz); let dh = roadH - S.h; while (dh > Math.PI) dh -= 2 * Math.PI; while (dh < -Math.PI) dh += 2 * Math.PI; S.h += dh * .25;
+    S.v *= Math.pow(.6, dt); S.wallT += dt;
+    if (S.wallT > .05 && !S.wallHit) { S.wallHit = true; S.contacts++; thump(.5, .35, 500); shake = .35; flash('岩壁に接触！', 'var(--warn)'); }
+  }
+  if (ad < hw - BUS.half - .8) S.edgeArmed = true;
+  if (cliffHere ? ad < hw - BUS.half - .3 : ad < hw - BUS.half - .4) { S.wallHit = false; S.wallT = 0; }
+}
+function startFall(sgn) {
+  if (S.falling) return;
+  S.falling = true; S.fallT = 0; S.fallDir = sgn; game.mode = 'falling';
+  S.cause = S.T >= 85 ? 'brake' : (S.t - S.slipT < 2 ? 'curve' : 'edge');
+  thump(.9, .9, 220); beep(220, .6, 'sawtooth', .07);
+}
+function fallStep(dt) { // ≤ 2 s crash
+  S.fallT += dt; const r = roadAt(Rd, S.s);
+  S.x += (Math.sin(S.h) * S.v * .5 + r.rx * S.fallDir * 4) * dt; S.z += (Math.cos(S.h) * S.v * .5 + r.rz * S.fallDir * 4) * dt;
+  S.vy = (S.vy || 0) - G * dt * 1.4; S.y += S.vy * dt; S.roll += S.fallDir * dt * 1.6; S.pitch += dt * .6;
+  S.recT += dt; if (S.recT >= 1 / 30) { S.recT = 0; S.rec.push({ x: S.x, y: S.y, z: S.z, h: S.h, p: S.pitch, r: S.roll, v: S.v, fall: 1 }); if (S.rec.length > 160) S.rec.shift(); }
+  if (S.fallT > 1.8) failStage(S.cause);
+}
+
+/* ---------- hazards & nonsense events (never unavoidable) ---------- */
+function hazards(dt) {
+  for (const o of HZ) {
+    if (o.state === 'done') continue;
+    if (o.k === 'goat') {
+      const dsp = o.s - S.s;
+      if (o.state === 'wait' && dsp < 150) { o.state = 'cross'; o.t = 0; o.d = (roadAt(Rd, o.s).side === 1 ? -1 : 1) * (roadAt(Rd, o.s).w / 2 + 1.5); hint('🐐 ヤギが道路に！ 安全に止まって待とう', 2.6, true); S.events.push('ヤギの道路横断'); }
+      if (o.state === 'cross' || o.state === 'stand' || o.state === 'leave') {
+        o.t += dt;
+        if (o.state === 'cross') { o.d += -Math.sign(o.d || 1) * 0 + (o.d > 0 ? -1.2 : 1.2) * dt; if (Math.abs(o.d) < .3) { o.state = 'stand'; o.t = 0; } }
+        else if (o.state === 'stand') { const waited = S.v < .5 && dsp < 40 && dsp > 0; if (waited && !S.goatOk) { S.goatOk = true; flash('ナイス判断！ 安全に停止', 'var(--ok)'); }
+          if (o.t > (S.goatOk ? 2.5 : 7)) { o.state = 'leave'; o.t = 0; } }
+        else { o.d += 1.6 * dt; if (o.t > 4) { o.state = 'done'; o.obj.visible = false; } }
+        const p = roadAt(Rd, o.s); o.obj.position.set(p.x + p.rx * o.d, p.y, p.z + p.rz * o.d); o.obj.rotation.y = Math.atan2(p.rx, p.rz) + (o.state === 'leave' ? 0 : Math.PI);
+        if (Math.abs(dsp) < BUS.len / 2 + .6 && Math.abs(o.d - S.d) < BUS.half + .5 && !S.goatHit) {
+          S.goatHit = true; S.major++; S.v *= .3; thump(.6, .4, 600); beep(700, .25, 'triangle', .08); flash('メェ〜！ ヤギと接触（重大接触）', 'var(--bad)'); o.state = 'leave'; o.t = 0; o.d = 4;
+        }
+      }
+    } else if (o.k === 'car') {
+      if (o.state === 'wait' && S.s > o.trig) { o.state = 'go'; o.obj.visible = true; }
+      if (o.state === 'go') {
+        if (BR && o.s > BR[1] && o.s - 9 * dt < BR[1] + 10 && S.s < BR[1] + 6) { o.s = Math.max(o.s, BR[1] + 10); } // wait at the bridge end
+        else if (Math.abs(roadAt(Rd, o.s - 6).k) > 1 / 45 && o.s - S.s < 90 && o.s > S.s) { /* never meet the bus inside a sharp curve: wait before it */ }
+        else o.s -= 9 * dt;
+        const p = roadAt(Rd, o.s), d = p.w / 4; o.obj.position.set(p.x + p.rx * d, p.y, p.z + p.rz * d); o.obj.rotation.y = Math.atan2(-p.tx, -p.tz);
+        if (Math.abs(o.s - S.s) < (BUS.len + 4.2) / 2 && Math.abs(d - S.d) < BUS.half + .9) { o.state = 'done'; S.cause = 'car'; failStage('car'); return; }
+        if (o.s < S.s - 40) { o.state = 'done'; o.obj.visible = false; }
+      }
+    } else if (o.k === 'sing' && S.s > o.s) { o.state = 'done'; song(); hint('♪ 乗客が突然歌い始めた！（運転に集中…）', 3); S.events.push('乗客の合唱'); }
+    else if (o.k === 'chicken' && S.s > o.s) { o.state = 'done'; hint('🐔 ニワトリがバスに乗り込んできた！ 乗客 +1羽', 2.6); S.chicken = true; beep(1100, .08, 'square', .06); beep(900, .08, 'square', .06, .1); S.events.push('ニワトリが乗車'); }
+  }
+}
+
+/* ---------- in-drive tutorial (no long explanation screens) ---------- */
+function tutorial(r) {
+  const H = S.hints, once = (k, msg, sec = 3) => { if (!H[k]) { H[k] = 1; hint(msg, sec, true); } };
+  if (ST.id === 1 || SV.plays <= 2) {
+    if (S.t > .5) once('steer', Matchesmobile() ? 'ハンドル：左下を左右にドラッグ' : 'ハンドル：← → キー', 3.2);
+    if (S.t > 4.5) once('brake', Matchesmobile() ? 'BRAKE 長押しで減速。カーブの手前で！' : '↓ / Space 長押しでブレーキ。カーブの手前で！', 3.2);
+  }
+  if (r.g > .095 && !S.low) once('low', '急な下り坂！ LOW ギアでエンジンブレーキを', 3.2);
+  if (S.T > 50) once('hot', '🔥 ブレーキが熱い！ 踏みっぱなしに注意。LOW と AUX で冷やそう', 3.6);
+  if (S.T > 70) once('fade', '⚠ 過熱：ブレーキの効きが落ちている！', 2.6);
+  if (S.edge >= 1 && S.v > 3) once('edge', '崖っぷち！ ハンドルをゆっくり道路の内側へ', 2.6);
+  if (S.slip > .15) once('slip', 'タイヤが滑っている！ カーブの前に減速を', 2.6);
+}
+const Matchesmobile = () => matchMedia('(pointer:coarse)').matches;
+
+/* =========================== cameraController =========================== */
+const cam = { pos: new THREE.Vector3(), look: new THREE.Vector3(), init: false };
+let shake = 0, camLean = 0;
+function updateCamera(dt, rec) {
+  const st = rec || S, f = new THREE.Vector3(Math.sin(st.h), 0, Math.cos(st.h));
+  const ahead = roadAt(Rd, Math.min(Rd.len, S.s + 18 + S.v * .8));
+  const want = new THREE.Vector3(st.x, st.y, st.z).addScaledVector(f, -13.5).add(new THREE.Vector3(0, 6.2, 0));
+  if (!rec && S.edge) { const r = roadAt(Rd, S.s), sg = Math.sign(S.d) || 1; camLean = lerp(camLean, sg * (S.edge === 2 ? 3.2 : 1.8), clamp(dt * 2, 0, 1)); }
+  else camLean = lerp(camLean, 0, clamp(dt * 1.5, 0, 1));
+  { const r = roadAt(Rd, S.s); want.x += r.rx * camLean; want.z += r.rz * camLean; want.y += Math.abs(camLean) * .8; }
+  const lookW = new THREE.Vector3(lerp(st.x + f.x * 10, ahead.x, .55), st.y + 1.6 - Math.abs(camLean) * 1.2, lerp(st.z + f.z * 10, ahead.z, .55));
+  if (rec) { // cinematic replay: side-high angle
+    const r = roadAt(Rd, S.s), sg = S.fallDir || 1;
+    want.set(st.x - r.rx * sg * 9 - f.x * 10, st.y + 9, st.z - r.rz * sg * 9 - f.z * 10); lookW.set(st.x, st.y + 1, st.z);
+  }
+  if (game.mode === 'falling') { lookW.set(st.x, st.y, st.z); want.copy(cam.pos); }
+  if (!cam.init) { cam.pos.copy(want); cam.look.copy(lookW); cam.init = true; }
+  cam.pos.lerp(want, clamp(dt * 3.2, 0, 1)); cam.look.lerp(lookW, clamp(dt * 4, 0, 1));
+  camera.position.copy(cam.pos);
+  if (shake > 0) { camera.position.x += (Math.random() - .5) * shake; camera.position.y += (Math.random() - .5) * shake; shake = Math.max(0, shake - dt * 1.5); }
+  camera.lookAt(cam.look);
+}
+function placeBus(st) {
+  bus.position.set(st.x, st.y, st.z);
+  bus.rotation.set(0, 0, 0); bus.rotation.order = 'YXZ'; bus.rotation.y = st.h; bus.rotation.x = st.p != null ? st.p : st.pitch; bus.rotation.z = -(st.r != null ? st.r : st.roll);
+  const spin = (st.v || 0) * DT / .55; bus.userData.wheels.forEach(w => w.rotation.x += spin);
+  bus.userData.tail.forEach(t => t.material.color.setHex(S && S.P > .1 ? 0xff3a2a : 0x7a1a12));
+}
+
+/* =========================== scoring =========================== */
+function scoreRun() {
+  const safety = Math.max(0, 60 - S.contacts * 6 - S.edgeEvt * 4 - S.skids * 4 - S.major * 20);
+  const vehicle = Math.max(0, Math.round(20 * clamp(1 - (S.maxT - 70) / 30, 0, 1)) - S.contacts * 2);
+  const target = Rd.len / 7.2; // generous: a calm ~26 km/h average (incl. hairpins) earns full marks — no reward for speeding
+  const time = Math.round(20 * clamp(1 - (S.t - target) / target, 0, 1));
+  const total = safety + vehicle + time;
+  const rank = total >= 90 && S.major === 0 && S.contacts === 0 ? 'S' : total >= 75 ? 'A' : total >= 60 ? 'B' : 'C';
+  return { safety, vehicle, time, total, rank, target };
+}
+
+/* =========================== ui =========================== */
+let hintT = 0, flashT = 0;
+function hint(msg, sec = 2.5, important) { const el = $('hint'); el.textContent = msg; el.classList.add('on'); hintT = sec; if (important) beep(880, .06, 'sine', .05); }
+function flash(msg, col) { const el = $('flash'); el.textContent = msg; el.style.color = col || '#fff'; el.style.opacity = 1; flashT = 1.4; }
+const show = id => { for (const s of ['scrTitle', 'scrPause', 'scrFail', 'scrResult']) $(s).hidden = s !== id; };
+function playUI(on) { $('hud').hidden = $('ctrl').hidden = $('sys').hidden = !on; }
+function updateHUD() {
+  const kmh = S.v * 3.6;
+  $('spd').innerHTML = `${Math.round(kmh)}<small>km/h</small>`;
+  $('gL').classList.toggle('on', S.low); $('gH').classList.toggle('on', !S.low); $('gA').classList.toggle('on', S.aux);
+  $('bGear').innerHTML = (S.low ? 'LOW' : 'HIGH') + '<small>ギア（タップで切替）</small>'; $('bGear').classList.toggle('on', S.low);
+  $('bAux').classList.toggle('on', S.aux);
+  const [stt, col] = brakeState(S.T);
+  $('tempBar').firstElementChild.style.width = Math.round(S.T) + '%'; $('tempBar').firstElementChild.style.background = col;
+  $('tempTxt').innerHTML = `${Math.round(S.T)}% <span style="color:${col}">${stt}</span>`;
+  $('dist').textContent = `残り ${(Math.max(0, Rd.len - S.s) / 1000).toFixed(2)} km`;
+  // look-ahead curve sign (先読み)
+  let found = null;
+  for (let s = S.s + 15; s < S.s + 170; s += 4) { const r = roadAt(Rd, s); if (Math.abs(r.k) > 1 / 55) { found = { s, k: r.k }; break; } }
+  const cel = $('curve');
+  if (found) {
+    const R = 1 / Math.abs(found.k), vs = Math.sqrt(ST.mu * G * R * .78) * 3.6, dist = found.s - S.s, hp = R < 32;
+    cel.hidden = false; cel.innerHTML = `<b>${found.k > 0 ? '↱ 右' : '↰ 左'}${hp ? 'ヘアピン' : 'カーブ'} ${Math.round(dist)}m</b>推奨 ${Math.round(vs / 5) * 5} km/h 以下`;
+    cel.classList.toggle('danger', kmh > vs + 4 && dist < 90);
+  } else cel.hidden = true;
+  // passengers' faces
+  const fear = clamp(Math.max((kmh - 40) / 30, (S.T - 60) / 40, S.edge * .5, S.slip * 3), 0, 1);
+  const face = fear > .7 ? '😱' : fear > .4 ? '😨' : fear > .15 ? '😬' : '😀';
+  $('pax').textContent = face.repeat(6) + (S.chicken ? '🐔' : '') + ' ×18';
+  $('warn').classList.toggle('on', S.edge >= 1 || S.T >= 85);
+  if (IN.wheelEl) IN.wheelEl.style.transform = `rotate(${(IN.wheelOn ? IN.steer : IN.kSteer) * 120}deg)`;
+}
+
+/* =========================== game =========================== */
+const game = { mode: 'title', stage: 0 };
+let warnBeepT = 0;
+function startStage(idx, sStart = 0) {
+  game.stage = idx; ST = STAGES[idx]; Rd = buildRoad(ST); buildWorld(ST, Rd);
+  newState(sStart); cam.init = false; SV.plays++; save();
+  game.mode = 'drive'; show(null); playUI(true); $('replayTag').hidden = true;
+  hint(`STAGE ${ST.id}  ${ST.name}　${ST.jp}`, 2.4); KEYS.clear(); IN.brake = false; IN.kSteer = 0;
+  updateCamera(1, null); placeBus(S); last = performance.now();
+}
+function restart() { startStage(game.stage, 0); }
+function failStage(cause) {
+  game.mode = 'fail'; playUI(false);
+  const C = { brake: ['ブレーキ過熱で止まれず転落', '長い坂ではLOWギアを活用'], curve: ['カーブで曲がりきれず転落', 'カーブに入る前に減速'], car: ['対向車と衝突', '狭い区間では速度を落とし、左車線を守る'], edge: ['路肩から転落', 'ハンドルを急に切りすぎない'] }[cause] || ['事故', ''];
+  $('failTitle').textContent = cause === 'car' ? '衝突…' : '転落…';
+  $('failCause').textContent = C[0]; $('failHint').textContent = C[1];
+  $('failData').innerHTML = [['走行距離', `${(S.s / 1000).toFixed(2)} / ${(Rd.len / 1000).toFixed(2)} km`], ['事故時の速度', `${Math.round(S.v * 3.6)} km/h`], ['ブレーキ温度', `${Math.round(S.T)}%`], ['ギア', S.low ? 'LOW' : 'HIGH']].map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join('');
+  const cp = Rd.cps.filter(c => c < S.s - 20).pop();
+  $('bPractice').hidden = cp == null; game.cp = cp;
+  if (cause === 'car') { thump(1, .8, 300); shake = .8; }
+  setTimeout(() => { if (game.mode === 'fail') show('scrFail'); }, cause === 'car' ? 700 : 0);
+}
+function finishStage() {
+  game.mode = 'result'; playUI(false);
+  const sc = scoreRun(), key = 's' + ST.id, b = SV.best[key];
+  const nb = !S.practice && (!b || sc.total > b.score);
+  if (nb) SV.best[key] = { score: sc.total, rank: sc.rank, time: +S.t.toFixed(1) }; save();
+  $('resStage').textContent = `STAGE ${ST.id} · ${ST.name}${S.practice ? '（練習）' : ''}`;
+  $('resTitle').textContent = S.major ? '村に到着（接触あり）' : '乗客全員、無事に村へ到着！';
+  $('resRank').textContent = sc.rank; $('resTotal').textContent = `${sc.total} / 100`;
+  $('resBest').textContent = S.practice ? '練習モードの記録は保存されません' : nb ? '★ 最高記録更新！' : b ? `最高記録 ${b.score}点（${b.rank}）` : '';
+  $('resBars').innerHTML = [['安全運転', sc.safety, 60], ['車両状態', sc.vehicle, 20], ['走行時間', sc.time, 20]].map(([k, v, m]) => `<div class="bar"><span>${k}</span><span class="t"><i style="width:${v / m * 100}%"></i></span><span class="n">${v}/${m}</span></div>`).join('');
+  const mm = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
+  $('resData').innerHTML = [['走行時間', `${mm(S.t)}（目標 ${mm(sc.target)}）`], ['最高ブレーキ温度', `${Math.round(S.maxT)}%`], ['岩壁接触', S.contacts + '回'], ['路肩はみ出し', S.edgeEvt + '回'], ['横滑り', S.skids + '回'], ['重大接触', S.major + '回']].map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join('');
+  $('resEvents').textContent = S.events.length ? 'できごと：' + S.events.join(' ・ ') : '';
+  $('bNext').hidden = game.stage >= STAGES.length - 1;
+  show('scrResult');
+}
+function replay() {
+  if (!S || !S.rec.length) return;
+  show(null); game.mode = 'replay'; $('replayTag').hidden = false;
+  const frames = S.rec.slice(-150); let k = 0;
+  const step = () => {
+    if (game.mode !== 'replay') return;
+    const f = frames[Math.min(frames.length - 1, Math.floor(k))]; placeBus(f); updateCamera(1 / 30, f); renderer.render(scene, camera);
+    k += .5; if (k < frames.length) requestAnimationFrame(step); else { $('replayTag').hidden = true; game.mode = 'fail'; show('scrFail'); }
+  };
+  requestAnimationFrame(step);
+}
+function pause() { if (game.mode !== 'drive') return; game.mode = 'pause'; playUI(false); show('scrPause'); setEngineSound(); }
+function resume() { if (game.mode !== 'pause') return; game.mode = 'drive'; show(null); playUI(true); last = performance.now(); KEYS.clear(); }
+function toTitle() { game.mode = 'title'; playUI(false); renderStages(); show('scrTitle'); setEngineSound(); }
+function renderStages() {
+  const box = $('stages'); box.innerHTML = '';
+  STAGES.forEach((st, i) => {
+    const b = SV.best['s' + st.id], el = document.createElement('button'); el.className = 'st'; el.type = 'button';
+    el.innerHTML = `<span class="lv">STAGE ${st.id} · ${st.lv}</span><b>${st.name}</b><small>${st.jp}｜${st.desc}<br>${b ? `最高 ${b.score}点` : '未クリア'}</small><span class="rk">${b ? b.rank : '—'}</span>`;
+    el.onclick = () => { audioInit(); startStage(i); };
+    box.appendChild(el);
+  });
+}
+$('bPause').onclick = pause; $('bResume').onclick = resume; $('bRetryP').onclick = restart;
+$('bRetry').onclick = restart; $('bReplay').onclick = replay; $('bPractice').onclick = () => startStage(game.stage, game.cp || 0);
+$('bAgain').onclick = restart; $('bNext').onclick = () => startStage(Math.min(STAGES.length - 1, game.stage + 1));
+for (const id of ['bToTitleP', 'bToTitleF', 'bToTitleR']) $(id).onclick = toTitle;
+const setMute = m => { SV.mute = m; save(); if (AU.master) AU.master.gain.value = m ? 0 : .8; $('bSound2').textContent = '音：' + (m ? 'OFF' : 'ON'); $('bSound').style.opacity = m ? .4 : 1; };
+$('bSound').onclick = () => { audioInit(); setMute(!SV.mute); }; $('bSound2').onclick = () => { audioInit(); setMute(!SV.mute); };
+document.addEventListener('visibilitychange', () => { if (document.hidden) { pause(); if (AU.ctx) AU.ctx.suspend(); } else if (AU.ctx && game.mode === 'drive') audioInit(); });
+for (const ev of ['pointerdown', 'touchend', 'keydown']) addEventListener(ev, () => { if (AU.ctx && AU.ctx.state !== 'running' && !document.hidden) AU.ctx.resume(); }, { capture: true, passive: true });
+
+// title backdrop: show stage 1 scenery with an idle bus
+ST = STAGES[0]; Rd = buildRoad(ST); buildWorld(ST, Rd); newState(0); S.v = 0;
+let last = performance.now(), acc = 0, fpsAcc = 0, fpsN = 0, titleT = 0;
+function frame(now) {
+  const dt = Math.min(.1, (now - last) / 1000); last = now;
+  if (hintT > 0) { hintT -= dt; if (hintT <= 0) $('hint').classList.remove('on'); }
+  if (flashT > 0) { flashT -= dt; $('flash').style.opacity = Math.min(1, flashT * 2); }
+  if (game.mode === 'drive') {
+    acc += dt; while (acc >= DT && game.mode === 'drive') { physics(DT); acc -= DT; }
+    updateHUD();
+    warnBeepT -= dt; if ((S.T >= 70 || S.edge >= 2) && warnBeepT <= 0) { beep(S.edge >= 2 ? 1400 : 980, .07, 'square', .05); warnBeepT = S.edge >= 2 ? .18 : .55; }
+  } else if (game.mode === 'falling') { acc += dt; while (acc >= DT && game.mode === 'falling') { fallStep(DT); acc -= DT; } }
+  else acc = 0;
+  if (game.mode === 'title') { titleT += dt; const r = roadAt(Rd, 40 + titleT * 6 % (Rd.len - 80)); S.x = r.x - r.rx * r.w / 4; S.z = r.z - r.rz * r.w / 4; S.y = r.y; S.h = Math.atan2(r.tx, r.tz); S.s = 40 + titleT * 6 % (Rd.len - 80); S.v = 6; S.pitch = Math.atan(r.g); }
+  if (game.mode !== 'replay') { placeBus(S); updateCamera(dt, null); renderer.render(scene, camera); }
+  village.forEach((v, i) => { if (v.userData.jump) v.position.y = roadAt(Rd, Rd.len - 12 - i * 4).y + Math.abs(Math.sin(now / 150 + i)) * .6; });
+  setEngineSound();
+  // adaptive resolution (mobile ≥30 fps)
+  fpsAcc += dt; fpsN++; if (fpsAcc > 2) { const fps = fpsN / fpsAcc; if (fps < 32 && quality > 1) { quality = Math.max(1, quality - .25); renderer.setPixelRatio(quality); resize(); } fpsAcc = 0; fpsN = 0; }
+  requestAnimationFrame(frame);
+}
+setMute(SV.mute); renderStages(); show('scrTitle');
+requestAnimationFrame(frame);
+window.__cdk = { get S() { return S; }, get Rd() { return Rd; }, get ST() { return ST; }, game, STAGES, startStage, IN, KEYS, physics, scoreRun, toggleGear, toggleAux, roadAt: s => roadAt(Rd, s) };
+})();
+</script>
+</body>
+</html>
