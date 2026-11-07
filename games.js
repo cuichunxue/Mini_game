@@ -13,7 +13,7 @@
  *
  * サイト上の「管理」画面からも追加・削除できます（その場合はこのブラウザだけに保存されます）。
  */
-window.GAMES_VERSION = "23";
+window.GAMES_VERSION = "24";
 
 /* 管理画面のパスワード（SHA-256 ハッシュ。パスワードそのものは書かない）
  * 変更するには: "mini-game-arcade:" + 新しいパスワード を SHA-256 にかけた値に置き換える */
@@ -361,5 +361,14 @@ window.GAMES = [
     emoji: "🎯",
     color: "#0d1d3a",
     accent: "#ffc83d"
+  },
+  {
+    id: "diving-10m",
+    title: "10m高飛び込み 決勝",
+    description: "タイミングよく踏み切り、長押しで回転、離して真っすぐ入水！審判7人が採点するオリンピック形式の決勝。",
+    path: "games/diving-10m/index.html",
+    emoji: "🤿",
+    color: "#0f5d8c",
+    accent: "#7fe3ff"
   }
 ];
