@@ -13,7 +13,7 @@
  *
  * サイト上の「管理」画面からも追加・削除できます（その場合はこのブラウザだけに保存されます）。
  */
-window.GAMES_VERSION = "36";
+window.GAMES_VERSION = "37";
 
 /* 管理画面のパスワード（SHA-256 ハッシュ。パスワードそのものは書かない）
  * 変更するには: "mini-game-arcade:" + 新しいパスワード を SHA-256 にかけた値に置き換える */
@@ -428,7 +428,7 @@ window.GAMES = [
   {
     id: "tenwari-ronin",
     title: "天割り浪人",
-    description: "夜空から襲う妖を斬撃・突進・天割りで斬り払え！七つの地をめぐる旅路で村を守る浪人アクション。",
+    description: "夜空から降る隕石を斬撃・突進・天割りで斬り払え！レベルアップで刀と技を強化し、七つの地を旅する浪人アクション。",
     path: "games/tenwari-ronin/index.html",
     emoji: "⚔️",
     color: "#141a33",
