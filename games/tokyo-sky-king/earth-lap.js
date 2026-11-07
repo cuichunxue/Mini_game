@@ -27,7 +27,7 @@
       desc: 'リングなし。宇宙まで上昇して地球を高速でまわしたり、超低空で世界の名所と動物を探そう。', start: '富士山', ring: [] }
   ];
   const BATTLES = [
-    { id: 'sat1', battle: true, code: 'MISSION 1', name: '暴走衛星 迎撃作戦', time: '3ウェーブ＋ボス', start: '種子島宇宙センター', startLL: [30.40, 130.97], ring: [], waves: [3, 4, 5], boss: true,
+    { id: 'sat1', battle: true, code: 'MISSION 1', name: '暴走衛星 迎撃作戦', time: '3ウェーブ＋ボス', start: '種子島宇宙センター', startLL: [30.40, 130.97], ring: [], waves: [4, 5, 6], boss: true,
       desc: '飛行ロボで種子島から発進、高度1,900kmの暗い宇宙で暴走衛星と戦え。赤い照準線が固まったら回避！最後に巨大な影が待つ。' },
     { id: 'sat2', battle: true, code: 'MISSION ∞', name: '衛星エンドレス', time: 'サバイバル', start: '種子島宇宙センター', startLL: [30.40, 130.97], ring: [], waves: null, boss: false,
       desc: 'シールドが尽きるまで衛星を撃ち落とし続ける。倒すほどデブリが増えていく、終わりのない宇宙の戦い。' }
@@ -103,6 +103,13 @@
 #elFire small{font:600 10px var(--mono);opacity:.85}
 #elWrap.battle #elBoost{bottom:calc(128px + env(safe-area-inset-bottom,0px));right:calc(32px + env(safe-area-inset-right,0px));width:64px;height:64px;font-size:12px}
 #elWrap.battle #elView{display:none!important}
+#elWrap #elSlash{right:calc(16px + env(safe-area-inset-right,0px));bottom:calc(20px + env(safe-area-inset-bottom,0px));width:100px;height:100px;font-size:34px;
+  background:radial-gradient(circle at 50% 38%,#7ff4ff,#1f7fe0 70%,#173a9a);box-shadow:0 0 18px rgba(80,220,255,.45)}
+#elWrap #elSlash small{font:600 10px var(--mono);opacity:.9;margin-top:2px}
+#elSlash.held{transform:scale(.93);box-shadow:0 0 30px 10px rgba(110,240,255,.8)}
+#elWrap.battle #elFire{right:calc(26px + env(safe-area-inset-right,0px));bottom:calc(134px + env(safe-area-inset-bottom,0px));width:70px;height:70px;font-size:13px}
+#elWrap.battle #elRoll{right:calc(128px + env(safe-area-inset-right,0px));bottom:calc(26px + env(safe-area-inset-bottom,0px));width:72px;height:72px;background:rgba(255,106,26,.88);font-size:14px}
+#elWrap.battle #elBoost{display:none!important}
 #elRoll{right:calc(118px + env(safe-area-inset-right,0px));bottom:calc(30px + env(safe-area-inset-bottom,0px));width:64px;height:64px;background:rgba(255,106,26,.85);font-size:13px}
 #elRoll.held{transform:scale(.92);background:#ff6a1a}
 #elView{right:calc(30px + env(safe-area-inset-right,0px));bottom:calc(124px + env(safe-area-inset-bottom,0px));width:52px;height:52px;background:rgba(12,23,32,.7);font-size:22px}
@@ -117,7 +124,7 @@
 #elWrap .elRank{font:400 64px var(--display);line-height:1;color:#ffd23f}
 #elLoad{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#eef3f1;font:400 18px var(--display);letter-spacing:.06em;text-align:center;padding:20px}
 #elWrap [hidden]{display:none!important}
-@media (max-height:520px){#elBoost{width:76px;height:76px}#elFire{width:78px;height:78px}#elWrap.battle #elBoost{bottom:calc(108px + env(safe-area-inset-bottom,0px));width:54px;height:54px;right:calc(30px + env(safe-area-inset-right,0px))}#elRoll{width:56px;height:56px;right:calc(104px + env(safe-area-inset-right,0px))}
+@media (max-height:520px){#elWrap #elSlash{width:84px;height:84px;font-size:28px}#elWrap.battle #elFire{bottom:calc(112px + env(safe-area-inset-bottom,0px));width:58px;height:58px}#elWrap.battle #elRoll{right:calc(110px + env(safe-area-inset-right,0px));width:62px;height:62px}#elBoost{width:76px;height:76px}#elFire{width:78px;height:78px}#elWrap.battle #elBoost{bottom:calc(108px + env(safe-area-inset-bottom,0px));width:54px;height:54px;right:calc(30px + env(safe-area-inset-right,0px))}#elRoll{width:56px;height:56px;right:calc(104px + env(safe-area-inset-right,0px))}
   #elView{bottom:auto;top:calc(10px + env(safe-area-inset-top,0px));right:calc(180px + env(safe-area-inset-right,0px));width:42px;height:42px;font-size:18px}
   #elWrap .elRank{font-size:44px}#elWrap .elScr .sheet{gap:10px}#elWrap .elScr h2{font-size:26px!important}#elWrap .elScr .lead{display:none}#elWrap .panel{padding:8px 14px!important}#elWrap .toggles label{padding:3px 0!important;min-height:0!important;font-size:13px}}
 `;
@@ -129,6 +136,7 @@
 <button type="button" class="elb" id="elRoll">ROLL<small>Z/X</small></button>
 <button type="button" class="elb" id="elBoost">BOOST<small>×100</small></button>
 <button type="button" class="elb" id="elFire">FIRE<small>LOCK</small></button>
+<button type="button" class="elb" id="elSlash">斬<small>SABER</small></button>
 <button type="button" class="elb" id="elView" aria-label="視点切替">🌍</button>
 <button type="button" id="elPauseB" aria-label="一時停止">II</button>
 <div id="elLoad">🌍 地球を読み込み中…</div>
@@ -142,7 +150,7 @@
  <div class="elRes" id="elResData"></div>
  <div class="row"><button class="btn primary" id="elRetry2" type="button">もう一度 <span class="k">R</span></button><button class="btn" id="elQuit2" type="button">コース選択へ</button></div></div></div>`;
     document.body.appendChild(wrap);
-    for (const id of ['elGL', 'elHud', 'elStick', 'elRoll', 'elBoost', 'elFire', 'elHelp', 'elView', 'elPauseB', 'elLoad', 'elPause', 'elResult', 'elResT', 'elResRank', 'elResScore', 'elResBest', 'elResData', 'elOptAssist', 'elOptInvert', 'elOptSound']) el[id] = document.getElementById(id);
+    for (const id of ['elGL', 'elHud', 'elStick', 'elRoll', 'elBoost', 'elFire', 'elSlash', 'elHelp', 'elView', 'elPauseB', 'elLoad', 'elPause', 'elResult', 'elResT', 'elResRank', 'elResScore', 'elResBest', 'elResData', 'elOptAssist', 'elOptInvert', 'elOptSound']) el[id] = document.getElementById(id);
     glc = el.elGL; hud = el.elHud; hx = hud.getContext('2d');
     bindInput();
   }
@@ -273,28 +281,7 @@ diffuseColor.rgb *= 1.0 + 0.2 * (mix(grain, 0.5, sea * 0.6) - 0.5) * clamp(1.0 -
     const jet = new T.Group(), rk = new T.Group();
     jet.add(new T.Mesh(body, m(0xdfe6ee, 0.45, 0.35, 0x1a1d22)), new T.Mesh(wing, m(0x2d3646, 0.4, 0.45, 0x0b0f16)), new T.Mesh(tail, m(0x2d3646, 0.4, 0.45, 0x0b0f16)),
       new T.Mesh(tips, m(0xff6a1a, 0.2, 0.5, 0x5a1800)), new T.Mesh(canopy, m(0x101826, 0.9, 0.15, 0x0a2a40)));
-    // flying robot SG-1 "SORA-GUARD": superman pose, head toward -Z, back (+Y) to the chase camera
-    { const sm = (c, mt, rg, em) => new T.MeshStandardMaterial({ color: c, metalness: mt, roughness: rg, emissive: em || 0, flatShading: true });
-      const W = sm(0xeef1f6, 0.35, 0.4, 0x1c1e24), BL = sm(0x1f4fc8, 0.4, 0.4, 0x0a1a50), RD = sm(0xd8323c, 0.3, 0.45, 0x400a0e), GR = sm(0x5a6270, 0.6, 0.4, 0x101318), YL = sm(0xffd23f, 0.4, 0.4, 0x403000);
-      const box = (w, h, l, x, y, z, mt, rz) => { const b = new T.Mesh(new T.BoxGeometry(w, h, l), mt); b.position.set(x, y, z); if (rz) b.rotation.z = rz; rk.add(b); return b; };
-      box(1.2, 0.7, 1.5, 0, 0, 0, W);                    // torso
-      box(0.9, 0.18, 0.9, 0, 0.38, -0.25, BL);           // back armour
-      box(0.55, 0.5, 0.55, 0, 0.05, -1.05, W);           // head
-      const visor = new T.Mesh(new T.BoxGeometry(0.44, 0.13, 0.06), new T.MeshBasicMaterial({ color: 0x66f0ff })); visor.position.set(0, 0.08, -1.34); rk.add(visor);
-      box(0.08, 0.36, 0.08, -0.16, 0.42, -1.2, YL, 0.5); box(0.08, 0.36, 0.08, 0.16, 0.42, -1.2, YL, -0.5); // V antenna
-      box(0.48, 0.52, 0.55, 0.84, 0.02, -0.45, RD); box(0.48, 0.52, 0.55, -0.84, 0.02, -0.45, RD); // shoulders
-      box(0.3, 0.3, 1.0, 0.84, -0.12, -1.1, W); box(0.2, 0.24, 1.5, 0.84, -0.32, -1.95, GR); box(0.1, 0.1, 0.3, 0.84, -0.32, -2.8, GR); // right arm + beam rifle
-      box(0.3, 0.3, 1.1, -0.86, -0.06, 0.2, W);         // left arm
-      box(0.95, 0.55, 0.42, 0, -0.02, 0.92, GR);        // waist
-      box(0.38, 0.42, 1.3, 0.32, -0.04, 1.75, W); box(0.38, 0.42, 1.3, -0.32, -0.04, 1.75, W); // legs
-      box(0.42, 0.34, 0.38, 0.32, -0.14, 2.5, BL); box(0.42, 0.34, 0.38, -0.32, -0.14, 2.5, BL); // feet
-      box(0.95, 0.42, 0.95, 0, 0.56, 0.12, GR);         // backpack
-      box(1.5, 0.06, 0.55, 0.95, 0.66, 0.25, BL, 0.32); box(1.5, 0.06, 0.55, -0.95, 0.66, 0.25, BL, -0.32); // wings
-      const fl = [];
-      for (const x of [-0.28, 0.28]) { const n = new T.Mesh(new T.CylinderGeometry(0.15, 0.2, 0.35, 10), GR); n.rotation.x = Math.PI / 2; n.position.set(x, 0.56, 0.7); rk.add(n);
-        const cg = new T.ConeGeometry(0.17, 1, 10, 1, true); cg.rotateX(Math.PI / 2); cg.translate(0, 0, 0.5);
-        const f = new T.Mesh(cg, new T.MeshBasicMaterial({ color: 0x8fe8ff, transparent: true, opacity: 0.75, blending: T.AdditiveBlending, depthWrite: false })); f.position.set(x, 0.56, 0.86); rk.add(f); fl.push(f); }
-      rk.userData.flames = fl; }
+    rk.userData.R = buildRobot(T, rk); rk.userData.flames = rk.userData.R.flames; g.userData.R0 = rk.userData.R;
     rk.visible = false; g.add(jet, rk); g.userData.jet = jet; g.userData.rk = rk;
     const cg = new T.ConeGeometry(0.3, 1, 12, 1, true); cg.rotateX(Math.PI / 2); cg.translate(0, 0, 0.5);
     flame = new T.Mesh(cg, new T.MeshBasicMaterial({ color: 0x66d9ff, transparent: true, opacity: 0.6, blending: T.AdditiveBlending, depthWrite: false }));
@@ -342,8 +329,8 @@ diffuseColor.rgb *= 1.0 + 0.2 * (mix(grain, 0.5, sea * 0.6) - 0.5) * clamp(1.0 -
   }
 
   /* ---------------- input ---------------- */
-  const keys = new Set(); let stick = null, stickId = null, boostHeld = false, fireHeld = false, rollQ = 0;
-  const GK = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyB', 'KeyZ', 'KeyX', 'KeyV', 'KeyF', 'KeyJ']);
+  const keys = new Set(); let stick = null, stickId = null, boostHeld = false, fireHeld = false, rollQ = 0, slashQ = 0, dashDown = 0;
+  const GK = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyB', 'KeyZ', 'KeyX', 'KeyV', 'KeyF', 'KeyJ', 'KeyK', 'KeyL', 'ShiftLeft']);
   function bindInput() {
     window.addEventListener('keydown', e => {
       if (!active || e.ctrlKey || e.metaKey || e.altKey) return;
@@ -351,11 +338,12 @@ diffuseColor.rgb *= 1.0 + 0.2 * (mix(grain, 0.5, sea * 0.6) - 0.5) * clamp(1.0 -
       if (!el.elResult.hidden) { if (e.code === 'KeyR' || e.code === 'Enter') restart(); if (e.code === 'Escape') exit(); return; }
       if (e.code === 'Escape') { paused ? resume() : pause(); return; }
       if (paused) { if (e.code === 'KeyR') restart(); return; }
-      if (!e.repeat) { if (e.code === 'KeyZ') rollQ = -1; if (e.code === 'KeyX') rollQ = 1; if (e.code === 'KeyV') toggleView(); if (e.code === 'KeyR') restart(); }
+      if (!e.repeat) { if (e.code === 'KeyZ') rollQ = -1; if (e.code === 'KeyX') rollQ = 1; if (e.code === 'KeyJ') slashQ = 1;
+        if (course && course.battle && (e.code === 'KeyK' || e.code === 'KeyL')) rollQ = (stick && stick.nx < -0.2) || keys.has('ArrowLeft') || keys.has('KeyA') ? -1 : 1; if (e.code === 'KeyV') toggleView(); if (e.code === 'KeyR') restart(); }
       keys.add(e.code);
     });
     window.addEventListener('keyup', e => keys.delete(e.code));
-    window.addEventListener('blur', () => { keys.clear(); stick = null; boostHeld = false; fireHeld = false; });
+    window.addEventListener('blur', () => { keys.clear(); stick = null; boostHeld = false; fireHeld = false; dashDown = 0; });
     document.addEventListener('visibilitychange', () => { if (document.hidden && active && !paused && S && !S.done) pause(); });
     const sz = el.elStick;
     sz.addEventListener('pointerdown', e => { e.preventDefault(); stickId = e.pointerId; try { sz.setPointerCapture(e.pointerId); } catch (er) {} stick = { ox: e.clientX, oy: e.clientY, nx: 0, ny: 0 }; });
@@ -366,7 +354,8 @@ diffuseColor.rgb *= 1.0 + 0.2 * (mix(grain, 0.5, sea * 0.6) - 0.5) * clamp(1.0 -
       const up = () => { b.classList.remove('held'); off && off(); }; b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up); };
     hold(el.elBoost, () => { boostHeld = true; }, () => { boostHeld = false; });
     hold(el.elFire, () => { fireHeld = true; }, () => { fireHeld = false; });
-    hold(el.elRoll, () => { rollQ = stick && stick.nx < -0.2 ? -1 : 1; });
+    hold(el.elRoll, () => { rollQ = stick && stick.nx < -0.2 ? -1 : 1; dashDown = performance.now(); }, () => { dashDown = 0; });
+    hold(el.elSlash, () => { slashQ = 1; });
     el.elView.addEventListener('click', () => toggleView());
     el.elPauseB.addEventListener('click', () => pause());
     document.getElementById('elResume').onclick = resume;
@@ -384,11 +373,11 @@ diffuseColor.rgb *= 1.0 + 0.2 * (mix(grain, 0.5, sea * 0.6) - 0.5) * clamp(1.0 -
     let climb = ((keys.has('ArrowUp') || keys.has('KeyW')) ? 1 : 0) - ((keys.has('ArrowDown') || keys.has('KeyS')) ? 1 : 0);
     if (stick) { const dz = v => Math.abs(v) < 0.1 ? 0 : (v - Math.sign(v) * 0.1) / 0.9; turn += dz(stick.nx); climb += dz(-stick.ny); }
     const sv = (window.EarthLapHost || {}).Save; if (sv && sv.d.opt.invert) climb = -climb;
-    const r = rollQ; rollQ = 0;
+    const r = rollQ; rollQ = 0; const sq = slashQ; slashQ = 0;
     const bt = course && course.battle;
     return { turn: clamp(turn, -1, 1), climb: clamp(climb, -1, 1), roll: r,
-      boost: boostHeld || keys.has('KeyB') || (bt ? keys.has('ShiftLeft') || keys.has('ShiftRight') : keys.has('Space')),
-      fire: bt && (fireHeld || keys.has('Space') || keys.has('KeyF') || keys.has('KeyJ')) };
+      boost: boostHeld || keys.has('KeyB') || (bt ? keys.has('ShiftLeft') || keys.has('ShiftRight') || (dashDown && performance.now() - dashDown > 250) || keys.has('KeyL') : keys.has('Space')),
+      fire: bt && (fireHeld || keys.has('Space') || keys.has('KeyF')), slash: bt && sq };
   }
   function snd(fn, ...a) { const s = (window.EarthLapHost || {}).Snd; if (s && s[fn]) try { s[fn](...a); } catch (e) {} }
 
@@ -442,17 +431,22 @@ diffuseColor.rgb *= 1.0 + 0.2 * (mix(grain, 0.5, sea * 0.6) - 0.5) * clamp(1.0 -
     s.vs += (vsT - s.vs) * Math.min(1, dt * 4);
     s.alt = clamp(s.alt + s.vs * dt, 0, ALT_MAX); if (B && !B.launch) s.alt = clamp(s.alt, 0.22, 0.55);
     // --- move along great circle
-    const ang = s.v * TWm * dt / (R_KM * (1 + s.alt));
+    const ang = B && B.move ? 0 : s.v * TWm * dt / (R_KM * (1 + s.alt));
     const ax = s.p.clone().cross(s.f).normalize();
     s.p.applyAxisAngle(ax, ang).normalize(); s.f.applyAxisAngle(ax, ang);
     s.f.sub(s.p.clone().multiplyScalar(s.p.dot(s.f))).normalize();
     s.dist += ang * R_KM;
     // --- visuals: bank/pitch/roll
-    s.bank += (-turnRate * 0.9 * 60 * D - s.bank) * Math.min(1, dt * 5);
+    s.bank += (-turnRate * (B ? 0.4 : 0.9) * 60 * D - s.bank) * Math.min(1, dt * (B ? 8 : 5));
     s.pitch += (clamp(s.vs / (0.004 + s.alt * 0.8), -1, 1) * 22 * D - s.pitch) * Math.min(1, dt * 5);
     if (B && B.launch) s.pitch = Math.max(s.pitch, clamp(1 - s.alt / 0.3, 0, 1) * 78 * D);
-    if (inp.roll && s.rollT <= 0 && !(B && B.rollCD > 0)) { s.rollT = 0.7; s.rollDir = inp.roll; snd('swish', 0.6, 0.55); if (B) B.rollCD = 1.6; }
-    if (s.rollT > 0) { s.rollT -= dt; s.roll = s.rollDir * (1 - Math.max(0, s.rollT) / 0.7) * Math.PI * 2; if (s.rollT <= 0) { s.roll = 0; s.tricks++; if (!B) addScore(s, 300, 'バレルロール +300', '#ff9f43'); } }
+    const RD = B ? 0.34 : 0.7;
+    if (inp.roll && s.rollT <= 0 && !(B && (B.rollCD > 0 || B.move || B.launch))) { s.rollT = RD; s.rollDir = inp.roll; snd('swish', 0.6, B ? 0.35 : 0.55);
+      if (B) { B.rollCD = 0.5; B.dodgeT = 0.3; B.dodgeDone = 0; B.dodges0 = (B.dodges0 || 0) + 1; } }
+    if (B && B.dodgeT > 0) { // DASH: quick side-step, i-frames for its whole length
+      const x0 = B.dodgeDone, x1 = EASE.out(clamp(1 - (B.dodgeT - dt) / 0.3, 0, 1)); B.dodgeDone = x1; B.dodgeT -= dt;
+      s.p.applyAxisAngle(s.f, -s.rollDir * (x1 - x0) * 0.02 / (1 + s.alt)).normalize(); }
+    if (s.rollT > 0) { s.rollT -= dt; s.roll = s.rollDir * (1 - Math.max(0, s.rollT) / RD) * Math.PI * 2; if (s.rollT <= 0) { s.roll = 0; s.tricks++; if (!B) addScore(s, 300, 'バレルロール +300', '#ff9f43'); } }
     // --- terrain
     const th = sampleH(s.p), agl = s.alt - th;
     if (agl < 3.5 / R_KM) {
@@ -519,6 +513,174 @@ diffuseColor.rgb *= 1.0 + 0.2 * (mix(grain, 0.5, sea * 0.6) - 0.5) * clamp(1.0 -
     trail.userData.n = n; trailGeo.setDrawRange(0, n); trailGeo.attributes.position.needsUpdate = true;
   }
 
+  /* ---------------- SG-1 robot rig + melee (motion language ported from CHROME RONIN) ----------------
+     Joint groups in a standing frame that faces -Z (right side = +X), then the whole rig is tilted prone for flight.
+     shoulder/elbow/hip .x > 0 swings the limb forward; knee .x < 0 bends the shin back; spine.y > 0 turns left;
+     neck.x > 0 lifts the face; rig.x < 0 tips the body forward toward the flight direction. */
+  const EASE = { out: x => 1 - Math.pow(1 - x, 3), in: x => x * x, lin: x => x, io: x => x * x * (3 - 2 * x) };
+  const RK = ['rig.x', 'rig.y', 'rig.z', 'spine.x', 'spine.y', 'spine.z', 'neck.x', 'neck.y', 'lSh.x', 'lSh.z', 'rSh.x', 'rSh.z', 'lEl.x', 'rEl.x', 'lHp.x', 'lHp.z', 'rHp.x', 'rHp.z', 'lKn.x', 'rKn.x'];
+  const PX = (b, o) => Object.assign({}, b, o || {});
+  const CRUISE = { 'rig.x': -1.3, 'spine.x': 0.05, 'neck.x': 0.65, 'lSh.x': 2.95, 'lSh.z': -0.1, 'lEl.x': 0.1, 'rSh.x': 0.3, 'rSh.z': 0.12, 'rEl.x': 0.35,
+    'lHp.x': -0.05, 'lHp.z': -0.06, 'rHp.x': 0.1, 'rHp.z': 0.06, 'lKn.x': -0.25, 'rKn.x': -0.5 };
+  const RPOSE = {
+    cruise: CRUISE,
+    boost: PX(CRUISE, { 'rig.x': -1.5, 'neck.x': 0.75, 'lSh.x': -0.35, 'lSh.z': -0.25, 'rSh.x': -0.35, 'rSh.z': 0.25, 'lEl.x': 0, 'rEl.x': 0, 'lHp.x': 0, 'rHp.x': 0, 'lKn.x': -0.05, 'rKn.x': -0.1, 'lHp.z': 0, 'rHp.z': 0 }),
+    aim: { 'rig.x': -0.8, 'neck.x': 0.75, 'rSh.x': 2.37, 'rSh.z': 0.05, 'rEl.x': 0, 'lSh.x': 1.6, 'lSh.z': 0.5, 'lEl.x': 1.3, 'spine.x': 0.1,
+      'lHp.x': 0.45, 'lKn.x': -0.9, 'rHp.x': -0.15, 'rKn.x': -0.35, 'lHp.z': -0.1, 'rHp.z': 0.1 },
+    tuck: { 'rig.x': -0.9, 'spine.x': 0.5, 'neck.x': 0.4, 'lSh.x': 1.2, 'lSh.z': -0.4, 'lEl.x': 1.8, 'rSh.x': 1.2, 'rSh.z': 0.4, 'rEl.x': 1.6, 'lHp.x': 1.4, 'rHp.x': 1.3, 'lKn.x': -2.0, 'rKn.x': -1.9 },
+    ready: { 'rig.x': -0.55, 'neck.x': 0.55, 'spine.x': 0.15, 'rSh.x': 1.2, 'rSh.z': 0.35, 'rEl.x': 0.9, 'lSh.x': 0.9, 'lSh.z': -0.3, 'lEl.x': 1.1, 'lHp.x': 0.5, 'lKn.x': -0.9, 'rHp.x': -0.2, 'rKn.x': -0.4 },
+    ksLoad: { 'rig.x': -0.45, 'neck.x': 0.5, 'spine.x': 0.05, 'spine.y': 0.65, 'rSh.x': 3.0, 'rSh.z': 0.55, 'rEl.x': 0.45, 'lSh.x': 0.9, 'lSh.z': -0.4, 'lEl.x': 1.2, 'rHp.x': 0.7, 'rKn.x': -1.1, 'lHp.x': -0.2, 'lKn.x': -0.3 },
+    ksHit: { 'rig.x': -0.7, 'neck.x': 0.65, 'spine.x': 0.3, 'spine.y': -0.75, 'rSh.x': 1.0, 'rSh.z': -0.45, 'rEl.x': 0.05, 'lSh.x': -0.3, 'lSh.z': -0.6, 'lEl.x': 0.6, 'rHp.x': -0.3, 'rKn.x': -0.4, 'lHp.x': 0.6, 'lKn.x': -0.8 },
+    ksFol: { 'rig.x': -0.75, 'neck.x': 0.65, 'spine.x': 0.35, 'spine.y': -0.95, 'rSh.x': 0.45, 'rSh.z': -0.75, 'rEl.x': 0.2, 'lSh.x': -0.4, 'lSh.z': -0.7, 'lEl.x': 0.5, 'rHp.x': -0.35, 'rKn.x': -0.5, 'lHp.x': 0.65, 'lKn.x': -0.9 },
+    gyLoad: { 'rig.x': -0.6, 'neck.x': 0.6, 'spine.x': 0.25, 'spine.y': -0.7, 'rSh.x': 0.35, 'rSh.z': -0.7, 'rEl.x': 0.3, 'lSh.x': 1.0, 'lSh.z': -0.2, 'lEl.x': 1.2, 'lHp.x': 0.7, 'lKn.x': -1.2, 'rHp.x': -0.1, 'rKn.x': -0.3 },
+    gyHit: { 'rig.x': -0.4, 'neck.x': 0.5, 'spine.x': 0, 'spine.y': 0.8, 'rSh.x': 2.9, 'rSh.z': 0.7, 'rEl.x': 0.05, 'lSh.x': -0.4, 'lSh.z': -0.5, 'lEl.x': 0.4, 'lHp.x': -0.3, 'lKn.x': -0.4, 'rHp.x': 0.6, 'rKn.x': -0.9 },
+    gyFol: { 'rig.x': -0.35, 'neck.x': 0.5, 'spine.y': 0.95, 'rSh.x': 3.1, 'rSh.z': 0.95, 'rEl.x': 0.2, 'lSh.x': -0.5, 'lSh.z': -0.6, 'lEl.x': 0.4, 'lHp.x': -0.35, 'lKn.x': -0.5, 'rHp.x': 0.65, 'rKn.x': -1.0 },
+    spLoad: { 'rig.x': -0.5, 'neck.x': 0.55, 'spine.y': 0.9, 'spine.x': 0.2, 'rSh.x': 1.6, 'rSh.z': -0.9, 'rEl.x': 0.6, 'lSh.x': 0.8, 'lSh.z': -0.5, 'lEl.x': 1.2, 'lHp.x': 0.8, 'lKn.x': -1.4, 'rHp.x': 0.6, 'rKn.x': -1.2 },
+    spCut: { 'rig.x': -0.5, 'neck.x': 0.55, 'spine.y': -0.2, 'rSh.x': 1.62, 'rSh.z': 1.45, 'rEl.x': 0, 'lSh.x': 1.0, 'lSh.z': -1.3, 'lEl.x': 0.2, 'lHp.x': 0.3, 'lKn.x': -0.5, 'rHp.x': -0.1, 'rKn.x': -0.3, 'lHp.z': -0.4, 'rHp.z': 0.4 },
+    kbLoad: { 'rig.x': 0.25, 'neck.x': 0.2, 'spine.x': -0.35, 'rSh.x': 3.2, 'rSh.z': 0.15, 'rEl.x': 0.6, 'lSh.x': 3.2, 'lSh.z': -0.15, 'lEl.x': 0.6, 'lHp.x': 1.3, 'rHp.x': 1.2, 'lKn.x': -1.9, 'rKn.x': -1.8 },
+    kbHit: { 'rig.x': -1.15, 'neck.x': 0.95, 'spine.x': 0.6, 'rSh.x': 0.9, 'rSh.z': 0.05, 'rEl.x': 0, 'lSh.x': 0.9, 'lSh.z': -0.05, 'lEl.x': 0, 'lHp.x': -0.4, 'rHp.x': -0.2, 'lKn.x': -0.2, 'rKn.x': -0.5 },
+    isLoad: { 'rig.x': -1.2, 'neck.x': 0.9, 'spine.y': 0.5, 'rSh.x': 0.2, 'rSh.z': -0.5, 'rEl.x': 0.6, 'lSh.x': 0.5, 'lSh.z': -0.3, 'lEl.x': 1.4, 'lHp.x': 0, 'rHp.x': 0, 'lKn.x': -0.1, 'rKn.x': -0.2 },
+    isHit: { 'rig.x': -1.25, 'neck.x': 0.9, 'spine.y': -0.6, 'rSh.x': 1.4, 'rSh.z': 1.5, 'rEl.x': 0, 'lSh.x': -0.4, 'lSh.z': -0.6, 'lEl.x': 0.3, 'lHp.x': -0.1, 'rHp.x': 0.1, 'lKn.x': -0.2, 'rKn.x': -0.3 }
+  };
+  /* saber moves: keys [u, pose, ease]; lunge [u0, u1] = dash toward the target; spin [[u, rig.y]]; hits at u */
+  const SMOVES = {
+    kesa: { jp: '袈裟斬り', ro: 'KESA-GIRI', d: 0.42, lunge: [0.08, 0.45], keys: [[0, 'ready'], [0.28, 'ksLoad', 'io'], [0.5, 'ksHit', 'out'], [0.72, 'ksFol', 'out'], [1, 'ready', 'io']], hits: [{ u: 0.48, dmg: 2 }] },
+    gyaku: { jp: '逆袈裟', ro: 'GYAKU-KESA', d: 0.4, lunge: [0.06, 0.42], keys: [[0, 'ksFol'], [0.25, 'gyLoad', 'io'], [0.48, 'gyHit', 'out'], [0.7, 'gyFol', 'out'], [1, 'ready', 'io']], hits: [{ u: 0.46, dmg: 2 }] },
+    spin: { jp: '旋風斬り', ro: 'SENPŪ-GIRI', d: 0.55, lunge: [0.1, 0.5], spin: [[0, 0], [0.25, -0.6], [0.75, Math.PI * 2], [1, Math.PI * 2]], keys: [[0, 'ready'], [0.22, 'spLoad', 'io'], [0.36, 'spCut', 'out'], [0.8, 'spCut', 'lin'], [1, 'ready', 'io']], hits: [{ u: 0.46, dmg: 2, wide: true }, { u: 0.68, dmg: 2, wide: true }] },
+    kabuto: { jp: '兜割り', ro: 'KABUTO-WARI', d: 0.72, fin: true, lunge: [0.2, 0.58], keys: [[0, 'ready'], [0.3, 'kbLoad', 'out'], [0.56, 'kbHit', 'in'], [0.85, 'kbHit', 'lin'], [1, 'ready', 'io']], hits: [{ u: 0.56, dmg: 7, fin: true }] },
+    issen: { jp: '一閃', ro: 'ISSEN · COUNTER', d: 0.5, fin: true, pass: true, lunge: [0.12, 0.42], keys: [[0, 'ready'], [0.18, 'isLoad', 'io'], [0.4, 'isHit', 'out'], [0.75, 'isHit', 'lin'], [1, 'ready', 'io']], hits: [{ u: 0.36, dmg: 99, fin: true }] }
+  };
+  const SCHAIN = ['kesa', 'gyaku', 'spin', 'kabuto'];
+  function buildRobot(T, parent) {
+    const sm = (c, mt, rg, em) => new T.MeshStandardMaterial({ color: c, metalness: mt, roughness: rg, emissive: em || 0, flatShading: true });
+    const Wm = sm(0xeef1f6, 0.35, 0.4, 0x1c1e24), BLm = sm(0x1f4fc8, 0.4, 0.4, 0x0a1a50), RDm = sm(0xd8323c, 0.3, 0.45, 0x400a0e), GRm = sm(0x5a6270, 0.6, 0.4, 0x101318), YLm = sm(0xffd23f, 0.4, 0.4, 0x403000);
+    const G = () => new T.Group();
+    const box = (par, w, h, d, x, y, z, mt, rz) => { const b = new T.Mesh(new T.BoxGeometry(w, h, d), mt); b.position.set(x, y, z); if (rz) b.rotation.z = rz; par.add(b); return b; };
+    const J = {}; const rig = J.rig = G(); rig.position.y = 0.25; parent.add(rig);
+    const pelvis = J.pelvis = G(); rig.add(pelvis); box(pelvis, 0.95, 0.45, 0.6, 0, 0, 0, GRm);
+    const spine = J.spine = G(); spine.position.y = 0.22; pelvis.add(spine);
+    box(spine, 1.15, 1.2, 0.7, 0, 0.65, 0, Wm); box(spine, 0.9, 0.5, 0.2, 0, 0.85, -0.38, BLm); box(spine, 0.3, 0.22, 0.1, 0, 0.58, -0.4, YLm);
+    box(spine, 0.95, 0.95, 0.45, 0, 0.75, 0.55, GRm);
+    box(spine, 1.55, 0.55, 0.06, -0.98, 0.98, 0.62, BLm, -0.35); box(spine, 1.55, 0.55, 0.06, 0.98, 0.98, 0.62, BLm, 0.35);
+    const flames = [];
+    for (const x of [-0.28, 0.28]) { const n = new T.Mesh(new T.CylinderGeometry(0.15, 0.2, 0.35, 10), GRm); n.position.set(x, 0.2, 0.6); spine.add(n);
+      const cg = new T.ConeGeometry(0.17, 1, 10, 1, true); cg.rotateX(Math.PI); cg.translate(0, -0.5, 0);
+      const f = new T.Mesh(cg, new T.MeshBasicMaterial({ color: 0x8fe8ff, transparent: true, opacity: 0.8, blending: T.AdditiveBlending, depthWrite: false })); f.position.set(x, 0.03, 0.6); spine.add(f); flames.push(f); }
+    const neck = J.neck = G(); neck.position.y = 1.32; spine.add(neck);
+    box(neck, 0.55, 0.5, 0.55, 0, 0.28, 0, Wm);
+    const visor = new T.Mesh(new T.BoxGeometry(0.44, 0.13, 0.06), new T.MeshBasicMaterial({ color: 0x66f0ff })); visor.position.set(0, 0.32, -0.29); neck.add(visor);
+    box(neck, 0.08, 0.38, 0.08, -0.15, 0.62, -0.2, YLm, 0.5); box(neck, 0.08, 0.38, 0.08, 0.15, 0.62, -0.2, YLm, -0.5);
+    const arm = side => { const s = side === 'r' ? 1 : -1;
+      const sh = J[side + 'Sh'] = G(); sh.position.set(0.82 * s, 1.12, 0); spine.add(sh);
+      box(sh, 0.5, 0.5, 0.56, 0.05 * s, 0.05, 0, RDm); box(sh, 0.3, 0.9, 0.3, 0, -0.5, 0, Wm);
+      const elb = J[side + 'El'] = G(); elb.position.y = -0.95; sh.add(elb);
+      box(elb, 0.32, 0.8, 0.32, 0, -0.4, 0, Wm); box(elb, 0.3, 0.25, 0.3, 0, -0.88, 0, GRm); return elb; };
+    const rEl = arm('r'); arm('l');
+    const rifle = J.rifle = G(); rEl.add(rifle); box(rifle, 0.2, 1.3, 0.24, 0, -1.35, -0.1, GRm); box(rifle, 0.1, 0.3, 0.1, 0, -2.1, -0.1, GRm);
+    J.muzzle = new T.Object3D(); J.muzzle.position.set(0, -2.3, -0.1); rEl.add(J.muzzle);
+    const saber = J.saber = G(); rEl.add(saber);
+    box(saber, 0.14, 0.35, 0.14, 0, -1.05, 0, GRm);
+    const blade = new T.Mesh(new T.CylinderGeometry(0.07, 0.09, 2.6, 10), new T.MeshBasicMaterial({ color: 0xc8fbff })); blade.position.y = -2.5; saber.add(blade);
+    const bg = new T.Mesh(new T.CylinderGeometry(0.22, 0.26, 2.75, 10, 1, true), new T.MeshBasicMaterial({ color: 0x3fd0ff, transparent: true, opacity: 0.45, blending: T.AdditiveBlending, depthWrite: false })); bg.position.y = -2.5; saber.add(bg);
+    J.sBase = new T.Object3D(); J.sBase.position.y = -1.3; saber.add(J.sBase); J.sTip = new T.Object3D(); J.sTip.position.y = -3.8; saber.add(J.sTip);
+    saber.visible = false;
+    const leg = side => { const s = side === 'r' ? 1 : -1;
+      const hp = J[side + 'Hp'] = G(); hp.position.set(0.32 * s, -0.2, 0); pelvis.add(hp); box(hp, 0.4, 1.1, 0.44, 0, -0.55, 0, Wm);
+      const kn = J[side + 'Kn'] = G(); kn.position.y = -1.15; hp.add(kn);
+      box(kn, 0.42, 1.05, 0.46, 0, -0.5, 0, Wm); box(kn, 0.3, 0.3, 0.1, 0, -0.15, -0.25, RDm); box(kn, 0.44, 0.32, 0.62, 0, -1.1, -0.08, BLm); };
+    leg('r'); leg('l');
+    const R = { J, P: {}, flames };
+    applyRobot(R, RPOSE.cruise, 1);
+    return R;
+  }
+  function applyRobot(R, tg, k) {
+    const P = R.P;
+    for (const key of RK) { let v = tg[key] || 0; if (P[key] === undefined) P[key] = v;
+      if (key === 'rig.y' && Math.abs(v - P[key]) > Math.PI) P[key] += Math.PI * 2 * Math.sign(v - P[key]);
+      P[key] += (v - P[key]) * k; const i = key.indexOf('.'); R.J[key.slice(0, i)].rotation[key.slice(i + 1)] = P[key]; }
+  }
+  function segOf(arr, u) { for (let i = 0; i < arr.length - 1; i++) if (u <= arr[i + 1][0]) { const a = arr[i], b = arr[i + 1]; return [a, b, clamp((u - a[0]) / Math.max(1e-6, b[0] - a[0]), 0, 1)]; } const n = arr.length; return [arr[n - 2], arr[n - 1], 1]; }
+  function sampleSaber(def, u) {
+    const [a, b, x] = segOf(def.keys, u), e = EASE[b[2] || 'io'](x), pa = RPOSE[a[1]], pb = RPOSE[b[1]], o = {};
+    for (const k of RK) o[k] = (pa[k] || 0) + ((pb[k] || 0) - (pa[k] || 0)) * e;
+    if (def.spin) { const [c, d2, y] = segOf(def.spin, u); o['rig.y'] = c[1] + (d2[1] - c[1]) * EASE.io(y); }
+    return o;
+  }
+  const HS = { stop: 0, slow: 0 }; // hit-stop and slow motion (real-time seconds)
+  function nearestSat(s, P, maxD) { let best = null, bd = maxD; for (const t of s.B.sats) { const d = t.pos.distanceTo(P); if (d < bd) { bd = d; best = t; } } return best; }
+  function startSaber(s, name) {
+    const B = s.B, P = s.p.clone().multiplyScalar(1 + s.alt);
+    if (B.counter > 0) { name = 'issen'; B.counter = 0; }
+    const def = SMOVES[name], tgt = (B.lock && B.lock.pos.distanceTo(P) < 0.11 ? B.lock : null) || nearestSat(s, P, name === 'issen' ? 0.14 : 0.09);
+    B.move = { name, def, t: 0, tgt, S0: P.clone(), done: [], queued: false };
+    B.tech = { jp: def.jp, ro: def.ro, t: def.d + 0.5, fin: !!def.fin };
+    if (def.lunge) B.inv = Math.max(B.inv, def.pass ? def.d * 0.7 : 0.18);
+    snd('swish', def.fin ? 1 : 0.7, def.fin ? 0.6 : 0.4); snd('beep', def.fin ? 330 : 520, 0.25, 'sawtooth', 0.03, def.fin ? 1320 : 1100);
+  }
+  function worldToState(s, W) { s.alt = clamp(W.length() - 1, 0.2, 0.6); s.p.copy(W).normalize(); s.f.sub(s.p.clone().multiplyScalar(s.p.dot(s.f))).normalize(); }
+  function faceTo(s, X, k) { const d = X.clone().normalize(); const tdir = d.sub(s.p.clone().multiplyScalar(s.p.dot(d))); if (tdir.lengthSq() < 1e-10) return; tdir.normalize(); s.f.lerp(tdir, k).sub(s.p.clone().multiplyScalar(s.p.dot(s.f))).normalize(); }
+  function saberStep(s, inp, dt) {
+    const B = s.B;
+    B.chainT = Math.max(0, (B.chainT || 0) - dt); B.counter = Math.max(0, (B.counter || 0) - dt); B.comboT = Math.max(0, (B.comboT || 0) - dt); if (B.comboT <= 0) B.combo = 0;
+    if (inp.slash) {
+      if (!B.move) { B.chain = B.chainT > 0 ? (B.chain + 1) % SCHAIN.length : 0; startSaber(s, SCHAIN[B.chain]); }
+      else if (B.move.t / B.move.def.d > 0.4) B.move.queued = true;
+    }
+    const m = B.move; if (!m) return;
+    m.t += dt; const u = Math.min(1, m.t / m.def.d), d = m.def;
+    if (m.tgt && m.tgt.dead) m.tgt = nearestSat(s, s.p.clone().multiplyScalar(1 + s.alt), 0.05);
+    const P = s.p.clone().multiplyScalar(1 + s.alt);
+    if (m.tgt) faceTo(s, m.tgt.pos, Math.min(1, dt * 14));
+    if (d.lunge && u >= d.lunge[0] && u <= d.lunge[1] + 0.02) {
+      const goal = m.tgt ? m.tgt.pos.clone().addScaledVector(m.tgt.pos.clone().sub(m.S0).normalize(), d.pass ? 0.02 : -0.011)
+        : m.S0.clone().addScaledVector(s.f, 0.03);
+      const x = EASE.out(clamp((u - d.lunge[0]) / (d.lunge[1] - d.lunge[0]), 0, 1));
+      worldToState(s, m.S0.clone().lerp(goal, x)); B.lunging = true;
+    } else B.lunging = false;
+    d.hits.forEach((h, i) => { if (m.done[i] || u < h.u) return; m.done[i] = true;
+      const Pn = s.p.clone().multiplyScalar(1 + s.alt); let any = false;
+      for (const t of B.sats) { if (t.dead) continue; const dist = t.pos.distanceTo(Pn); if (dist > (h.wide ? 0.03 : 0.024) + t.r) continue; any = true;
+        const dir = t.pos.clone().sub(Pn).normalize();
+        t.hp -= h.dmg; B.hits++; B.combo = (B.combo || 0) + 1; B.comboT = 2.4; addScore(s, 150 * (h.fin ? 3 : 1), `斬撃 +${150 * (h.fin ? 3 : 1)}`, '#66f0ff');
+        boomFx(t.pos, t.boss ? 0.012 : 0.008, 0xd8fbff, 2); sparks(t.pos, dir, h.fin ? 18 : 9); ring(t.pos, h.fin ? 0x66f0ff : 0xffffff, h.fin ? 0.03 : 0.016, 0.3);
+        HS.stop = Math.max(HS.stop, h.fin ? 0.13 : 0.065); s.shake = Math.max(s.shake, h.fin ? 1 : 0.5);
+        snd('thump', h.fin ? 1 : 0.7, 0.2, 1800); snd('beep', 1760, 0.08, 'square', 0.04, 880);
+        if (t.hp <= 0) kill(s, t, dir, true); }
+      if (!any) snd('swish', 0.35, 0.25); });
+    if (u >= 1) { B.move = null; B.lunging = false; B.chainT = 0.55; if (m.queued) { B.chain = (B.chain + 1) % SCHAIN.length; startSaber(s, SCHAIN[B.chain]); } }
+  }
+  function robotPose(s, R, now) {
+    const B = s.B;
+    if (B && B.move) return sampleSaber(B.move.def, Math.min(1, B.move.t / B.move.def.d));
+    if (B && B.dodgeT > 0) return RPOSE.tuck;
+    let base = s.boosting || (B && B.launch) ? RPOSE.boost : RPOSE.cruise;
+    const aiming = B && !B.launch && (B.lock || B.aimT > 0), o = {};
+    for (const k of RK) o[k] = aiming ? (RPOSE.aim[k] || 0) : (base[k] || 0);
+    if (B && (B.chainT > 0) && !aiming) for (const k of RK) o[k] = RPOSE.ready[k] || 0;
+    // secondary motion: lean into turns, limbs trail, idle flutter
+    const tn = s.turn || 0, cl = s.climb || 0, fl = Math.sin(now * 0.004);
+    o['spine.z'] += -tn * 0.35; o['neck.y'] += -tn * 0.35; o['lHp.z'] += tn * 0.28; o['rHp.z'] += tn * 0.28; o['rig.x'] += -cl * 0.25;
+    o['lHp.x'] += fl * 0.08; o['rHp.x'] -= fl * 0.08; o['lKn.x'] += fl * 0.06; o['rKn.x'] -= fl * 0.06;
+    if (aiming && B.lock) { const d = B.lock.q.clone().sub(s.p.clone().multiplyScalar(s.p.dot(B.lock.q))).normalize(); o['spine.y'] = clamp(Math.atan2(s.p.dot(s.f.clone().cross(d)), s.f.dot(d)) * 0.9, -0.9, 0.9); }
+    return o;
+  }
+  // saber trail ribbon (from CHROME RONIN's blade trail)
+  const TR = { pts: [], n: 22 };
+  function trailUpdate(R, on, dt) {
+    for (const q of TR.pts) q.age += dt; TR.pts = TR.pts.filter(q => q.age < 0.16);
+    if (on) { const a = new THREE.Vector3(), b = new THREE.Vector3(); R.J.sBase.getWorldPosition(a); R.J.sTip.getWorldPosition(b); TR.pts.unshift({ a, b, age: 0 }); if (TR.pts.length > TR.n) TR.pts.length = TR.n; }
+    const pos = TR.geo.attributes.position.array, col = TR.geo.attributes.color.array, n = TR.pts.length;
+    for (let i = 0; i < TR.n; i++) { const q = TR.pts[Math.min(i, n - 1)], f = q ? Math.max(0, 1 - q.age / 0.16) * (1 - i / TR.n) : 0;
+      for (let j = 0; j < 2; j++) { const v = q ? (j ? q.b : q.a) : null, o = (i * 2 + j) * 3; if (v) { pos[o] = v.x; pos[o + 1] = v.y; pos[o + 2] = v.z; }
+        col[o] = 0.4 * f; col[o + 1] = 0.95 * f; col[o + 2] = 1 * f; } }
+    TR.geo.attributes.position.needsUpdate = true; TR.geo.attributes.color.needsUpdate = true; TR.geo.setDrawRange(0, n > 1 ? (n - 1) * 6 : 0);
+  }
+  function buildTrail(T) {
+    TR.geo = new T.BufferGeometry(); TR.geo.setAttribute('position', new T.BufferAttribute(new Float32Array(TR.n * 6), 3)); TR.geo.setAttribute('color', new T.BufferAttribute(new Float32Array(TR.n * 6), 3));
+    const idx = []; for (let i = 0; i < TR.n - 1; i++) { const a = i * 2; idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); } TR.geo.setIndex(idx);
+    TR.mesh = new T.Mesh(TR.geo, new T.MeshBasicMaterial({ vertexColors: true, transparent: true, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide }));
+    TR.mesh.frustumCulled = false; scene.add(TR.mesh);
+  }
   /* ---------------- satellite battle (flying robot SG-1) ----------------
      Journey-map pain points → TRIZ fixes:
        aiming at Mach 20+ on a phone      → auto lock-on cone + homing missiles (#15 dynamics, #10 prior action)
@@ -555,11 +717,17 @@ diffuseColor.rgb *= 1.0 + 0.2 * (mix(grain, 0.5, sea * 0.6) - 0.5) * clamp(1.0 -
     const dm = new T.MeshStandardMaterial({ color: 0xa8b0bc, metalness: 0.8, roughness: 0.3, flatShading: true, emissive: 0x15181c });
     BT.deb = []; for (let i = 0; i < 48; i++) { const g = i % 3 ? new T.TetrahedronGeometry(1) : new T.BoxGeometry(1.6, 0.15, 1); const mesh = new T.Mesh(g, i % 3 ? dm : BT.panelM);
       mesh.visible = false; scene.add(mesh); BT.deb.push({ mesh, on: false, life: 0, pos: new T.Vector3(), vel: new T.Vector3(), spin: 0, ax: new T.Vector3(Math.random() - .5, Math.random() - .5, Math.random() - .5).normalize() }); }
+    BT.chunk = []; for (let i = 0; i < 40; i++) { const g = i % 2 ? new T.BoxGeometry(2.4, 0.06, 1) : new T.BoxGeometry(1, 0.8, 1.2); const mesh = new T.Mesh(g, i % 2 ? BT.panelM : (i % 4 ? BT.bodyM : BT.bossM));
+      mesh.visible = false; scene.add(mesh); BT.chunk.push({ mesh, life: 0, pos: new T.Vector3(), vel: new T.Vector3(), av: new T.Vector3(), r: new T.Euler(), sc: 0.002 }); }
+    BT.rings = []; const rg = new T.RingGeometry(0.82, 1, 48); for (let i = 0; i < 8; i++) { const m = new T.Mesh(rg, new T.MeshBasicMaterial({ color: 0xffffff, transparent: true, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide })); m.visible = false; scene.add(m); BT.rings.push({ m, life: 0, dur: 1, size: 1 }); }
+    BT.spk = []; for (let i = 0; i < 80; i++) { const sp = spr(0xfff2c0); sp.visible = false; scene.add(sp); BT.spk.push({ sp, life: 0, pos: new T.Vector3(), vel: new T.Vector3() }); }
+    buildTrail(T);
     BT.fxs = []; for (let i = 0; i < 40; i++) { const sp = spr(0xff8030); sp.visible = false; scene.add(sp); BT.fxs.push({ sp, life: 0 }); }
   }
   function clearBattle() {
     if (S && S.B) for (const t of S.B.sats) { scene.remove(t.mesh); scene.remove(t.laser); t.laser.material.dispose(); }
-    if (BT.built) { BT.mis.forEach(m => { m.visible = false; }); BT.bolt.forEach(m => { m.visible = false; }); BT.fxs.forEach(f => { f.life = 0; f.sp.visible = false; }); BT.deb.forEach(d => { d.on = false; d.mesh.visible = false; }); BT.muz.visible = false; }
+    if (BT.built) { BT.chunk.forEach(c => { c.life = 0; c.mesh.visible = false; }); BT.rings.forEach(r => { r.life = 0; r.m.visible = false; }); BT.spk.forEach(p => { p.life = 0; p.sp.visible = false; }); TR.pts = []; HS.stop = HS.slow = 0;
+      BT.mis.forEach(m => { m.visible = false; }); BT.bolt.forEach(m => { m.visible = false; }); BT.fxs.forEach(f => { f.life = 0; f.sp.visible = false; }); BT.deb.forEach(d => { d.on = false; d.mesh.visible = false; }); BT.muz.visible = false; }
     if (plane) plane.visible = true;
   }
   function boomFx(pos, size, col, n) {
@@ -567,6 +735,16 @@ diffuseColor.rgb *= 1.0 + 0.2 * (mix(grain, 0.5, sea * 0.6) - 0.5) * clamp(1.0 -
       f.life = f.max = 0.5 + Math.random() * 0.5; f.size = size * (0.6 + Math.random() * 0.8); f.sp.material.color.setHex(col);
       f.pos = pos.clone(); f.vel = new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).multiplyScalar(size * (k ? 3 : 0.3)); f.sp.visible = true; }
   }
+  function chunks(t, dir, power) {
+    const n = t.boss ? 14 : 7, T = THREE;
+    for (let k = 0; k < n; k++) { const c = BT.chunk.find(q => q.life <= 0); if (!c) break;
+      c.life = 2.6 + Math.random(); c.pos.copy(t.pos); c.sc = (t.boss ? 0.0045 : 0.0024) * (0.6 + Math.random() * 0.6);
+      c.vel.copy(dir).multiplyScalar((0.012 + Math.random() * 0.02) * power).add(new T.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).multiplyScalar(0.03 * power));
+      c.av.set((Math.random() - 0.5) * 14, (Math.random() - 0.5) * 14, (Math.random() - 0.5) * 14); c.mesh.visible = true; }
+  }
+  function ring(pos, col, size, dur) { const r = BT.rings.find(q => q.life <= 0) || BT.rings[0]; r.m.position.copy(pos); r.m.material.color.setHex(col); r.life = r.dur = dur; r.size = size; r.m.visible = true; }
+  function sparks(pos, dir, n) { for (let k = 0; k < n; k++) { const p = BT.spk.find(q => q.life <= 0); if (!p) break; p.life = 0.25 + Math.random() * 0.35; p.pos.copy(pos);
+      p.vel.copy(dir).multiplyScalar(0.02 + Math.random() * 0.05).add(new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).multiplyScalar(0.06)); p.sp.visible = true; } }
   function los(a, b) { const dir = b.clone().sub(a), L = dir.length(); dir.normalize(); const bb = a.dot(dir), c = a.lengthSq() - 1, disc = bb * bb - c;
     if (disc <= 0) return true; const x = -bb - Math.sqrt(disc); return !(x > 0 && x < L); }
   function beamLen(t) { const dir = t.aim.clone().sub(t.from); let L = dir.length() * 1.8; dir.normalize();
@@ -580,7 +758,7 @@ diffuseColor.rgb *= 1.0 + 0.2 * (mix(grain, 0.5, sea * 0.6) - 0.5) * clamp(1.0 -
     const laser = new T.Mesh(BT.laserGeo, new T.MeshBasicMaterial({ color: 0xff2840, transparent: true, opacity: 0.6, blending: T.AdditiveBlending, depthWrite: false }));
     laser.visible = false; laser.frustumCulled = false; scene.add(mesh); scene.add(laser);
     const lv = B.lvl, t = { mesh, laser, q: dir, axis, w: (boss ? 0.004 : 0.006 + Math.random() * 0.006) * (Math.random() < 0.5 ? -1 : 1),
-      alt: clamp(s.alt + (Math.random() - 0.5) * 0.05, 0.24, 0.5), pos: new T.Vector3(), hp: boss ? 30 : 4 + Math.floor(lv / 2), r: boss ? 0.014 : 0.0065, boss,
+      alt: clamp(s.alt + (Math.random() - 0.5) * 0.05, 0.24, 0.5), pos: new T.Vector3(), hp: boss ? 44 : 4 + Math.floor(lv / 2), r: boss ? 0.014 : 0.0065, boss,
       state: 'idle', t: 0, cd: 1.4 + k * 0.9 + Math.random(), charge: boss ? 1.15 : Math.max(0.95, 1.65 - lv * 0.12), aim: new T.Vector3(), from: new T.Vector3(), spin: Math.random() * 6 };
     t.maxHp = t.hp; t.pos.copy(dir).multiplyScalar(1 + t.alt); mesh.position.copy(t.pos); B.sats.push(t);
   }
@@ -590,7 +768,7 @@ diffuseColor.rgb *= 1.0 + 0.2 * (mix(grain, 0.5, sea * 0.6) - 0.5) * clamp(1.0 -
       if (B.wave <= m.waves.length) { B.lvl = B.wave - 1; const n = m.waves[B.wave - 1]; for (let k = 0; k < n; k++) spawnSat(s, k, n, false);
         s.flash = { big: `WAVE ${B.wave}`, sub: `暴走衛星 ${n}機 接近中`, col: '#ff5b5b', t: 1.4 };
         radio(s, ['未確認の衛星群、接近。…こちらを見ている。', '次の群れだ。数が増えている…', '反応多数。囲まれるな、SG-1。'][(B.wave - 1) % 3]); }
-      else if (m.boss && !B.bossDone) { B.boss = true; B.lvl = 3; spawnSat(s, 1, 3, true); spawnSat(s, 0, 3, false); spawnSat(s, 2, 3, false);
+      else if (m.boss && !B.bossDone) { B.boss = true; B.lvl = 3; spawnSat(s, 1, 5, true); for (const k of [0, 2, 3, 4]) spawnSat(s, k, 5, false);
         s.flash = { big: 'BOSS 出現', sub: '巨大衛星「メガ・サテライト」', col: '#ff2840', t: 1.8 }; snd('boom'); radio(s, '…なんだ、あの影は。衛星なんかじゃない。'); return; }
       else return battleEnd(s, true);
     } else {
@@ -609,23 +787,33 @@ diffuseColor.rgb *= 1.0 + 0.2 * (mix(grain, 0.5, sea * 0.6) - 0.5) * clamp(1.0 -
     if (B.shield === 1) radio(s, 'シールド限界！もう一度当たれば…');
     if (B.shield <= 0) battleEnd(s, false);
   }
-  function kill(s, t) {
+  function kill(s, t, dir, melee) {
     const B = s.B; B.kills++; t.dead = true;
-    boomFx(t.pos, t.boss ? 0.03 : 0.014, 0xffa040, t.boss ? 14 : 7); boomFx(t.pos, t.boss ? 0.02 : 0.009, 0xffffff, 2);
+    dir = dir || t.pos.clone().sub(s.p.clone().multiplyScalar(1 + s.alt)).normalize();
+    boomFx(t.pos, t.boss ? 0.04 : 0.02, 0xffa040, t.boss ? 16 : 9); boomFx(t.pos, t.boss ? 0.03 : 0.014, 0xffffff, 3);
+    chunks(t, dir, melee ? 1.6 : 1); sparks(t.pos, dir, t.boss ? 40 : 22); ring(t.pos, 0xffc060, t.boss ? 0.07 : 0.032, 0.5); ring(t.pos, 0xffffff, t.boss ? 0.04 : 0.018, 0.28);
+    HS.slow = Math.max(HS.slow, t.boss ? 1.2 : melee ? 0.45 : 0.2); s.shake = Math.max(s.shake, t.boss ? 1.4 : 0.9);
+    if (melee && !t.boss) addScore(s, 400, '斬り捨て +400', '#66f0ff');
     if (t.boss) { addScore(s, 6000, 'メガ衛星 撃破！ +6000', '#ff2840'); s.flash = { big: 'メガ衛星 撃破！', sub: '大爆発！', col: '#ffd23f', t: 1.6 }; snd('boom'); setTimeout(() => snd('boom'), 250); }
     else { addScore(s, 800, '衛星 撃破！ +800', '#ffd23f'); snd('thump', 0.9, 0.6, 500); snd('beep', 990, 0.12, 'triangle', 0.08); }
     if (B.kills % 3 === 0 && B.shield < 4) { B.shield++; pop(s, 'シールド回復 +1', '#5fd7ff'); }
-    const n = t.boss ? 10 : 5; // Kessler: every kill leaves fragments that keep flying
+    const n = t.boss ? 6 : 3; // Kessler: every kill leaves fragments that keep flying
     for (let k = 0; k < n; k++) { const d = BT.deb.find(q => !q.on); if (!d) break;
       d.on = true; d.life = 14; d.pos.copy(t.pos).add(new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).multiplyScalar(0.006));
       d.vel.set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize().multiplyScalar(0.006 + Math.random() * 0.01); d.spin = Math.random() * 6; }
     if (B.kills === 1) radio(s, '撃破確認。…待て、破片が散らばった。デブリは止まらないぞ。');
   }
+  function perfectDodge(s, word) {
+    const B = s.B; B.dodges++; B.counter = 1.6; HS.slow = Math.max(HS.slow, 0.7); s.shake = Math.max(s.shake, 0.3);
+    addScore(s, 600, `${word} +600 → 斬で一閃`, '#66f0ff'); s.flash = { big: word, sub: '今だ！ 斬 で一閃カウンター', col: '#66f0ff', t: 1.0 };
+    snd('beep', 1568, 0.2, 'triangle', 0.08); snd('swish', 0.9, 0.7); if (!B.rm) { B.rm = true; radio(s, '見事な見切りだ！ 今なら一閃で斬り捨てられる！'); }
+  }
   function radio(s, txt) { const B = s.B; B.radio = { txt, t: 0, life: 4.5 + txt.length * 0.06 }; snd('swish', 0.12, 0.3); }
   function battleStep(s, inp, dt) {
     const B = s.B, P = s.p.clone().multiplyScalar(1 + s.alt);
     const vel = s.f.clone().multiplyScalar(s.v * TWm / R_KM).addScaledVector(s.p, s.vs);
-    B.inv = Math.max(0, B.inv - dt); B.rollCD = Math.max(0, B.rollCD - dt);
+    B.inv = Math.max(0, B.inv - dt); B.rollCD = Math.max(0, B.rollCD - dt); B.aimT = Math.max(0, (B.aimT || 0) - dt);
+    if (!B.launch) saberStep(s, inp, dt); if (s.done) return;
     if (B.launch && s.alt > 0.29) { B.launch = false; s.flash = { big: '戦闘宙域 到達', sub: '高度 1,900 km', col: '#5fd7ff', t: 1.6 }; snd('jingle', true); B.waveT = 2.2;
       radio(s, '管制：戦闘宙域に到達。空気も音もない。聞こえるのは自分の鼓動だけだ。'); }
     if (!B.r0) { B.r0 = true; radio(s, '管制：SG-1、発進を確認。目標高度1,900km…そこは、誰も助けに行けない場所だ。'); }
@@ -654,7 +842,7 @@ diffuseColor.rgb *= 1.0 + 0.2 * (mix(grain, 0.5, sea * 0.6) - 0.5) * clamp(1.0 -
         t.t -= dt;
         const len = beamLen(t), dir = t.aim.clone().sub(t.from).normalize(), rel = P.clone().sub(t.from), along = clamp(rel.dot(dir), 0, len);
         const dist = rel.sub(dir.multiplyScalar(along)).length(), rad = t.boss ? 0.006 : 0.004;
-        if (!t.hitDone && dist < rad) { t.hitDone = true; if (s.rollT > 0) { addScore(s, 500, 'ロールで無敵回避！ +500', '#5fd7ff'); B.dodges++; } else hurt(s); if (s.done) return; }
+        if (!t.hitDone && dist < rad) { t.hitDone = true; if (s.rollT > 0 || B.dodgeT > 0) perfectDodge(s, '見切り！'); else if (B.inv > 0) { addScore(s, 200, 'すり抜け +200', '#5fd7ff'); } else hurt(s); if (s.done) return; }
         else if (dist < rad * 3.5) t.near = true;
         if (t.t <= 0) { if (!t.hitDone && t.near) { addScore(s, 300, 'ギリギリ回避！ +300', '#ffd23f'); B.dodges++; } t.state = 'idle'; t.cd = (t.boss ? 1.1 : 1.9) + Math.random() * 1.3; }
       }
@@ -669,8 +857,8 @@ diffuseColor.rgb *= 1.0 + 0.2 * (mix(grain, 0.5, sea * 0.6) - 0.5) * clamp(1.0 -
     B.fireCD -= dt;
     if (inp.fire && B.fireCD <= 0 && !B.launch) { const m = B.missiles.find(q => !q.on);
       if (m) { B.fireCD = 0.25; B.shots++; const right = s.f.clone().cross(s.p).normalize(), ps = planeScale(s);
-        m.on = true; m.pos.copy(P).addScaledVector(right, 0.84 * ps).addScaledVector(s.p, -0.3 * ps).addScaledVector(s.f, 2.9 * ps);
-        m.dir.copy(B.lock ? B.lock.pos.clone().sub(m.pos).normalize() : vel.clone().normalize()); m.spd = vel.length() + 0.2; m.life = 1.3; m.target = B.lock; B.muzT = 0.07;
+        m.on = true; m.pos.copy(P).addScaledVector(right, 0.9 * ps).addScaledVector(s.f, 2.4 * ps).addScaledVector(s.p, 0.3 * ps);
+        m.dir.copy(B.lock ? B.lock.pos.clone().sub(m.pos).normalize() : vel.clone().normalize()); m.spd = vel.length() + 0.2; m.life = 1.3; m.target = B.lock; B.muzT = 0.07; B.aimT = 0.6;
         snd('beep', 1200, 0.09, 'sawtooth', 0.03, 300); } }
     for (const m of B.missiles) { if (!m.on) continue; m.life -= dt;
       if (m.target && !m.target.dead) { const want = m.target.pos.clone().sub(m.pos).normalize(); m.dir.lerp(want, Math.min(1, dt * 6)).normalize(); }
@@ -684,7 +872,7 @@ diffuseColor.rgb *= 1.0 + 0.2 * (mix(grain, 0.5, sea * 0.6) - 0.5) * clamp(1.0 -
     for (const d of BT.deb) { if (!d.on) continue; d.life -= dt; d.pos.addScaledVector(d.vel, dt);
       if (d.life <= 0 || d.pos.length() < 1.01) { d.on = false; continue; }
       const rel = d.pos.clone().sub(P), dist = rel.length();
-      if (dist < 0.0035) { d.on = false; boomFx(d.pos, 0.004, 0xcfd8e0, 2); if (s.rollT > 0) addScore(s, 200, 'デブリをロールで回避 +200', '#5fd7ff'); else { snd('thump', 0.8, 0.3, 300); hurt(s); if (s.done) return; } continue; }
+      if (dist < 0.0035) { d.on = false; boomFx(d.pos, 0.004, 0xcfd8e0, 2); if (s.rollT > 0 || B.dodgeT > 0 || B.move) addScore(s, 200, 'デブリ回避 +200', '#5fd7ff'); else { snd('thump', 0.8, 0.3, 300); hurt(s); if (s.done) return; } continue; }
       if (dist < 0.035 && rel.dot(d.vel.clone().sub(vel)) < 0) B.debWarn = true; }
     if (B.debWarn && !B.rd) { B.rd = true; radio(s, '破片が飛んでくる！当たれば穴が開くぞ。避けるかロールだ！'); }
     if (B.radio) { B.radio.t += dt; if (B.radio.t > B.radio.life) B.radio = null; }
@@ -715,15 +903,23 @@ diffuseColor.rgb *= 1.0 + 0.2 * (mix(grain, 0.5, sea * 0.6) - 0.5) * clamp(1.0 -
       L.material.color.setHex(t.state === 'lock' ? 0xff90a0 : 0xff2840);
       L.material.opacity = t.state === 'charge' ? 0.35 + 0.35 * (Math.floor(now / 60) % 2) : t.state === 'lock' ? 0.95 : 1;
     }
-    const ps = planeScale(s);
+    const ps = planeScale(s), Rb0 = plane.userData.rk.userData.R;
     B.missiles.forEach((m, i) => { const sp = BT.mis[i], b = BT.bolt[i]; sp.visible = b.visible = m.on;
       if (m.on) { sp.position.copy(m.pos); sp.scale.setScalar(0.004 + Math.random() * 0.001);
         b.position.copy(m.pos); b.quaternion.setFromUnitVectors(Y, m.dir.clone().negate()); b.scale.set(0.0005, 0.014, 0.0005); } });
-    BT.muz.visible = B.muzT > 0; if (BT.muz.visible) { BT.muz.position.copy(plane.localToWorld(new T.Vector3(0.84, -0.32, -2.95))); BT.muz.scale.setScalar(ps * 2.2); }
+    BT.muz.visible = B.muzT > 0; if (BT.muz.visible) { Rb0.J.muzzle.getWorldPosition(BT.muz.position); BT.muz.scale.setScalar(ps * 2.2); }
     for (const d of BT.deb) { d.mesh.visible = d.on; if (!d.on) continue; d.spin += dt * 3; d.mesh.position.copy(d.pos); d.mesh.setRotationFromAxisAngle(d.ax, d.spin); d.mesh.scale.setScalar(0.0011); }
     // Earth's shadow: the night side goes nearly black
     const nk = clamp(-s.p.dot(SUN) * 3 + 0.3, 0, 1); amb.intensity = 0.55 - 0.47 * nk; hemi.intensity = 0.25 * (1 - nk);
-    const fls = plane.userData.rk.userData.flames, fz = s.boosting ? 2.4 + Math.random() * 0.6 : 0.9 + Math.random() * 0.3; fls.forEach(f => f.scale.set(1, 1, fz)); flame.visible = glow.visible = false;
+    const fls = plane.userData.rk.userData.flames, fz = s.boosting || B.lunging || B.dodgeT > 0 ? 2.6 + Math.random() * 0.8 : 0.9 + Math.random() * 0.3; fls.forEach(f => f.scale.set(1, fz, 1)); flame.visible = glow.visible = false;
+    const Rb = plane.userData.rk.userData.R, saberOn = !!B.move || B.chainT > 0.3;
+    applyRobot(Rb, robotPose(s, Rb, now), 1 - Math.exp(-dt * (B.move ? 26 : 12)));
+    Rb.J.saber.visible = saberOn; Rb.J.rifle.visible = !saberOn;
+    plane.updateMatrixWorld(true); trailUpdate(Rb, !!B.move, dt);
+    for (const c of BT.chunk) { if (c.life <= 0) continue; c.life -= dt; if (c.life <= 0) { c.mesh.visible = false; continue; }
+      c.pos.addScaledVector(c.vel, dt); c.r.x += c.av.x * dt; c.r.y += c.av.y * dt; c.r.z += c.av.z * dt; c.mesh.position.copy(c.pos); c.mesh.rotation.copy(c.r); c.mesh.scale.setScalar(c.sc * Math.min(1, c.life / 0.6)); }
+    for (const r of BT.rings) { if (r.life <= 0) continue; r.life -= dt; if (r.life <= 0) { r.m.visible = false; continue; } const k = r.life / r.dur; r.m.position.copy(r.m.position); r.m.lookAt(camera.position); r.m.scale.setScalar(r.size * (0.25 + (1 - k * k))); r.m.material.opacity = 0.6 * k; }
+    for (const p of BT.spk) { if (p.life <= 0) continue; p.life -= dt; if (p.life <= 0) { p.sp.visible = false; continue; } p.pos.addScaledVector(p.vel, dt); p.vel.multiplyScalar(Math.exp(-dt * 3)); p.sp.position.copy(p.pos); p.sp.scale.setScalar(0.0016 * Math.min(1, p.life * 4)); }
     for (const f of BT.fxs) { if (f.life <= 0) continue; f.life -= dt; if (f.life <= 0) { f.sp.visible = false; continue; }
       const k = 1 - f.life / f.max; f.pos.addScaledVector(f.vel, dt); f.sp.position.copy(f.pos); f.sp.scale.setScalar(f.size * (0.4 + k * 1.2)); f.sp.material.opacity = 1 - k; }
   }
@@ -780,7 +976,11 @@ diffuseColor.rgb *= 1.0 + 0.2 * (mix(grain, 0.5, sea * 0.6) - 0.5) * clamp(1.0 -
       lines.forEach((l, i) => txt(l, 18, y0 - h + 26 + i * 17, `500 12px ${FD}`, '#c8ffe0', 'left', false)); hx.globalAlpha = 1; }
     if (B.warn === 2) txt('⚠ 回避！ 赤線から外れろ', cx, Math.max(H * 0.4, 192), `400 ${sm ? 18 : 24}px ${FD}`, Math.floor(now / 100) % 2 ? '#ff2840' : '#ffffff', 'center');
     else if (B.warn === 1 && H >= 420) txt('レーザー照準中…', cx, Math.max(H * 0.4, 192), `400 ${sm ? 13 : 16}px ${FD}`, '#ff8080', 'center');
-    if (B.rollCD > 0) txt(`ROLL ${B.rollCD.toFixed(1)}s`, 12, sy + 18, `600 10px ${FM}`, '#6f8790');
+    if (B.tech && B.tech.t > 0) { B.tech.t -= 1 / 60; const a = Math.min(1, B.tech.t * 3), ty = H > W ? H * 0.2 + 40 : H * 0.24;
+      hx.globalAlpha = a; txt(B.tech.jp, cx, ty, `400 ${sm ? 30 : 38}px ${FD}`, B.tech.fin ? '#ffd23f' : '#ffffff', 'center'); txt(B.tech.ro, cx, ty + (sm ? 24 : 30), `600 11px ${FM}`, '#66f0ff', 'center'); hx.globalAlpha = 1; }
+    if (B.combo > 1) { const port = H > W, cy = port ? H * 0.47 : H * 0.6, cxx = port ? W - 16 : 14, al = port ? 'right' : 'left';
+      txt(String(B.combo), cxx, cy, `400 ${sm ? 36 : 46}px ${FD}`, '#66f0ff', al); txt('COMBO', cxx, cy + (sm ? 26 : 32), `600 11px ${FM}`, '#eef3f1', al); }
+    if (B.counter > 0) txt('一閃 READY — 斬！', cx, Math.max(H * 0.4, 192) - 30, `400 ${sm ? 16 : 20}px ${FD}`, Math.floor(now / 90) % 2 ? '#66f0ff' : '#ffffff', 'center');
     if (B.inv > 0) { hx.fillStyle = `rgba(255,40,64,${Math.min(0.3, B.inv * 0.22)})`; hx.fillRect(0, 0, W, H); }
     if (B.launch) txt(`高度 ${Math.round(s.alt * R_KM).toLocaleString()} km → 戦闘宙域 1,900 km`, cx, Math.max(H * 0.4, 192), `400 ${sm ? 14 : 17}px ${FD}`, '#5fd7ff', 'center');
   }
@@ -806,7 +1006,8 @@ diffuseColor.rgb *= 1.0 + 0.2 * (mix(grain, 0.5, sea * 0.6) - 0.5) * clamp(1.0 -
   const camDist = s => s.B ? (s.B.launch ? 0.018 + s.alt * 0.04 : 0.03) : 0.0105 + s.alt * 1.55;
   const planeScale = s => camDist(s) * (s.B && !s.B.launch ? 0.072 : 0.105);
   function toggleView() { if (!S) return; S.view = S.view ? 0 : 1; snd('beep', S.view ? 520 : 780, 0.1, 'triangle', 0.08); }
-  function updateScene(s, dt, now) {
+  function updateScene(s, dt, now, dtR) {
+    dtR = dtR || dt;
     const T = THREE;
     const P = s.p.clone().multiplyScalar(1 + s.alt), up = s.p, right = s.f.clone().cross(up).normalize();
     // plane orientation: basis (right, up, back), then pitch & bank/roll
@@ -831,13 +1032,13 @@ diffuseColor.rgb *= 1.0 + 0.2 * (mix(grain, 0.5, sea * 0.6) - 0.5) * clamp(1.0 -
     }
     if (s.shake > 0) cp.add(new T.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).multiplyScalar(cd * 0.08 * s.shake));
     if (!s.camP) { s.camP = cp.clone(); s.camU = cu.clone(); s.camL = look.clone(); }
-    const k = Math.min(1, dt * (s.view ? 3 : 10));
+    const k = Math.min(1, dtR * (s.view ? 3 : s.B && s.B.lunging ? 6 : 10));
     s.camP.lerp(cp, k); s.camU.lerp(cu, k).normalize(); s.camL.lerp(look, k);
     if (s.camP.length() < 1 + sampleH(s.camP) + 0.0012) s.camP.setLength(1 + sampleH(s.camP) + 0.0012);
     camera.position.copy(s.camP); camera.up.copy(s.camU); camera.lookAt(s.camL);
     const camR = s.camP.length() - 1;
     camera.near = s.B ? 0.002 : clamp(camR * 0.05, 0.0003, 0.08); camera.far = 260;
-    camera.fov = s.B ? 62 + (s.boosting ? 6 : 0) : s.view ? 50 : 60 + clamp((s.v - VC) / (VM - VC), -0.5, 1) * 14; camera.updateProjectionMatrix();
+    camera.fov = s.B ? (camera.fov + ((62 + (s.boosting ? 6 : 0) + (s.B.lunging ? 14 : 0) + (s.B.dodgeT > 0 ? 6 : 0) - (HS.slow > 0 ? 4 : 0)) - camera.fov) * Math.min(1, dtR * 8)) : s.view ? 50 : 60 + clamp((s.v - VC) / (VM - VC), -0.5, 1) * 14; camera.updateProjectionMatrix();
     // rings & guide
     rings.forEach((r, i) => { r.mesh.visible = i >= s.ring && i <= s.ring + 1; if (!r.mesh.visible) return; const nx = i === s.ring;
       r.mesh.material.color.setHex(nx ? 0xff6a1a : 0xffd23f); r.mesh.material.opacity = nx ? 0.95 : 0.35;
@@ -880,7 +1081,7 @@ diffuseColor.rgb *= 1.0 + 0.2 * (mix(grain, 0.5, sea * 0.6) - 0.5) * clamp(1.0 -
     hx.setTransform(DPR, 0, 0, DPR, 0, 0); hx.clearRect(0, 0, W, H);
     const sm = Math.min(W, H) < 420, safeT = 10, cx = W / 2;
     // speed lines (sense of velocity, stronger with boost and near the ground)
-    const agl = s.alt - sampleH(s.p), intensity = clamp((s.v - VC * 0.6) / (VM - VC * 0.6), 0, 1) * clamp(1.4 - agl * 40, 0.25, 1) * (s.count > 0 ? 0 : 1) * (s.view ? 0.2 : 1);
+    const agl = s.alt - sampleH(s.p), intensity = (s.B && (s.B.lunging || s.B.dodgeT > 0)) ? 1 : clamp((s.v - VC * 0.6) / (VM - VC * 0.6), 0, 1) * clamp(1.4 - agl * 40, 0.25, 1) * (s.count > 0 ? 0 : 1) * (s.view ? 0.2 : 1);
     if (intensity > 0.02) {
       hx.save(); hx.globalCompositeOperation = 'lighter';
       const n = Math.round(10 + 34 * intensity), cy = H * 0.46;
@@ -987,12 +1188,13 @@ diffuseColor.rgb *= 1.0 + 0.2 * (mix(grain, 0.5, sea * 0.6) - 0.5) * clamp(1.0 -
     if (!active) return;
     raf = requestAnimationFrame(loop);
     const dt = Math.min(0.1, (now - (lastT || now)) / 1000); lastT = now;
+    let ts = 1; if (!paused) { if (HS.stop > 0) { HS.stop -= dt; ts = 0.05; } else if (HS.slow > 0) { HS.slow -= dt; ts = 0.3; } }
     if (!paused && S && !S.done) {
-      acc += dt; let n = 0;
+      acc += dt * ts; let n = 0;
       while (acc >= DT && n < 8) { acc -= DT; n++; step(S, readInput(), DT); if (S.done) break; }
     }
     engine(S, !paused);
-    if (S) { updateScene(S, dt, now); drawHud(S, now); }
+    if (S) { updateScene(S, dt * ts, now, dt); drawHud(S, now); }
   }
   function begin() {
     const sun = new THREE.Vector3(1, 0.35, 0.55).normalize(); SUN.x = sun.x; SUN.y = sun.y; SUN.z = sun.z; SUN.dot = null;
@@ -1002,9 +1204,9 @@ diffuseColor.rgb *= 1.0 + 0.2 * (mix(grain, 0.5, sea * 0.6) - 0.5) * clamp(1.0 -
     clearBattle();
     wrap.classList.toggle('battle', bt); plane.userData.jet.visible = !bt; plane.userData.rk.visible = bt;
     el.elRoll.innerHTML = bt ? 'ROLL<small>無敵回避</small>' : 'ROLL<small>Z/X</small>';
-    el.elFire.innerHTML = 'FIRE<small>BEAM</small>'; amb.intensity = 0.55; hemi.intensity = 0.25;
+    el.elFire.innerHTML = 'FIRE<small>BEAM</small>'; if (bt) el.elRoll.innerHTML = 'DASH<small>長押し加速</small>'; amb.intensity = 0.55; hemi.intensity = 0.25;
     el.elBoost.innerHTML = bt ? 'BOOST<small>B</small>' : 'BOOST<small>×100</small>';
-    el.elHelp.innerHTML = bt ? '左側ドラッグ：旋回・上昇/降下　FIRE：ビームライフル（照準の＋に向けて発射。正面の衛星は自動ロックオンして追尾）　ROLL：無敵回避（1.6秒に1回）　BOOST：加速<br>赤い細線＝照準中、線が太く固まったら0.5秒後に発射。進路を変えて外れろ！<br>PC：←→↑↓ 操作　Space/F 発射　B/Shift ブースト　Z/X ロール　Esc 一時停止'
+    el.elHelp.innerHTML = bt ? '左側ドラッグ：旋回・上昇/降下　斬：ビームサーベル（敵へ突進して斬る。連打で 袈裟→逆袈裟→旋風→兜割り）　FIRE：ビームライフル　DASH：横に高速回避（長押しで加速）<br>レーザーをDASHで見切ると、次の 斬 が必殺「一閃」になる。<br>赤い細線＝照準中、線が太く固まったら0.5秒後に発射。進路を変えて外れろ！<br>PC：←→↑↓ 操作　J 斬　Space/F 射撃　K/L・Z/X ダッシュ　Shift 加速　Esc 一時停止'
       : '左側ドラッグ：左右で旋回・上下で上昇/降下　BOOST：A/B（最高マッハ115）　ROLL：バレルロール　🌍：宇宙ビュー切替<br>PC：←→旋回 ↑↓上昇/降下 Space/B ブースト Z/X ロール V 視点 Esc 一時停止';
     makeRings(course);
     for (const sp of sprites) sp.material.opacity = 1;
@@ -1015,7 +1217,7 @@ diffuseColor.rgb *= 1.0 + 0.2 * (mix(grain, 0.5, sea * 0.6) - 0.5) * clamp(1.0 -
     el.elPause.hidden = true; el.elResult.hidden = true; paused = false; setControls(true);
     snd('beep', 660, 0.12, 'triangle', 0.1);
   }
-  function setControls(on) { const bt = course && course.battle; for (const k of ['elRoll', 'elBoost', 'elView', 'elPauseB', 'elStick', 'elFire']) el[k].hidden = !on || (k === 'elFire' && !bt) || (k === 'elView' && bt); }
+  function setControls(on) { const bt = course && course.battle; for (const k of ['elRoll', 'elBoost', 'elView', 'elPauseB', 'elStick', 'elFire', 'elSlash']) el[k].hidden = !on || ((k === 'elFire' || k === 'elSlash') && !bt) || (k === 'elView' && bt); }
   function finish(s) {
     s.done = true; setControls(false); s.flash = null; s.fact = null; s.pops = [];
     const n = rings.length, par = COURSES[courseIdx].par || 150;
