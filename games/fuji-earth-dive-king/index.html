@@ -1,0 +1,1175 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>FUJI EARTH DIVE KING</title>
+<meta name="theme-color" content="#140c1e">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=M+PLUS+Rounded+1c:wght@500;800&display=swap">
+<style>
+[hidden]{display:none!important}
+:root{
+  --ink:#fff6e6; --mute:#c7b8d8; --night:#140c1e; --panel:#22163a; --line:rgba(255,255,255,.16);
+  --lava:#ff6a2a; --gold:#ffc83d; --crys:#5fe3ff; --ok:#5fdc9b; --bad:#ff5a5a;
+  --disp:"Dela Gothic One","Hiragino Sans","Yu Gothic",system-ui,sans-serif;
+  --body:"M PLUS Rounded 1c","Hiragino Maru Gothic ProN","Hiragino Sans","Yu Gothic",system-ui,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:#0a0610;color:var(--ink);font-family:var(--body);overflow:hidden;overscroll-behavior:none;
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:none}
+#app{position:relative;height:100%;width:100%;max-width:480px;margin:0 auto;overflow:hidden;background:var(--night)}
+#cv{position:absolute;inset:0;display:block;touch-action:none}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+
+/* top-right system buttons */
+#sys{position:absolute;top:calc(env(safe-area-inset-top,0px) + 70px);right:8px;display:flex;flex-direction:column;gap:8px;z-index:5}
+#sys button{width:40px;height:40px;border-radius:50%;border:0;background-color:transparent;background-position:center;background-size:100%;background-repeat:no-repeat;opacity:.85}
+#bPause{background-image:url(assets/ui/btn_pause.png)}
+#bSound{background-image:url(assets/ui/btn_sound.png)}
+#bSound.off{filter:grayscale(1) brightness(.6)}
+
+/* fixed virtual pad */
+#ctrl{position:absolute;left:0;right:0;bottom:0;z-index:5;display:grid;grid-template-columns:1fr 1.15fr 1fr;align-items:end;gap:6px;
+  padding:0 max(12px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 12px) max(12px,env(safe-area-inset-left,0px));pointer-events:none}
+#ctrl button{pointer-events:auto;border:0;background-color:transparent;background-position:center;background-size:contain;background-repeat:no-repeat;touch-action:none;justify-self:center;position:relative}
+#bL,#bR{width:84px;height:84px}
+#bL{background-image:url(assets/ui/btn_left.png);justify-self:start}
+#bR{background-image:url(assets/ui/btn_right.png);justify-self:end}
+#bAct{width:104px;height:104px;background-image:url(assets/ui/btn_action.png)}
+#actLbl{position:absolute;left:50%;bottom:-2px;transform:translateX(-50%);white-space:nowrap;font:400 14px var(--disp);color:var(--gold);
+  text-shadow:0 2px 0 #000,0 0 6px #000;letter-spacing:.04em}
+#ctrl button.on{transform:scale(.92);filter:brightness(1.25)}
+
+/* overlays */
+.ov{position:absolute;inset:0;z-index:10;display:flex;flex-direction:column;overflow-y:auto;touch-action:pan-y;
+  padding:calc(env(safe-area-inset-top,0px) + 18px) max(16px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 18px) max(16px,env(safe-area-inset-left,0px));
+  background:linear-gradient(180deg,rgba(20,12,30,.9),rgba(20,12,30,.97) 40%)}
+#scrTitle{background:linear-gradient(180deg,rgba(20,12,30,.55),rgba(20,12,30,.94) 45%)}
+.ov .in{margin:auto 0;display:flex;flex-direction:column;gap:12px;width:100%}
+.logo{font:400 clamp(34px,11vw,48px)/1.02 var(--disp);margin:0;letter-spacing:.01em;text-shadow:0 4px 0 #000}
+.logo .a{color:var(--lava)} .logo .b{color:var(--gold);display:block}
+.tag{margin:0;color:var(--mute);font-size:14px;line-height:1.6}
+.btn{display:block;width:100%;border:0;border-radius:14px;padding:14px 12px;font:400 19px var(--disp);background:var(--lava);color:#fff;box-shadow:0 5px 0 #8a2a10}
+.btn:active{transform:translateY(3px);box-shadow:0 2px 0 #8a2a10}
+.btn.sub{background:var(--panel);box-shadow:0 4px 0 #0c0716;font:800 15px var(--body);border:1px solid var(--line)}
+.btn.gold{background:var(--gold);color:#2a1800;box-shadow:0 5px 0 #8a6200}
+.row{display:flex;gap:8px} .row>*{flex:1}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.stats div{background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:10px;padding:6px 4px;text-align:center;font-size:11px;color:var(--mute)}
+.stats b{display:block;font:400 18px var(--disp);color:var(--ink)}
+.howto{background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:13px;line-height:1.65}
+.howto b{color:var(--gold)}
+h2{margin:0;font:400 26px var(--disp)}
+.list{display:flex;flex-direction:column;gap:8px}
+.item{display:grid;grid-template-columns:48px 1fr auto;gap:10px;align-items:center;background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:12px;padding:8px 10px}
+.item img{width:48px;height:48px}
+.item b{display:block;font-size:15px} .item small{color:var(--mute);font-size:12px;line-height:1.4;display:block}
+.item button{border:0;border-radius:10px;padding:8px 10px;background:var(--gold);color:#2a1800;font:800 13px var(--body);white-space:nowrap}
+.item button[disabled]{background:#4a3f5a;color:#a99}
+.dex{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
+.dex div{background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:10px;padding:8px 6px;text-align:center;font-size:11px;color:var(--mute);min-height:94px}
+.dex div .e{font-size:30px;display:block;line-height:1.2}
+.dex div b{display:block;color:var(--ink);font-size:12px;margin-top:2px}
+.dex div.no{opacity:.45}
+.dex div.rare{border-color:var(--gold)}
+.card{background:var(--panel);border:2px solid var(--gold);border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:10px;text-align:center}
+.card .pic{font-size:56px;line-height:1}
+.card .pic img{width:96px;height:96px}
+.card h3{margin:0;font:400 22px var(--disp);color:var(--gold)}
+.card p{margin:0;font-size:14px;line-height:1.6;color:var(--ink)}
+.card .ns{font-size:11px;color:var(--mute);letter-spacing:.1em}
+.card .res{color:var(--ok);font-weight:800}
+.big{font:400 48px/1 var(--disp);color:var(--gold);text-align:center}
+.big small{font-size:18px}
+.cause{background:rgba(255,90,90,.12);border:1px solid var(--bad);border-radius:12px;padding:10px;text-align:center}
+.cause b{display:block;color:var(--bad);font:400 20px var(--disp)}
+#shareImg{width:100%;border-radius:12px;border:1px solid var(--line)}
+.note{font-size:12px;color:var(--mute);text-align:center;margin:0}
+#toast{position:absolute;left:50%;top:38%;transform:translateX(-50%);z-index:8;background:rgba(10,6,16,.88);border:1px solid var(--gold);color:var(--ink);
+  font:800 14px var(--body);padding:8px 14px;border-radius:999px;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .25s}
+#toast.on{opacity:1}
+@media (max-height:620px){#bL,#bR{width:70px;height:70px}#bAct{width:86px;height:86px}}
+</style>
+</head>
+<body>
+<div id="app">
+  <canvas id="cv" aria-label="FUJI EARTH DIVE KING ゲーム画面"></canvas>
+  <div id="sys" hidden><button id="bPause" type="button" aria-label="一時停止"></button><button id="bSound" type="button" aria-label="音のオン・オフ"></button></div>
+  <div id="ctrl" hidden>
+    <button id="bL" type="button" aria-label="左へ"></button>
+    <button id="bAct" type="button" aria-label="アクション"><span id="actLbl">減速</span></button>
+    <button id="bR" type="button" aria-label="右へ"></button>
+  </div>
+  <div id="toast"></div>
+
+  <section class="ov" id="scrTitle">
+    <div class="in">
+      <h1 class="logo"><span class="a">FUJI EARTH</span><span class="b">DIVE KING</span></h1>
+      <p class="tag">富士山の火口に飛び込んだら、地球の裏側まで行けるのか？ 落ちるか、洞窟を探るか──その迷いを楽しむ地底ダイブ。</p>
+      <div class="stats"><div>最深記録<b id="tDepth">0</b>km</div><div>ハイスコア<b id="tScore">0</b></div><div>図鑑<b id="tDex">0</b></div></div>
+      <div class="howto">
+        <b>◀ ▶</b> 左右に移動　<b>●</b> 落下中は長押しで減速（パラシュート）<br>
+        左右の<b>洞窟の入口</b>に近づくと探索モードへ。洞窟では <b>●</b> でジャンプ・調べる。<br>
+        無視してそのまま落ちれば <b>DIVEボーナス</b>。PC：← → / A D、Space で操作
+      </div>
+      <button class="btn" id="bStart" type="button">火口へダイブ！</button>
+      <div class="row"><button class="btn sub" id="bUpg" type="button">🪨 装備強化</button><button class="btn sub" id="bDex" type="button">📖 発見図鑑</button></div>
+      <p class="note" id="tMat"></p>
+    </div>
+  </section>
+
+  <section class="ov" id="scrUpg" hidden>
+    <div class="in">
+      <h2>装備強化</h2>
+      <p class="tag">強化素材 🪨 はプレイ中に洞窟の宝箱・商人・地層クリアで手に入り、失敗しても残ります。強化は毎回リセットされません。</p>
+      <p class="tag">所持 🪨 <b id="uMat">0</b></p>
+      <div class="list" id="upgList"></div>
+      <button class="btn sub" id="bUpgBack" type="button">もどる</button>
+    </div>
+  </section>
+
+  <section class="ov" id="scrDex" hidden>
+    <div class="in">
+      <h2>発見図鑑 <span id="dexCount" style="font-size:16px;color:var(--mute)"></span></h2>
+      <div class="dex" id="dexGrid"></div>
+      <button class="btn sub" id="bDexBack" type="button">もどる</button>
+    </div>
+  </section>
+
+  <section class="ov" id="scrPause" hidden>
+    <div class="in">
+      <h2>一時停止</h2>
+      <button class="btn" id="bResume" type="button">つづける</button>
+      <button class="btn sub" id="bSound2" type="button">音：ON</button>
+      <button class="btn sub" id="bRetire" type="button">ここで終える（結果へ）</button>
+    </div>
+  </section>
+
+  <section class="ov" id="scrModal" hidden><div class="in"><div class="card" id="modalCard"></div></div></section>
+
+  <section class="ov" id="scrDead" hidden>
+    <div class="in">
+      <h2 style="text-align:center">力尽きた…</h2>
+      <div class="cause"><span style="font-size:12px;color:var(--mute)">原因</span><b id="deadCause"></b><span id="deadHint" style="font-size:12px;color:var(--mute)"></span></div>
+      <div class="stats"><div>到達深度<b id="deadDepth">0</b>km</div><div>宝石<b id="deadGems">0</b></div><div>発見<b id="deadDisc">0</b></div></div>
+      <button class="btn gold" id="bRevive" type="button">チェックポイントから再開</button>
+      <button class="btn sub" id="bToResult" type="button">結果を見る</button>
+    </div>
+  </section>
+
+  <section class="ov" id="scrResult" hidden>
+    <div class="in">
+      <h2 id="resTitle" style="text-align:center">結果</h2>
+      <p class="note" id="resEnding"></p>
+      <div class="big" id="resScore">0</div>
+      <p class="note">スコア = 深度 + 10×宝石 + 100×レア発見 + 500×初発見の秘密</p>
+      <div class="stats"><div>到達深度<b id="rDepth">0</b>km</div><div>宝石<b id="rGems">0</b></div><div>レア / 秘密<b id="rRare">0</b></div></div>
+      <div class="howto" id="rDisc"></div>
+      <div class="howto" id="rNext"></div>
+      <img id="shareImg" alt="結果画像（長押しで保存）">
+      <p class="note">画像を長押し（PCは右クリック）で保存して共有できます</p>
+      <div class="row"><button class="btn sub" id="bShare" type="button">共有 / コピー</button><button class="btn sub" id="bResTitle" type="button">タイトルへ</button></div>
+      <button class="btn" id="bAgain" type="button">もう一度ダイブ</button>
+    </div>
+  </section>
+</div>
+
+<script>
+(() => {
+'use strict';
+/* =========================================================
+   FUJI EARTH DIVE KING  —  落下 × 探索 × 発見
+   Canvas 2D / fixed 60Hz step / localStorage / Web Audio
+   ========================================================= */
+const $ = id => document.getElementById(id);
+const cv = $('cv'), ctx = cv.getContext('2d');
+const LW = 360; let LH = 640, SC = 1, DPR = 1;
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+const lerp = (a, b, t) => a + (b - a) * t;
+const rnd = (a = 1, b) => b === undefined ? Math.random() * a : a + Math.random() * (b - a);
+const pick = a => a[(Math.random() * a.length) | 0];
+const fmt = n => Math.floor(n).toLocaleString('ja-JP');
+
+function resize() {
+  const r = $('app').getBoundingClientRect();
+  DPR = Math.min(2, window.devicePixelRatio || 1); SC = r.width / LW; LH = r.height / SC;
+  cv.width = Math.round(r.width * DPR); cv.height = Math.round(r.height * DPR);
+  cv.style.width = r.width + 'px'; cv.style.height = r.height + 'px';
+}
+addEventListener('resize', resize); resize();
+
+/* ---------------- assets ---------------- */
+const IMG = {};
+const ASSETS = ['characters/explorer_idle', 'characters/explorer_fall', 'characters/explorer_run', 'characters/explorer_jump', 'characters/explorer_hurt', 'characters/explorer_explore',
+  'enemies/rock_creature', 'equipment/core_scanner', 'equipment/drill_boots', 'equipment/heat_suit', 'equipment/magnet', 'equipment/parachute', 'equipment/pressure_shield',
+  'events/ramen_shop', 'events/toll_gate', 'items/checkpoint', 'items/gem_blue', 'items/gem_gold', 'items/gem_green', 'items/gem_red', 'items/heart', 'items/treasure_chest',
+  'npcs/mole_merchant', 'obstacles/lava_pool', 'obstacles/rock_small', 'obstacles/rock_spike', 'obstacles/steam_vent',
+  'terrain/cave_entrance', 'terrain/exit_portal', 'terrain/platform_crystal', 'terrain/platform_rock',
+  'backgrounds/bg_fuji_crater', 'backgrounds/bg_crystal_cave', 'backgrounds/bg_mantle', 'backgrounds/bg_outer_core', 'backgrounds/bg_inner_core'];
+const loadAssets = () => Promise.all(ASSETS.map(p => new Promise(res => {
+  const im = new Image(); im.onload = im.onerror = () => res(); im.src = 'assets/' + p + '.png'; IMG[p.split('/')[1]] = im;
+})));
+const ok = im => im && im.complete && im.naturalWidth > 0;
+function spr(name, x, y, w, h, o = {}) { // centred draw
+  const im = IMG[name];
+  ctx.save(); ctx.translate(x, y); if (o.rot) ctx.rotate(o.rot); if (o.flip) ctx.scale(-1, 1); if (o.alpha != null) ctx.globalAlpha *= o.alpha;
+  if (ok(im)) ctx.drawImage(im, -w / 2, -h / 2, w, h); else { ctx.fillStyle = '#f0f'; ctx.fillRect(-w / 4, -h / 4, w / 2, h / 2); }
+  ctx.restore();
+}
+
+/* ---------------- save ---------------- */
+const SAVE_KEY = 'fedk_v1';
+const DEF = () => ({ best: { depth: 0, score: 0 }, mat: 0, upg: { heat: 0, hp: 0, para: 0, mag: 0, shield: 0 }, disco: {}, secrets: {}, endings: {}, plays: 0, mute: false });
+let SV = DEF();
+try { const s = JSON.parse(localStorage.getItem(SAVE_KEY)); if (s) SV = Object.assign(DEF(), s, { best: Object.assign(DEF().best, s.best), upg: Object.assign(DEF().upg, s.upg) }); } catch (e) {}
+const save = () => { try { localStorage.setItem(SAVE_KEY, JSON.stringify(SV)); } catch (e) {} };
+
+/* ---------------- worlds (compressed depth) ---------------- */
+const WORLDS = [
+  { id: 1, name: '富士山の火口', en: 'FUJI CRATER', km0: 0, km1: 3, len: 4000, bg: 'bg_fuji_crater', wall: [74, 58, 54], wall2: [120, 86, 70], glow: '#ff8a3d', vmax: 290, heat: 0, press: 0, dark: 0, gap: [120, 175] },
+  { id: 2, name: '地殻の秘密洞窟', en: 'CRYSTAL CRUST', km0: 3, km1: 30, len: 10000, bg: 'bg_crystal_cave', wall: [30, 50, 78], wall2: [52, 96, 128], glow: '#5fe3ff', vmax: 320, heat: 0, press: 0, dark: .1, gap: [105, 160] },
+  { id: 3, name: 'マントル迷宮', en: 'MANTLE MAZE', km0: 30, km1: 2900, len: 15000, bg: 'bg_mantle', wall: [76, 26, 26], wall2: [130, 44, 30], glow: '#ff5a2a', vmax: 340, heat: 2.4, press: 0, dark: .35, gap: [118, 170] },
+  { id: 4, name: '外核・鉄の海', en: 'OUTER CORE', km0: 2900, km1: 5150, len: 13000, bg: 'bg_outer_core', wall: [62, 44, 34], wall2: [110, 80, 52], glow: '#ffb347', vmax: 350, heat: 3.2, press: 0, dark: .45, gap: [118, 170], mag: true },
+  { id: 5, name: '地球の中心', en: 'INNER CORE', km0: 5150, km1: 6371, len: 10000, bg: 'bg_inner_core', wall: [44, 32, 62], wall2: [80, 62, 112], glow: '#c9a7ff', vmax: 330, heat: 2, press: 3, dark: .3, gap: [112, 162] }
+];
+let acc0 = 0; for (const w of WORLDS) { w.d0 = acc0; acc0 += w.len; w.d1 = acc0; }
+const TOTAL = acc0, CORE_KM = 6371;
+const worldAt = d => WORLDS.find(w => d < w.d1) || WORLDS[WORLDS.length - 1];
+const kmAt = d => { if (d <= 0) return 0; const w = worldAt(d); return Math.min(CORE_KM, w.km0 + (w.km1 - w.km0) * clamp((d - w.d0) / w.len, 0, 1)); };
+
+/* ---------------- discoveries / events ---------------- */
+const EQUIP = {
+  para: { name: 'パラシュート', img: 'parachute', desc: '落下中に長押しで減速（初期装備）' },
+  drill: { name: 'ドリルブーツ', img: 'drill_boots', desc: 'ひびの入った岩を砕ける・秘密の壁を掘れる' },
+  heat: { name: '耐熱スーツ', img: 'heat_suit', desc: '熱の上昇を抑える' },
+  magnet: { name: 'マグネット', img: 'magnet', desc: '近くの宝石を吸い寄せる' },
+  shield: { name: '高圧シールド', img: 'pressure_shield', desc: '地球中心の圧力に耐える' },
+  scanner: { name: 'コア探査装置', img: 'core_scanner', desc: '地球中心への最終進入に必要' }
+};
+// ns = nonsense (無厘頭) / rare = counts as レア発見
+const EVENTS = {
+  ramen: { name: '地下ラーメン屋', img: 'ramen_shop', ns: 1, w: [1, 2, 3, 4], text: '地下1,000kmで営業中の老舗。名物「替え玉」を食べると落下速度が一時的に2倍に！' },
+  sunglasses: { name: '恐竜の忘れ物', e: '🕶️', ns: 1, rare: 1, w: [2, 3, 4, 5], text: '地下でサングラスを発見。持ち主はティラノサウルスだったらしい。' },
+  toll: { name: '地底人の料金所', img: 'toll_gate', ns: 1, w: [2, 3, 4, 5], text: '「ここを通るなら通行料、宝石10個ね。払わないなら…抜け道は危ないよ？」' },
+  mole: { name: 'モグラ商人', img: 'mole_merchant', w: [1, 2, 3, 4, 5], text: '「へい、らっしゃい。地底価格で何でもそろうよ」' },
+  onsen: { name: '地底温泉', e: '♨️', ns: 1, w: [2, 3, 4], text: '地熱で沸いた秘湯。疲れも熱も吹き飛ぶ。' },
+  tablet: { name: '古代遺跡の石板', e: '🗿', rare: 1, w: [2, 3], text: '謎の文字が刻まれている──「中心ニ至ル者、鍵ヲ持テ」。コア探査装置のことだろうか？' },
+  penguin: { name: '迷子のペンギン', e: '🐧', ns: 1, w: [1, 2, 3], text: 'なぜこんな地底に？ 南極に帰りたいらしい。' },
+  karaoke: { name: '地底カラオケ', e: '🎤', ns: 1, w: [2, 3, 4], text: '地底人たちが熱唱中。「一曲どう？」' },
+  vending: { name: '地下の自販機', e: '🥤', ns: 1, w: [1, 2, 3, 4, 5], text: 'なぜか電気が通っている。何が出るかはお楽しみ。' },
+  diamond: { name: '巨大ダイヤ', e: '💎', rare: 1, w: [2, 3, 4, 5], text: '人の頭ほどもあるダイヤモンドが埋まっている！' },
+  mailbox: { name: '地底ポスト', e: '📮', ns: 1, w: [1, 2, 3, 4, 5], text: '未来の自分から手紙が届いていた。' },
+  fossil: { name: '恐竜の化石', e: '🦴', rare: 1, w: [2, 3], text: '全長20mの化石。地上の博物館が欲しがりそう。' },
+  lake: { name: '地下湖', e: '🌊', w: [2], text: '青く光る静かな湖。冷たい水がのどを潤す。' },
+  whale: { name: '鉄のクジラ', e: '🐋', ns: 1, rare: 1, w: [4], text: '液体金属の海を泳ぐ巨大な影。背中に乗れそうだ…！' },
+  corelab: { name: 'コア研究所跡', e: '🛰️', rare: 1, w: [5], text: '昔の探検隊の研究所。棚に「コア探査装置」が残っている！' }
+};
+const SECRETS = {
+  1: [{ id: 's_tube', name: '溶岩トンネルの抜け道', e: '🕳️' }],
+  2: [{ id: 's_heart', name: '水晶の心臓部', e: '🔷' }, { id: 's_ruins', name: '古代遺跡の宝物庫', e: '🏛️' }],
+  3: [{ id: 's_garden', name: 'マグマ庭園', e: '🌋' }],
+  4: [{ id: 's_cath', name: '鉄の大聖堂', e: '⛪' }],
+  5: [{ id: 's_prism', name: '結晶の間', e: '🔮' }]
+};
+const ENDINGS = {
+  true: { name: '地球の裏側へ', e: '🌏', text: 'コア探査装置が扉を開いた。中心を突き抜け…気づけばブラジルの海岸に立っていた！' },
+  normal: { name: '閉ざされた中心', e: '🔒', text: '地球の中心に着いた。だが巨大な結晶の扉は開かない。鍵が必要だ…' },
+  ramen: { name: '地底ラーメン王', e: '🍜', text: '替え玉を食べすぎて地球の中心で屋台を開くことにした。名物は「マントル豚骨」。' }
+};
+const DEX = [
+  ...Object.entries(EVENTS).map(([id, v]) => ({ id: 'ev_' + id, name: v.name, e: v.e, img: v.img, rare: v.rare, desc: v.text })),
+  ...Object.values(SECRETS).flat().map(s => ({ id: s.id, name: s.name, e: s.e, rare: 1, desc: '秘密エリア' })),
+  ...Object.entries(EQUIP).filter(([k]) => k !== 'para').map(([id, v]) => ({ id: 'eq_' + id, name: v.name, img: v.img, desc: v.desc })),
+  ...Object.entries(ENDINGS).map(([id, v]) => ({ id: 'end_' + id, name: v.name, e: v.e, rare: 1, desc: 'エンディング' }))
+];
+const dexCount = () => DEX.filter(d => SV.disco[d.id]).length;
+
+/* ---------------- audio (synth) ---------------- */
+const AU = { ctx: null, master: null, wind: null };
+function audioInit() {
+  if (!AU.ctx) {
+    try {
+      const C = window.AudioContext || window.webkitAudioContext; AU.ctx = new C();
+      AU.master = AU.ctx.createGain(); AU.master.gain.value = SV.mute ? 0 : .7; AU.master.connect(AU.ctx.destination);
+      const n = AU.ctx.sampleRate * 2, b = AU.ctx.createBuffer(1, n, AU.ctx.sampleRate), d = b.getChannelData(0);
+      for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+      AU.noise = b;
+      const src = AU.ctx.createBufferSource(); src.buffer = b; src.loop = true;
+      const f = AU.ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 500; f.Q.value = .7;
+      const g = AU.ctx.createGain(); g.gain.value = 0; src.connect(f); f.connect(g); g.connect(AU.master); src.start();
+      AU.wind = { g, f };
+    } catch (e) { AU.ctx = null; }
+  }
+  if (AU.ctx && AU.ctx.state !== 'running') { try { AU.ctx.resume(); } catch (e) {} }
+}
+const live = () => AU.ctx && !SV.mute && AU.ctx.state === 'running';
+function tone(f0, f1, dur, type = 'square', vol = .08, delay = 0) {
+  if (!live()) return; const c = AU.ctx, t = c.currentTime + delay, o = c.createOscillator(), g = c.createGain();
+  o.type = type; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t + dur);
+  g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + .01); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+  o.connect(g); g.connect(AU.master); o.start(t); o.stop(t + dur + .05);
+}
+function noise(dur, vol, f0, f1, delay = 0) {
+  if (!live()) return; const c = AU.ctx, t = c.currentTime + delay, s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
+  s.buffer = AU.noise; f.type = 'lowpass'; f.frequency.setValueAtTime(f0, t); f.frequency.exponentialRampToValueAtTime(Math.max(40, f1), t + dur);
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+  s.connect(f); f.connect(g); g.connect(AU.master); s.start(t); s.stop(t + dur + .05);
+}
+const SFX = {
+  gem: () => { tone(1320, 1760, .08, 'triangle', .07); tone(1980, 2400, .1, 'triangle', .05, .05); },
+  hit: () => { noise(.3, .5, 1200, 120); tone(160, 60, .25, 'sawtooth', .1); },
+  jump: () => tone(360, 720, .14, 'square', .06),
+  land: () => noise(.08, .15, 600, 200),
+  cave: () => { noise(.6, .25, 300, 2400); tone(220, 440, .4, 'triangle', .06); },
+  exit: () => { tone(330, 990, .35, 'triangle', .08); noise(.5, .2, 2400, 400, .1); },
+  chest: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, f, .16, 'triangle', .08, i * .07)),
+  event: () => [392, 523, 659].forEach((f, i) => tone(f, f * 1.01, .2, 'sine', .08, i * .09)),
+  world: () => { tone(110, 55, 1.2, 'sawtooth', .09); tone(220, 110, 1.2, 'triangle', .07); noise(1, .2, 800, 100); },
+  dive: () => { tone(600, 1600, .25, 'square', .06); noise(.3, .2, 3000, 800); },
+  break: () => { noise(.25, .45, 3000, 300); tone(240, 80, .2, 'square', .07); },
+  dead: () => [392, 330, 262, 196].forEach((f, i) => tone(f, f * .97, .3, 'sawtooth', .07, i * .14)),
+  win: () => [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, f, .35, 'triangle', .09, i * .12)),
+  tick: () => tone(900, 900, .04, 'square', .03)
+};
+function setMute(m) {
+  SV.mute = m; save(); $('bSound').classList.toggle('off', m); $('bSound2').textContent = '音：' + (m ? 'OFF' : 'ON');
+  if (AU.master) AU.master.gain.value = m ? 0 : .7;
+}
+
+/* ---------------- input ---------------- */
+const IN = { l: false, r: false, act: false, actEdge: false, actUp: false };
+const KEYS = { ArrowLeft: 'l', KeyA: 'l', ArrowRight: 'r', KeyD: 'r', Space: 'act', ArrowUp: 'act', KeyW: 'act', Enter: 'act', ArrowDown: 'act', KeyS: 'act' };
+addEventListener('keydown', e => {
+  if (e.code === 'Escape' || e.code === 'KeyP') { if (G.state === 'play') pause(); else if (G.state === 'pause') resume(); return; }
+  const k = KEYS[e.code]; if (!k) return;
+  if (G.state === 'play') e.preventDefault();
+  if (e.repeat) return;
+  audioInit();
+  if (k === 'act') { if (!IN.act) IN.actEdge = true; IN.act = true; } else IN[k] = true;
+});
+addEventListener('keyup', e => { const k = KEYS[e.code]; if (!k) return; if (k === 'act') { IN.act = false; IN.actUp = true; } else IN[k] = false; });
+function bindBtn(el, key) {
+  const down = e => { e.preventDefault(); audioInit(); try { el.setPointerCapture(e.pointerId); } catch (er) {} el.classList.add('on');
+    if (key === 'act') { if (!IN.act) IN.actEdge = true; IN.act = true; } else IN[key] = true; };
+  const up = () => { el.classList.remove('on'); if (key === 'act') { if (IN.act) IN.actUp = true; IN.act = false; } else IN[key] = false; };
+  el.addEventListener('pointerdown', down); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up); el.addEventListener('lostpointercapture', up);
+}
+bindBtn($('bL'), 'l'); bindBtn($('bR'), 'r'); bindBtn($('bAct'), 'act');
+cv.addEventListener('pointerdown', () => { audioInit(); if (G.state === 'play' && R && R.mode === 'intro') IN.actEdge = true; });
+addEventListener('blur', () => { IN.l = IN.r = IN.act = false; });
+document.addEventListener('touchmove', e => { if (G.state === 'play') e.preventDefault(); }, { passive: false });
+document.addEventListener('gesturestart', e => e.preventDefault());
+
+/* ---------------- UI helpers ---------------- */
+const G = { state: 'title' };
+const screens = ['scrTitle', 'scrUpg', 'scrDex', 'scrPause', 'scrModal', 'scrDead', 'scrResult'];
+function show(id) { for (const s of screens) $(s).hidden = s !== id; }
+function setPlayUI(on) { $('ctrl').hidden = !on; $('sys').hidden = !on; }
+let toastT = 0;
+function toast(t, sec = 2) { $('toast').textContent = t; $('toast').classList.add('on'); toastT = sec; }
+
+/* ---------------- run state ---------------- */
+let R = null;
+const maxHp = () => 100 + 20 * SV.upg.hp;
+function newRun() {
+  R = {
+    t: 0, mode: 'intro', introT: 0, d: -24, x: LW / 2, vx: 0, vy: 0, face: 1,
+    hp: maxHp(), heat: 0, gems: 0, mat: 0, rare: 0, secNew: 0, disc: [], ramen: 0, buffRamen: 0, divebonus: 0,
+    eq: { para: true, drill: false, heat: false, magnet: SV.upg.mag >= 2, shield: SV.upg.shield > 0, scanner: false, sunglasses: false },
+    objs: [], caves: [], spawnY: 260, nextCave: 2300, coreLabPlaced: false, shieldGiven: false, firstCave: true,
+    inv: 0, lastHit: '', cp: null, rescued: false, revives: 0, world: 1, banner: null, pops: [], parts: [], shake: 0,
+    cave: null, magDir: 1, magT: 0, magWarn: 0, worldsReached: { 1: true }, ending: null, caveCount: 0, caveTime: 0, hintT: 0
+  };
+  SV.plays++; save();
+}
+function addDisc(id, name, rare) {
+  const fresh = !SV.disco[id];
+  SV.disco[id] = true; save();
+  if (!R.disc.find(d => d.id === id)) R.disc.push({ id, name, rare: !!rare, fresh });
+  if (rare) R.rare++;
+  return fresh;
+}
+function pop(text, x, y, col = '#fff') { R.pops.push({ text, x, y, col, t: 1.2 }); }
+function burst(x, y, n, col, sp = 120) { for (let i = 0; i < n; i++) { const a = rnd(Math.PI * 2), v = rnd(sp * .3, sp); R.parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, t: rnd(.4, .9), col, r: rnd(1.5, 3.5) }); } }
+const score = () => Math.floor(kmAt(Math.max(R.d, 0))) + 10 * R.gems + 100 * R.rare + 500 * R.secNew;
+
+/* ---------------- shaft geometry ---------------- */
+function shaft(y) {
+  if (y < 0) return [40, LW - 40];
+  const hw = 116 + 26 * Math.sin(y / 620) + 12 * Math.sin(y / 233 + 1) + (y < 400 ? (400 - y) * .08 : 0);
+  const cx = LW / 2 + 16 * Math.sin(y / 900);
+  return [cx - hw, cx + hw];
+}
+
+/* ---------------- fall-mode spawning ---------------- */
+function nearCave(y, side) { return R.caves.some(c => Math.abs(c.y - y) < 130 && (side == null || c.side === side)); }
+function spawnChunk(y) {
+  const w = worldAt(y); const [L, Rr] = shaft(y);
+  if (y > TOTAL - 300) return;
+  const roll = Math.random(), wid = w.id;
+  const gemCol = { 1: 'gem_red', 2: 'gem_blue', 3: 'gem_red', 4: 'gem_gold', 5: 'gem_green' }[wid];
+  if (roll < .30) { // gem line / arc
+    const n = 4 + (Math.random() * 4 | 0), x0 = rnd(L + 30, Rr - 30), dx = rnd(-14, 14);
+    for (let i = 0; i < n; i++) R.objs.push({ k: 'gem', x: clamp(x0 + dx * i, L + 18, Rr - 18), y: y + i * 26, c: gemCol });
+    return;
+  }
+  if (roll < .36 && Math.random() < .5) { R.objs.push({ k: 'heart', x: rnd(L + 30, Rr - 30), y }); return; }
+  const hz = [];
+  if (wid <= 2) hz.push('rock', 'rock', 'spike', 'vent');
+  if (wid === 2) hz.push('crys');
+  if (wid === 3) hz.push('rock', 'lava', 'lava', 'cr', 'spike');
+  if (wid === 4) hz.push('iron', 'iron', 'cr', 'rock', 'lava');
+  if (wid === 5) hz.push('shard', 'shard', 'rock', 'iron');
+  const k = pick(hz);
+  if (k === 'rock' || k === 'crys') {
+    const n = Math.random() < .35 + wid * .06 ? 2 : 1;
+    for (let i = 0; i < n; i++) {
+      const r = rnd(15, 25); R.objs.push({ k: 'rock', x: rnd(L + r + 6, Rr - r - 6), y: y + i * 40, r, brittle: Math.random() < .35, crys: k === 'crys', rot: rnd(6) });
+    }
+  } else if (k === 'spike' || k === 'vent') {
+    const side = Math.random() < .5 ? -1 : 1; if (nearCave(y, side)) return;
+    R.objs.push({ k, side, y, ph: rnd(6) });
+  } else if (k === 'lava') R.objs.push({ k: 'lava', x: rnd(L + 40, Rr - 40), y, vx: rnd(40, 80) * (Math.random() < .5 ? -1 : 1), w: 62, h: 30 });
+  else if (k === 'cr') R.objs.push({ k: 'cr', x0: (L + Rr) / 2, y, amp: (Rr - L) / 2 - 30, ph: rnd(6), sp: rnd(1.1, 1.8), r: 18 });
+  else if (k === 'iron') R.objs.push({ k: 'iron', x: rnd(L + 30, Rr - 30), y, r: rnd(14, 22), vx: 0, rot: rnd(6) });
+  else if (k === 'shard') R.objs.push({ k: 'shard', x: rnd(L + 40, Rr - 40), y, rot: rnd(6), vr: rnd(-2, 2) });
+}
+function spawnCaves() {
+  while (R.nextCave < R.d + LH * 1.6 && R.nextCave < TOTAL - 1600) {
+    const y = R.nextCave, w = worldAt(y);
+    let special = null;
+    if (w.id === 5 && !R.coreLabPlaced && y > w.d0 + 2000) { special = 'corelab'; R.coreLabPlaced = true; }
+    const side = Math.random() < .5 ? -1 : 1;
+    const desc = genCave(w.id, special);
+    R.caves.push({ y, side, desc, state: 'pending' });
+    R.objs = R.objs.filter(o => !(Math.abs(o.y - y) < 120 && (o.k === 'spike' || o.k === 'vent')));
+    R.nextCave += w.id === 2 ? rnd(3600, 5200) : rnd(4300, 6600);
+    if (w.id === 5 && !R.coreLabPlaced && R.nextCave > w.d0 + 2000) R.nextCave = Math.max(R.nextCave, w.d0 + 2050);
+  }
+}
+
+/* ---------------- cave generation (templates) ---------------- */
+function genCave(wid, special) {
+  const first = R.firstCave; R.firstCave = false;
+  const len = special ? 1300 : first ? 1450 : rnd(1550, 2050) + wid * 60;
+  const C = { wid, len, ground: [], plats: [], gems: [], spikes: [], vents: [], walkers: [], chest: null, ev: null, cp: null, secret: null, wall: null, exit: null, special };
+  const gemCol = { 1: 'gem_red', 2: 'gem_blue', 3: 'gem_red', 4: 'gem_gold', 5: 'gem_green' }[wid];
+  let x = 0, segs = 0;
+  while (x < len) {
+    const sl = segs === 0 ? 260 : rnd(170, 330), x1 = Math.min(len + 140, x + sl);
+    C.ground.push([x, x1]); segs++;
+    x = x1;
+    if (x < len - 120) {
+      const gap = rnd(58, 82 + wid * 6);
+      if (Math.random() < .55) C.plats.push({ x: x + gap / 2, y: -rnd(70, 110), w: 92, crys: wid === 2 || wid === 5 });
+      for (let i = 0; i < 3; i++) C.gems.push({ x: x + gap / 2 - 22 + i * 22, y: -95 - Math.sin(i / 2 * Math.PI) * 26, c: gemCol });
+      x += gap;
+    }
+  }
+  const segMid = () => { const s = pick(C.ground.slice(1, -1).length ? C.ground.slice(1, -1) : C.ground); return [s, rnd(s[0] + 40, s[1] - 40)]; };
+  const danger = special ? 0 : (wid <= 1 ? 1 : wid <= 3 ? 2 : 3) - (first ? 1 : 0);
+  for (let i = 0; i < danger + 1; i++) { const [s, sx] = segMid(); if (s[1] - s[0] > 120) C.spikes.push({ x: sx }); }
+  if (wid <= 3 && Math.random() < .6 && !first) { const [, sx] = segMid(); C.vents.push({ x: sx, ph: rnd(6) }); }
+  if (wid >= 2 && !special) for (let i = 0; i < (wid >= 4 ? 2 : 1); i++) { const s = pick(C.ground.slice(1)); if (s[1] - s[0] > 160) C.walkers.push({ x0: s[0] + 30, x1: s[1] - 30, x: s[0] + 40, dir: 1, alive: true, sp: 40 + wid * 8 }); }
+  for (let i = 0; i < 2; i++) C.plats.push({ x: rnd(220, len - 200), y: -rnd(120, 150), w: 92, crys: wid === 2 || wid === 5, gems: true });
+  C.plats.filter(p => p.gems).forEach(p => { for (let i = 0; i < 3; i++) C.gems.push({ x: p.x - 22 + i * 22, y: p.y - 26, c: gemCol }); });
+  // chest
+  if (first || special || Math.random() < .72) {
+    let content;
+    if (first) content = { k: 'equip', id: 'drill' };
+    else if (!R.eq.drill && Math.random() < .3) content = { k: 'equip', id: 'drill' };
+    else if (wid === 4 && !R.eq.shield && !R.shieldGiven) { content = { k: 'equip', id: 'shield' }; R.shieldGiven = true; }
+    else if (wid >= 3 && !R.eq.heat && Math.random() < .35) content = { k: 'equip', id: 'heat' };
+    else if (!R.eq.magnet && Math.random() < .12) content = { k: 'equip', id: 'magnet', rare: true };
+    else if (Math.random() < .42) content = { k: 'mat', n: Math.random() < .3 ? 2 : 1 };
+    else if (Math.random() < .25) content = { k: 'heart' };
+    else content = { k: 'gems', n: (8 + Math.random() * 10 | 0) + wid * 2 };
+    C.chest = { x: rnd(len * .3, len * .55), open: false, content };
+  }
+  // event (≈30% of draws are nonsense)
+  if (special) C.ev = { id: special, x: len * .6, used: false };
+  else if (Math.random() < (first ? 0 : .62)) {
+    const pool = Object.entries(EVENTS).filter(([id, v]) => v.w.includes(wid) && id !== 'corelab');
+    const nsP = pool.filter(([, v]) => v.ns), nP = pool.filter(([, v]) => !v.ns);
+    const fromNs = nsP.length && (Math.random() < .5 || !nP.length);
+    const pl = fromNs ? nsP : nP;
+    const [id] = pick(pl.length ? pl : pool);
+    C.ev = { id, x: rnd(len * .62, len * .8), used: false };
+  }
+  if (wid >= 2 && Math.random() < .4) C.cp = { x: rnd(len * .15, len * .28), got: false };
+  // secret: drill wall (needs drill boots) or high ledge
+  if (!first && Math.random() < .42) {
+    const sec = pick(SECRETS[wid]);
+    if (Math.random() < .5) { C.wall = { x: -30, broken: false }; C.ground[0][0] = -220; C.secret = Object.assign({ via: 'wall', x: -150, got: false }, sec); }
+    else {
+      const bx = rnd(len * .35, len * .7);
+      C.plats.push({ x: bx, y: -150, w: 70, crys: true }, { x: bx + 90, y: -230, w: 70, crys: true });
+      C.secret = Object.assign({ via: 'ledge', x: bx + 90, y: -230 - 30, got: false }, sec);
+    }
+  }
+  const lastSeg = C.ground[C.ground.length - 1]; lastSeg[1] = Math.max(lastSeg[1], C.len + 60);
+  C.exit = { x: C.len - 60 };
+  // reward preview shown at the entrance (TRIZ: prior action)
+  const gemsN = C.gems.length + (C.chest && C.chest.content.k === 'gems' ? C.chest.content.n : 0);
+  C.preview = { gems: gemsN, chest: !!C.chest, ev: !!C.ev, secret: !!C.secret, danger: Math.max(0, danger), equip: C.chest && C.chest.content.k === 'equip' ? C.chest.content.id : null };
+  return C;
+}
+
+/* ---------------- damage / death ---------------- */
+const CAUSE = {
+  rock: ['落石に激突', '岩は左右に避けよう。ひびの入った岩はドリルブーツで砕ける'],
+  spike: ['壁のトゲに接触', '壁ぎわは危険。シャフトの中央寄りを落ちよう'],
+  vent: ['噴気をあびた', '噴気は点滅のリズムを見て、止まった瞬間に通過'],
+  lava: ['溶岩に触れた', '溶岩は左右に往復している。動きを読んで避けよう'],
+  cr: ['岩石生物にぶつかった', '洞窟では上から踏めば倒せる'],
+  iron: ['鉄の塊に激突', '外核では磁場で流される。矢印の向きに注意'],
+  shard: ['回転する結晶に接触', '結晶は回っている。すき間をねらおう'],
+  pit: ['洞窟の穴に転落', 'ジャンプは足場のぎりぎりで'],
+  heat: ['熱で力尽きた', '洞窟の中は涼しい。耐熱スーツの強化も有効'],
+  press: ['高圧に押しつぶされた', '高圧シールドが必要。外核の洞窟の宝箱や装備強化で手に入る']
+};
+function hurt(n, cause) {
+  if (R.inv > 0 || R.mode === 'dead') return;
+  if (cause === 'lava' && R.eq.heat) n *= .5;
+  R.hp -= n; R.inv = 1.1; R.lastHit = cause; R.shake = 8;
+  SFX.hit(); if (navigator.vibrate) try { navigator.vibrate(40); } catch (e) {}
+  if (R.hp <= 0) die();
+}
+function drain(n, cause) { R.hp -= n; R.lastHit = cause; if (R.hp <= 0) die(); }
+function die() {
+  R.hp = 0;
+  if (!R.rescued && SV.plays <= 2 && !R.cp && R.d < WORLDS[2].d0) { // first-failure rescue
+    R.rescued = true; R.hp = maxHp() * .6; R.inv = 2.5; toast('🧚 地底の妖精が助けてくれた！（初回サービス）', 3); SFX.event(); return;
+  }
+  R.mode = 'dead'; SFX.dead();
+  setTimeout(() => {
+    if (G.state !== 'play') return;
+    G.state = 'dead'; setPlayUI(false); show('scrDead');
+    const c = CAUSE[R.lastHit] || ['力尽きた', ''];
+    $('deadCause').textContent = c[0]; $('deadHint').textContent = 'ヒント：' + c[1];
+    $('deadDepth').textContent = fmt(kmAt(R.d)); $('deadGems').textContent = R.gems; $('deadDisc').textContent = R.disc.length;
+    const can = R.cp && R.revives < 2;
+    $('bRevive').hidden = !can;
+    if (can) $('bRevive').textContent = `チェックポイントから再開（💎${Math.ceil(R.gems / 2)}を失う）`;
+  }, 900);
+}
+function revive() {
+  R.revives++; R.gems = Math.floor(R.gems / 2);
+  R.cave = null; R.mode = 'fall'; R.d = R.cp.d; R.x = R.cp.x; R.vx = 0; R.vy = 60; R.hp = maxHp() * .65; R.heat = 0; R.inv = 2.5;
+  R.objs = R.objs.filter(o => o.y > R.d + 200); R.caves.forEach(c => { if (c.y < R.d + 100) c.state = 'done'; });
+  G.state = 'play'; show(null); setPlayUI(true); toast('チェックポイントから再開！ 宝石を半分失った', 2.5);
+}
+
+/* ---------------- fall mode ---------------- */
+function updateFall(dt) {
+  const w = worldAt(Math.max(0, R.d));
+  if (w.id !== R.world) {
+    R.world = w.id; R.banner = { w, t: 3 }; SFX.world();
+    if (!R.worldsReached[w.id]) { R.worldsReached[w.id] = true; R.mat += 1; pop('地層到達！ 🪨+1', R.x, R.d - 40, '#ffc83d'); }
+  }
+  // horizontal
+  const ax = (IN.r ? 1 : 0) - (IN.l ? 1 : 0);
+  R.vx = lerp(R.vx, ax * 250, Math.min(1, dt * 9));
+  if (ax) R.face = ax;
+  if (w.mag) { // TRIZ: new control twist in the outer core — the magnetic field pushes sideways and flips
+    R.magT += dt; if (R.magT > 6.5) { R.magT = 0; R.magDir *= -1; R.magWarn = 1.2; toast('🧲 磁場反転！', 1.2); SFX.tick(); }
+    R.vx += R.magDir * 150 * dt * 6;
+  }
+  R.x += R.vx * dt;
+  const [L, Rr] = shaft(R.d);
+  // cave proximity → auto slow & enter
+  let near = null;
+  for (const c of R.caves) {
+    if (c.state !== 'pending') continue;
+    const [cl, cr] = shaft(c.y), ex = c.side < 0 ? cl : cr, dy = R.d - c.y, dx = Math.abs(R.x - ex);
+    if (Math.abs(dy) < 110 && dx < 85) near = c;
+    if (Math.abs(dy) < 46 && dx < 34) { enterCave(c); return; }
+    if (dy > 90) { c.state = 'skipped'; if (R.vy > 240) { R.gems += 2; R.divebonus++; pop('DIVE! 💎+2', R.x, R.d - 30, '#5fe3ff'); SFX.dive(); } }
+  }
+  R.near = near;
+  R.x = clamp(R.x, L + 14, Rr - 14);
+  // vertical
+  const para = IN.act;
+  let target = para ? 125 - 15 * SV.upg.para : w.vmax * (R.buffRamen > 0 ? 1.85 : 1);
+  if (near) target = Math.min(target, 95);
+  R.vy = lerp(R.vy, target, Math.min(1, dt * (para || near ? 3.2 : 1.1)));
+  R.d += R.vy * dt;
+  if (R.buffRamen > 0) R.buffRamen -= dt;
+  // heat & pressure
+  if (w.heat) {
+    const rate = w.heat * (1 - .22 * SV.upg.heat) * (R.eq.heat ? .6 : 1);
+    R.heat = Math.min(100, R.heat + rate * dt);
+    if (R.heat >= 100) drain(7 * dt, 'heat');
+  } else R.heat = Math.max(0, R.heat - 15 * dt);
+  if (w.press && !R.eq.shield) drain(w.press * dt, 'press');
+  // spawn
+  while (R.spawnY < R.d + LH * 1.4) { spawnChunk(R.spawnY); R.spawnY += rnd(...w.gap); }
+  spawnCaves();
+  // objects
+  const magR = R.eq.magnet ? 150 : 40 + 30 * SV.upg.mag;
+  for (const o of R.objs) {
+    if (o.dead) continue;
+    const dy = o.y - R.d; if (dy < -LH || dy > LH * 1.5) { if (dy < -LH) o.dead = true; continue; }
+    if (o.k === 'gem' || o.k === 'heart') {
+      const dx = o.x - R.x, dd = Math.hypot(dx, dy);
+      if (o.k === 'gem' && dd < magR) { o.x -= dx * Math.min(1, dt * 7); o.y -= dy * Math.min(1, dt * 7); }
+      if (dd < 22) { o.dead = true;
+        if (o.k === 'gem') { R.gems++; SFX.gem(); burst(o.x, o.y, 6, '#bff'); }
+        else { R.hp = Math.min(maxHp(), R.hp + 25); pop('HP+25', R.x, R.d - 30, '#ff8aa0'); SFX.chest(); } }
+      continue;
+    }
+    if (o.k === 'lava') { o.x += o.vx * dt; const [a, b] = shaft(o.y); if (o.x < a + 34 || o.x > b - 34) o.vx *= -1; o.x = clamp(o.x, a + 34, b - 34);
+      if (Math.abs(o.x - R.x) < o.w / 2 + 8 && Math.abs(dy) < o.h / 2 + 8) hurt(20, 'lava'); continue; }
+    if (o.k === 'cr') { o.x = o.x0 + Math.sin(R.t * o.sp + o.ph) * o.amp; if (Math.hypot(o.x - R.x, dy) < o.r + 12) hurt(18, 'cr'); continue; }
+    if (o.k === 'iron') { if (w.mag) { o.vx = lerp(o.vx, R.magDir * 70, dt); o.x += o.vx * dt; const [a, b] = shaft(o.y); o.x = clamp(o.x, a + o.r, b - o.r); } o.rot += dt;
+      if (Math.hypot(o.x - R.x, dy) < o.r + 11) hurt(18, 'iron'); continue; }
+    if (o.k === 'shard') { o.rot += o.vr * dt; const ca = Math.cos(o.rot), sa = Math.sin(o.rot), lx = (R.x - o.x) * ca + dy * sa, ly = -(R.x - o.x) * sa + dy * ca;
+      if (Math.abs(lx) < 36 && Math.abs(ly) < 13) hurt(18, 'shard'); continue; }
+    if (o.k === 'rock') {
+      if (Math.hypot(o.x - R.x, dy) < o.r + 11) {
+        if (o.brittle && R.eq.drill) { o.dead = true; SFX.break(); burst(o.x, o.y, 14, '#c9a'); R.gems++; pop('粉砕！ 💎+1', o.x, o.y, '#ffc83d'); }
+        else { hurt(15, 'rock'); R.vx = (R.x < o.x ? -1 : 1) * 220; }
+      }
+      continue;
+    }
+    if (o.k === 'spike') { const [a, b] = shaft(o.y), edge = o.side < 0 ? a : b;
+      if (Math.abs(dy) < 18 && Math.abs(R.x - edge) < 46) hurt(15, 'spike'); continue; }
+    if (o.k === 'vent') { const on = Math.sin(R.t * 2.6 + o.ph) > .25; o.on = on; const [a, b] = shaft(o.y), edge = o.side < 0 ? a : b;
+      if (on && Math.abs(dy) < 13 && Math.abs(R.x - edge) < 135) hurt(10, 'vent'); continue; }
+  }
+  R.objs = R.objs.filter(o => !o.dead);
+  R.caves = R.caves.filter(c => c.y > R.d - LH);
+  if (R.d >= TOTAL) reachCore();
+}
+
+/* ---------------- cave mode ---------------- */
+function enterCave(c) {
+  c.state = 'in'; R.caveCount++;
+  R.cave = { c, desc: c.desc, px: 40, py: 0, vx: 0, vy: 0, onG: true, coyote: 0, safe: 40, camX: 0, t: 0, face: 1, act: null, challenge: false };
+  R.cave.camX = c.desc.wall ? -70 : 0;
+  R.mode = 'cave'; R.vx = 0; SFX.cave();
+  toast(c.desc.special ? '🛰️ 特別な洞窟を発見！' : '洞窟を探索！ 出口のポータルをめざせ', 1.8);
+}
+function exitCave() {
+  const k = R.cave, c = k.c, [L, Rr] = shaft(c.y);
+  c.state = 'done'; R.caveTime += k.t;
+  if (k.challenge) { R.rare++; addDisc('ev_toll', EVENTS.toll.name, false); toast('抜け道突破！ レア報酬 +100点', 1.8); }
+  R.mode = 'fall'; R.cave = null; R.d = c.y + 60; R.x = c.side < 0 ? L + 50 : Rr - 50; R.vy = 70; R.vx = 0; R.inv = 1;
+  SFX.exit(); toast('ふたたび落下！', 1.2);
+}
+const groundAt = (C, x) => C.ground.some(([a, b]) => x > a && x < b);
+function updateCave(dt) {
+  const k = R.cave, C = k.desc;
+  k.t += dt;
+  R.heat = Math.max(0, R.heat - 12 * dt); // caves are cool: a reason to DISCOVER in the deep worlds
+  const ax = (IN.r ? 1 : 0) - (IN.l ? 1 : 0);
+  k.vx = lerp(k.vx, ax * 195, Math.min(1, dt * (k.onG ? 14 : 6)));
+  if (ax) k.face = ax;
+  // interactables
+  k.act = null;
+  const near = (x, r = 34) => Math.abs(k.px - x) < r && k.py > -60;
+  if (C.chest && !C.chest.open && near(C.chest.x)) k.act = { k: 'chest' };
+  else if (C.ev && !C.ev.used && near(C.ev.x, 40)) k.act = { k: 'ev' };
+  else if (C.wall && !C.wall.broken && k.px < C.wall.x + 60 && k.py > -50) k.act = { k: 'wall' };
+  $('actLbl').textContent = k.act ? (k.act.k === 'wall' ? (R.eq.drill ? '掘る' : '調べる') : '調べる') : 'ジャンプ';
+  if (IN.actEdge) {
+    if (k.act) interact(k.act.k);
+    else if (k.onG || k.coyote > 0) { k.vy = -610; k.onG = false; k.coyote = 0; SFX.jump(); }
+  }
+  if (IN.actUp && k.vy < -260) k.vy = -260; // variable jump height
+  k.vy += 1650 * dt; if (k.vy > 900) k.vy = 900;
+  const ox = k.px, oy = k.py;
+  k.px += k.vx * dt;
+  const minX = C.wall ? (C.wall.broken ? -200 : C.wall.x + 16) : 12;
+  k.px = clamp(k.px, minX, C.exit.x + 24);
+  k.py += k.vy * dt;
+  // landing on ground / one-way platforms
+  const wasG = k.onG; k.onG = false;
+  if (k.vy >= 0) {
+    if (oy <= 0.5 && k.py >= 0 && groundAt(C, k.px)) { k.py = 0; k.vy = 0; k.onG = true; k.safe = k.px; }
+    for (const p of C.plats) if (oy <= p.y + .5 && k.py >= p.y && Math.abs(k.px - p.x) < p.w / 2) { k.py = p.y; k.vy = 0; k.onG = true; }
+  }
+  if (k.onG && !wasG && oy < -10) SFX.land();
+  k.coyote = k.onG ? .1 : Math.max(0, k.coyote - dt);
+  if (k.py > 380) { hurt(10, 'pit'); if (R.mode === 'dead') return; k.px = k.safe; k.py = -20; k.vy = 0; k.vx = 0; }
+  // gems
+  const magR = R.eq.magnet ? 140 : 30 + 25 * SV.upg.mag;
+  for (const g of C.gems) { if (g.got) continue; const dx = g.x - k.px, dy = g.y - (k.py - 18), dd = Math.hypot(dx, dy);
+    if (dd < magR) { g.x -= dx * Math.min(1, dt * 6); g.y -= dy * Math.min(1, dt * 6); }
+    if (dd < 22) { g.got = true; R.gems++; SFX.gem(); } }
+  // hazards
+  for (const s of C.spikes) if (Math.abs(k.px - s.x) < 20 && k.py > -16) { hurt(15, 'spike'); k.vy = -420; k.vx = -k.face * 150; }
+  for (const v of C.vents) { v.on = Math.sin(k.t * 2.4 + v.ph) > .2; if (v.on && Math.abs(k.px - v.x) < 16 && k.py > -120) { hurt(10, 'vent'); k.vy = Math.min(k.vy, -380); } }
+  for (const wk of C.walkers) {
+    if (!wk.alive) continue;
+    wk.x += wk.dir * wk.sp * dt; if (wk.x < wk.x0 || wk.x > wk.x1) wk.dir *= -1;
+    if (Math.abs(k.px - wk.x) < 24 && k.py > -46 && k.py < 6) {
+      if (k.vy > 50 && k.py < -24) { wk.alive = false; k.vy = -480; R.gems += 2; pop('ふみつけ！ 💎+2', wk.x, -40, '#ffc83d'); SFX.break(); }
+      else { hurt(15, 'cr'); k.vx = (k.px < wk.x ? -1 : 1) * 260; k.vy = -300; }
+    }
+  }
+  // checkpoint
+  if (C.cp && !C.cp.got && Math.abs(k.px - C.cp.x) < 22 && k.py > -50) {
+    C.cp.got = true; const [L, Rr] = shaft(k.c.y); R.cp = { d: k.c.y + 60, x: k.c.side < 0 ? L + 50 : Rr - 50 };
+    toast('🚩 チェックポイント！', 1.6); SFX.chest();
+  }
+  // secret
+  const S = C.secret;
+  if (S && !S.got) {
+    const hit = S.via === 'wall' ? (C.wall.broken && k.px < S.x + 30) : (Math.abs(k.px - S.x) < 26 && Math.abs(k.py - (S.y + 30)) < 30);
+    if (hit) foundSecret(S);
+  }
+  // exit
+  if (Math.abs(k.px - C.exit.x) < 30 && k.py > -260) exitCave();
+  k.camX = clamp(k.px - LW * .42, C.wall ? (C.wall.broken ? -220 : -70) : 0, Math.max(0, C.len + 130 - LW));
+}
+function foundSecret(S) {
+  S.got = true;
+  const freshArea = !SV.secrets[S.id];
+  SV.secrets[S.id] = true; save();
+  addDisc(S.id, S.name, true);
+  if (freshArea) R.secNew++;
+  R.gems += 15; R.mat += 1;
+  SFX.win(); burst(R.cave.px, -30, 30, '#ffe680', 200);
+  openModal({ title: '秘密エリア発見！', pic: S.e, ns: 'SECRET AREA', text: `${S.name}にたどり着いた。${freshArea ? '<br><b style="color:#ffc83d">初発見ボーナス +500点</b>' : ''}`,
+    result: 'レア発見 +100点 ・ 💎+15 ・ 🪨+1', choices: [['やったー！', () => null]] });
+}
+function interact(kind) {
+  const k = R.cave, C = k.desc;
+  if (kind === 'chest') {
+    C.chest.open = true; SFX.chest(); burst(C.chest.x, -20, 20, '#ffd76a');
+    const ct = C.chest.content; let msg, pic = '📦', title = '宝箱を開けた！';
+    if (ct.k === 'equip') {
+      R.eq[ct.id] = true; const E = EQUIP[ct.id]; pic = `<img src="assets/equipment/${E.img}.png" alt="">`; title = E.name + 'を手に入れた！';
+      msg = E.desc; const fresh = addDisc('eq_' + ct.id, E.name, ct.rare);
+      if (ct.id === 'drill') msg += '<br>落下中のひびの岩を砕き、洞窟の秘密の壁も掘れる！';
+      if (fresh) msg += '<br><small>📖 図鑑に登録</small>';
+    } else if (ct.k === 'gems') { R.gems += ct.n; msg = `宝石 💎×${ct.n}`; }
+    else if (ct.k === 'mat') { R.mat += ct.n; msg = `強化素材 🪨×${ct.n}（失敗しても残る）`; }
+    else { R.hp = Math.min(maxHp(), R.hp + 40); msg = 'ハート！ HP+40'; }
+    openModal({ title, pic, text: msg, choices: [['OK', () => null]] });
+  } else if (kind === 'ev') {
+    C.ev.used = true; runEvent(C.ev.id);
+  } else if (kind === 'wall') {
+    if (R.eq.drill) { C.wall.broken = true; SFX.break(); burst(C.wall.x, -40, 30, '#b9a', 200); toast('ドリルで壁を掘った！ 奥に何かある…', 1.8); }
+    else toast('奥から風が…ドリルブーツがあれば掘れそう', 2);
+  }
+}
+
+/* ---------------- events ---------------- */
+function runEvent(id) {
+  const E = EVENTS[id]; SFX.event();
+  const fresh = addDisc('ev_' + id, E.name, E.rare);
+  const pic = E.img ? `<img src="assets/${id === 'mole' ? 'npcs' : 'events'}/${E.img}.png" alt="">` : E.e;
+  const base = { title: E.name, pic, ns: (E.ns ? '無厘頭イベント' : E.rare ? 'レア発見' : 'イベント') + (fresh ? ' ・ 図鑑に新登録' : ''), text: E.text };
+  const pay = (n, f) => () => { if (R.gems < n) return '宝石が足りない…'; R.gems -= n; return f(); };
+  const C = {
+    ramen: [['替え玉を頼む（💎5）', pay(5, () => { R.ramen++; R.buffRamen = 14; return 'ズルズル完食！ 次の落下は速度2倍（14秒）'; })], ['ごちそうさま', () => 'またのお越しを']],
+    sunglasses: [['かけてみる', () => { R.eq.sunglasses = true; return '暗闇がよく見える！ 深部の暗さが軽くなった'; }]],
+    toll: [['払う（💎10）→ 安全＋回復', pay(10, () => { R.hp = Math.min(maxHp(), R.hp + 30); return '「まいど！」HP+30。安全に通れた'; })],
+      ['抜け道に挑戦（危険・レア報酬）', () => { const k = R.cave; k.challenge = true; const cx = k.desc.ev.x;
+        for (let i = 1; i <= 3; i++) k.desc.spikes.push({ x: cx + 70 + i * 55 });
+        k.desc.gems.push({ x: k.desc.exit.x - 30, y: -40, c: 'gem_gold' }, { x: k.desc.exit.x - 50, y: -40, c: 'gem_gold' });
+        return 'トゲだらけの抜け道！ 出口まで突破すればレア報酬（+100点）'; }]],
+    mole: [['ハート（💎8）HP+35', pay(8, () => { R.hp = Math.min(maxHp(), R.hp + 35); return 'HP+35'; })], ['強化素材（💎12）🪨+1', pay(12, () => { R.mat++; return '🪨+1（失敗しても残る）'; })],
+      ...(!R.eq.magnet ? [['マグネット（💎20）', pay(20, () => { R.eq.magnet = true; addDisc('eq_magnet', EQUIP.magnet.name, true); return 'マグネット装備！ 宝石を吸い寄せる'; })]] : []), ['見るだけ', () => '「また来てね」']],
+    onsen: [['ひとっ風呂', () => { R.hp = maxHp(); R.heat = 0; return 'HP全回復・熱ゼロ！'; }]],
+    tablet: [['読み解く', () => 'レア発見！ +100点。コア探査装置が鍵らしい…']],
+    penguin: [['励ます', () => { R.gems += 6; return 'お礼に宝石をくれた！ 💎+6'; }]],
+    karaoke: [['熱唱する', () => { const s = 70 + (Math.random() * 30 | 0); R.gems += Math.round(s / 10); return `採点 ${s}点！ ご褒美 💎+${Math.round(s / 10)}`; }]],
+    vending: [['買う（💎4）', pay(4, () => { const r = Math.random(); if (r < .3) { R.hp = Math.min(maxHp(), R.hp + 30); return '「マグマソーダ」HP+30'; } if (r < .55) { R.mat++; return '「謎の鉱石」🪨+1'; } R.gems += 12; return '当たり！ 宝石が12個出てきた 💎+12'; })], ['やめる', () => '…']],
+    diamond: [['持っていく', () => { R.gems += 30; return '💎+30！ レア発見 +100点'; }]],
+    mailbox: [['読む', () => { R.mat++; const b = Math.floor(SV.best.depth); return `「最深記録は ${fmt(b)} km。君ならもっと深く行ける」── 同封の 🪨+1`; }]],
+    fossil: [['スケッチする', () => 'レア発見！ +100点']],
+    lake: [['水を飲む', () => { R.hp = Math.min(maxHp(), R.hp + 20); R.heat = 0; return 'HP+20・熱ゼロ'; }]],
+    whale: [['背中に乗る', () => { R.whale = true; return '鉄のクジラが深く運んでくれる！（出口から一気に深度+）'; }]],
+    corelab: [['装置を持っていく', () => { R.eq.scanner = true; addDisc('eq_scanner', EQUIP.scanner.name, false); return 'コア探査装置を手に入れた！ これで中心の扉が開くはず'; }]]
+  }[id] || [['OK', () => null]];
+  openModal(Object.assign(base, { choices: C }));
+}
+function openModal(o) {
+  G.state = 'modal'; setPlayUI(false);
+  const card = $('modalCard');
+  card.innerHTML = `${o.ns ? `<div class="ns">${o.ns}</div>` : ''}<div class="pic">${o.pic || ''}</div><h3>${o.title}</h3><p>${o.text || ''}</p>${o.result ? `<p class="res">${o.result}</p>` : ''}<div class="list" id="mChoices"></div>`;
+  const box = card.querySelector('#mChoices');
+  o.choices.forEach(([label, fn]) => {
+    const b = document.createElement('button'); b.className = 'btn sub'; b.type = 'button'; b.textContent = label;
+    b.onclick = () => {
+      const res = fn();
+      if (res) { card.querySelector('.list').innerHTML = `<p class="res">${res}</p>`; const okb = document.createElement('button'); okb.className = 'btn'; okb.type = 'button'; okb.textContent = 'つづける'; okb.onclick = closeModal; card.querySelector('.list').appendChild(okb); okb.focus(); }
+      else closeModal();
+    };
+    box.appendChild(b);
+  });
+  show('scrModal'); setTimeout(() => { const f = box.querySelector('button'); f && f.focus({ preventScroll: true }); }, 30);
+}
+function closeModal() {
+  show(null); G.state = 'play'; setPlayUI(true); IN.actEdge = false; IN.act = false;
+  if (R.whale && R.mode === 'cave') { R.whale = false; exitCave(); R.d = Math.min(TOTAL - 50, R.d + 1600); R.objs = R.objs.filter(o => o.y > R.d + 150); R.spawnY = Math.max(R.spawnY, R.d + 150); toast('🐋 一気に深く！', 1.5); }
+}
+
+/* ---------------- core / ending / result ---------------- */
+function reachCore() {
+  if (R.mode === 'end') return;
+  R.mode = 'end'; R.d = TOTAL;
+  const end = R.ramen >= 3 ? 'ramen' : R.eq.scanner ? 'true' : 'normal';
+  R.ending = end; const E = ENDINGS[end];
+  const fresh = !SV.disco['end_' + end]; addDisc('end_' + end, E.name, true);
+  SV.endings[end] = true; save();
+  SFX.win();
+  openModal({ title: E.name, pic: E.e, ns: 'ENDING' + (fresh ? ' ・ 初到達' : ''), text: E.text, result: '地球の中心 6,371 km 到達！', choices: [['結果を見る', () => { setTimeout(finish, 50); return null; }]] });
+}
+function finish() {
+  G.state = 'result'; setPlayUI(false);
+  const depth = Math.floor(kmAt(Math.max(0, R.d))), S = score();
+  const newBest = S > SV.best.score, newDeep = depth > SV.best.depth;
+  SV.best.score = Math.max(SV.best.score, S); SV.best.depth = Math.max(SV.best.depth, depth);
+  SV.mat += R.mat; save();
+  $('resTitle').textContent = R.ending ? '地球の中心に到達！' : (R.mode === 'dead' ? 'ダイブ終了' : 'リタイア');
+  $('resEnding').textContent = R.ending ? `エンディング：${ENDINGS[R.ending].name}` : (CAUSE[R.lastHit] && R.mode === 'dead' ? '原因：' + CAUSE[R.lastHit][0] : '');
+  $('resScore').innerHTML = fmt(S) + '<small> 点</small>' + (newBest ? '<div style="font-size:14px;color:#5fdc9b">ハイスコア更新！</div>' : '');
+  $('rDepth').textContent = fmt(depth) + (newDeep ? '★' : ''); $('rGems').textContent = R.gems; $('rRare').textContent = `${R.rare} / ${R.secNew}`;
+  const disc = R.disc.length ? R.disc.map(d => `${d.rare ? '★' : '・'}${d.name}${d.fresh ? ' <b>NEW</b>' : ''}`).join('<br>') : 'まだ何も発見していない…洞窟に入ってみよう';
+  $('rDisc').innerHTML = `<b>今回の発見（${R.disc.length}）</b><br>${disc}<br><span style="color:var(--mute)">洞窟 ${R.caveCount}回 ・ DIVE ${R.divebonus}回 ・ 強化素材 🪨+${R.mat}</span>`;
+  const nw = WORLDS.find(w => w.km0 > depth);
+  const next = R.ending ? (R.ending === 'true' ? `図鑑コンプリートをめざそう（${dexCount()} / ${DEX.length}）` : 'コア探査装置を見つけて「真のエンディング」へ（地球の中心の手前の洞窟に…）')
+    : nw ? `次の目標：${nw.name}（${fmt(nw.km0)} km）に到達しよう` : 'もう少しで地球の中心！';
+  $('rNext').innerHTML = `<b>NEXT</b>　${next}<br><span style="color:var(--mute)">最深 ${fmt(SV.best.depth)} km ・ ハイスコア ${fmt(SV.best.score)}</span>`;
+  $('shareImg').src = shareImage(depth, S);
+  show('scrResult');
+}
+function shareImage(depth, S) {
+  const c = document.createElement('canvas'); c.width = 600; c.height = 820; const g = c.getContext('2d');
+  const gr = g.createLinearGradient(0, 0, 0, 820); gr.addColorStop(0, '#2a1830'); gr.addColorStop(.5, '#4a1a1a'); gr.addColorStop(1, '#1c1230'); g.fillStyle = gr; g.fillRect(0, 0, 600, 820);
+  const bg = IMG[worldAt(Math.max(0, R.d - 1)).bg]; if (ok(bg)) { g.globalAlpha = .35; g.drawImage(bg, 0, 0, 600, 800); g.globalAlpha = 1; }
+  g.textAlign = 'center'; g.fillStyle = '#ff6a2a'; g.font = '400 46px "Dela Gothic One",sans-serif'; g.fillText('FUJI EARTH', 300, 80);
+  g.fillStyle = '#ffc83d'; g.fillText('DIVE KING', 300, 134);
+  g.fillStyle = '#fff'; g.font = '800 26px "M PLUS Rounded 1c",sans-serif'; g.fillText(R.ending ? '🌏 地球の中心に到達！' : `深度 ${fmt(depth)} km まで潜った！`, 300, 200);
+  g.font = '400 92px "Dela Gothic One",sans-serif'; g.fillStyle = '#ffc83d'; g.fillText(fmt(S), 300, 320);
+  g.font = '800 22px "M PLUS Rounded 1c",sans-serif'; g.fillStyle = '#e8dcff'; g.fillText('SCORE', 300, 352);
+  const ex = IMG.explorer_fall; if (ok(ex)) g.drawImage(ex, 420, 360, 150, 150);
+  g.textAlign = 'left'; g.fillStyle = '#fff'; g.font = '800 24px "M PLUS Rounded 1c",sans-serif';
+  [`💎 宝石 ${R.gems}`, `★ レア発見 ${R.rare}`, `🔓 新しい秘密 ${R.secNew}`, R.ending ? `🏁 ${ENDINGS[R.ending].name}` : `🪨 素材 +${R.mat}`].forEach((t, i) => g.fillText(t, 50, 420 + i * 40));
+  g.font = '800 20px "M PLUS Rounded 1c",sans-serif'; g.fillStyle = '#ffc83d'; g.fillText('今回の発見', 50, 600);
+  g.fillStyle = '#fff'; g.font = '500 19px "M PLUS Rounded 1c",sans-serif';
+  (R.disc.slice(0, 5).map(d => (d.rare ? '★ ' : '・') + d.name)).forEach((t, i) => g.fillText(t, 60, 632 + i * 28));
+  g.textAlign = 'center'; g.fillStyle = '#c7b8d8'; g.font = '700 18px "M PLUS Rounded 1c",sans-serif'; g.fillText('きみはどこまで潜れる？ #FUJIEARTHDIVEKING', 300, 795);
+  try { return c.toDataURL('image/png'); } catch (e) { return ''; }
+}
+async function share() {
+  const depth = Math.floor(kmAt(Math.max(0, R.d)));
+  const txt = `FUJI EARTH DIVE KING で深度 ${fmt(depth)} km、スコア ${fmt(score())}！${R.disc.filter(d => d.rare).length ? ' レア発見：' + R.disc.filter(d => d.rare).map(d => d.name).slice(0, 3).join('・') : ''} #FUJIEARTHDIVEKING`;
+  try {
+    if (navigator.share) {
+      const blob = await (await fetch($('shareImg').src)).blob(); const file = new File([blob], 'fuji-earth-dive.png', { type: 'image/png' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) await navigator.share({ text: txt, files: [file] }); else await navigator.share({ text: txt });
+      return;
+    }
+  } catch (e) { if (e && e.name === 'AbortError') return; }
+  try { await navigator.clipboard.writeText(txt); toast('共有文をコピーしました', 1.6); } catch (e) { toast('共有できませんでした', 1.6); }
+}
+
+/* ---------------- render ---------------- */
+const rgb = (c, a = 1) => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a})`;
+function drawBg(camTop) {
+  const d = Math.max(0, R.d), w = worldAt(d), next = WORLDS[w.id] || null;
+  const bh = LW * 1024 / 768;
+  const tile = (im, alpha) => {
+    if (!ok(im)) return; ctx.globalAlpha = alpha;
+    const off = ((camTop * .3) % bh + bh) % bh;
+    for (let y = -off; y < LH; y += bh) ctx.drawImage(im, 0, y, LW, bh);
+    ctx.globalAlpha = 1;
+  };
+  tile(IMG[w.bg], 1);
+  if (next) { const k = clamp(1 - (w.d1 - d) / 700, 0, 1); if (k > 0) tile(IMG[next.bg], k); }
+}
+function drawSurface(camTop) { // Fuji summit at world y < 0
+  if (camTop > 40) return;
+  const y0 = -camTop; // screen y of world 0
+  const g = ctx.createLinearGradient(0, y0 - 420, 0, y0); g.addColorStop(0, '#7ec8ff'); g.addColorStop(1, '#ffd9a8');
+  ctx.fillStyle = g; ctx.fillRect(0, y0 - 600, LW, 600);
+  ctx.fillStyle = '#fff'; ctx.globalAlpha = .7; for (const [cx, cy, r] of [[60, -300, 30], [100, -310, 22], [280, -260, 26], [310, -250, 18]]) { ctx.beginPath(); ctx.arc(cx, y0 + cy, r, 0, 7); ctx.fill(); } ctx.globalAlpha = 1;
+  ctx.fillStyle = '#5a4a5a'; ctx.beginPath(); ctx.moveTo(-20, y0 + 10); ctx.lineTo(40, y0 - 30); ctx.lineTo(120, y0 - 10); ctx.lineTo(120, y0 + 10); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(LW + 20, y0 + 10); ctx.lineTo(LW - 40, y0 - 30); ctx.lineTo(LW - 120, y0 - 10); ctx.lineTo(LW - 120, y0 + 10); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.moveTo(20, y0 - 18); ctx.lineTo(40, y0 - 30); ctx.lineTo(70, y0 - 22); ctx.lineTo(50, y0 - 15); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(LW - 20, y0 - 18); ctx.lineTo(LW - 40, y0 - 30); ctx.lineTo(LW - 70, y0 - 22); ctx.lineTo(LW - 50, y0 - 15); ctx.fill();
+  // plank + sign
+  ctx.fillStyle = '#8a5a30'; ctx.fillRect(LW / 2 - 40, y0 - 6, 80, 7);
+  ctx.fillStyle = '#f2e6c8'; ctx.fillRect(250, y0 - 64, 82, 26); ctx.fillStyle = '#6a4a2a'; ctx.fillRect(288, y0 - 38, 5, 30);
+  ctx.fillStyle = '#3a2a1a'; ctx.font = '800 11px "M PLUS Rounded 1c",sans-serif'; ctx.textAlign = 'center'; ctx.fillText('富士山頂 3776m', 291, y0 - 47);
+}
+function drawShaft(camTop) {
+  const w = worldAt(Math.max(0, R.d));
+  const step = 10, Lp = [], Rp = [];
+  for (let sy = -step; sy <= LH + step; sy += step) { const wy = camTop + sy; if (wy < 0) continue; const [a, b] = shaft(wy); Lp.push([a, sy]); Rp.push([b, sy]); }
+  if (!Lp.length) return;
+  const wc = worldAt(Math.max(0, camTop + LH / 2));
+  ctx.fillStyle = rgb(wc.wall);
+  ctx.beginPath(); ctx.moveTo(0, Lp[0][1]); for (const [x, y] of Lp) ctx.lineTo(x, y); ctx.lineTo(0, Lp[Lp.length - 1][1]); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(LW, Rp[0][1]); for (const [x, y] of Rp) ctx.lineTo(x, y); ctx.lineTo(LW, Rp[Rp.length - 1][1]); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = rgb(wc.wall2); ctx.lineWidth = 4;
+  ctx.beginPath(); Lp.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.stroke();
+  ctx.beginPath(); Rp.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.stroke();
+  // rock specks
+  ctx.fillStyle = rgb(wc.wall2, .55);
+  for (let i = 0; i < 26; i++) { const wy = Math.floor(camTop / 40) * 40 + i * 40, h = Math.sin(wy * 12.9898) * 43758.5453 % 1, h2 = Math.abs(h); if (wy < 0) continue; const [a, b] = shaft(wy);
+    ctx.fillRect(h2 * (a - 16), wy - camTop, 6, 4); ctx.fillRect(b + 8 + h2 * (LW - b - 16), wy - camTop + 18, 5, 4); }
+  // magnetic arrows
+  if (w.mag) { ctx.fillStyle = `rgba(255,200,120,${R.magWarn > 0 && Math.sin(R.t * 20) > 0 ? .9 : .45})`; ctx.font = '400 20px "Dela Gothic One",sans-serif'; ctx.textAlign = 'center';
+    for (let sy = 60; sy < LH; sy += 120) { const [a, b] = shaft(camTop + sy); ctx.fillText(R.magDir > 0 ? '▶▶' : '◀◀', (a + b) / 2 + Math.sin(R.t * 3 + sy) * 20, sy); } }
+}
+function drawFallObjs(camTop) {
+  for (const c of R.caves) {
+    const sy = c.y - camTop; if (sy < -80 || sy > LH + 80) continue;
+    const [a, b] = shaft(c.y), ex = c.side < 0 ? a : b;
+    const pulse = .6 + .4 * Math.sin(R.t * 4);
+    ctx.fillStyle = `rgba(255,220,120,${.25 * pulse})`; ctx.beginPath(); ctx.arc(ex, sy, 46, 0, 7); ctx.fill();
+    spr('cave_entrance', ex + c.side * 8, sy, 72, 72, { flip: c.side > 0 });
+    if (c.state === 'pending') {
+      const P = c.desc.preview, parts = [`💎${P.gems}`]; if (P.chest) parts.push(P.equip ? '🎁' : '📦'); if (P.ev) parts.push('❗'); if (P.secret) parts.push('❓'); parts.push(P.danger >= 2 ? '⚠⚠' : P.danger ? '⚠' : '🙂');
+      if (c.desc.special) parts.unshift('🛰️');
+      const t = parts.join(' '); ctx.font = '800 12px "M PLUS Rounded 1c",sans-serif'; const tw = ctx.measureText(t).width + 14;
+      const tx = clamp(ex - c.side * (tw / 2 + 30), tw / 2 + 4, LW - tw / 2 - 4);
+      ctx.fillStyle = 'rgba(10,6,16,.82)'; ctx.fillRect(tx - tw / 2, sy - 52, tw, 22); ctx.strokeStyle = '#ffc83d'; ctx.lineWidth = 1; ctx.strokeRect(tx - tw / 2, sy - 52, tw, 22);
+      ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.fillText(t, tx, sy - 37);
+      if (R.near === c) { ctx.fillStyle = '#ffc83d'; ctx.font = '400 15px "Dela Gothic One",sans-serif'; ctx.fillText(c.side < 0 ? '◀ DISCOVER' : 'DISCOVER ▶', tx, sy + 54); }
+    }
+  }
+  for (const o of R.objs) {
+    const sy = o.y - camTop; if (sy < -60 || sy > LH + 60) continue;
+    if (o.k === 'gem') spr(o.c, o.x, sy + Math.sin(R.t * 5 + o.y) * 2, 24, 24);
+    else if (o.k === 'heart') spr('heart', o.x, sy, 26, 26);
+    else if (o.k === 'rock') { spr(o.crys ? 'platform_crystal' : 'rock_small', o.x, sy, o.r * 2.6, o.r * 2.6, { rot: o.rot });
+      if (o.brittle) { ctx.strokeStyle = 'rgba(255,230,160,.9)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(o.x - o.r * .5, sy - o.r * .4); ctx.lineTo(o.x, sy); ctx.lineTo(o.x - o.r * .1, sy + o.r * .5); ctx.moveTo(o.x, sy); ctx.lineTo(o.x + o.r * .5, sy - o.r * .2); ctx.stroke(); } }
+    else if (o.k === 'spike') { const [a, b] = shaft(o.y), e = o.side < 0 ? a : b; spr('rock_spike', e - o.side * 18, sy, 52, 44, { rot: o.side < 0 ? Math.PI / 2 : -Math.PI / 2 }); }
+    else if (o.k === 'vent') { const [a, b] = shaft(o.y), e = o.side < 0 ? a : b; spr('steam_vent', e - o.side * 12, sy, 40, 40, { rot: o.side < 0 ? Math.PI / 2 : -Math.PI / 2 });
+      const on = Math.sin(R.t * 2.6 + o.ph) > .25, warn = Math.sin(R.t * 2.6 + o.ph) > -.2;
+      if (on || warn) { const len = on ? 130 : 40; const g = ctx.createLinearGradient(e, 0, e - o.side * len, 0); g.addColorStop(0, `rgba(230,240,255,${on ? .85 : .35})`); g.addColorStop(1, 'rgba(230,240,255,0)');
+        ctx.fillStyle = g; ctx.fillRect(Math.min(e, e - o.side * len), sy - 12, len, 24); } }
+    else if (o.k === 'lava') spr('lava_pool', o.x, sy, o.w * 1.3, o.h * 1.6);
+    else if (o.k === 'cr') spr('rock_creature', o.x, sy, 46, 46, { flip: Math.cos(R.t * o.sp + o.ph) < 0 });
+    else if (o.k === 'iron') { ctx.save(); ctx.filter = 'brightness(.55) sepia(.6)'; spr('rock_small', o.x, sy, o.r * 2.6, o.r * 2.6, { rot: o.rot }); ctx.restore(); }
+    else if (o.k === 'shard') spr('platform_crystal', o.x, sy, 84, 30, { rot: o.rot });
+  }
+}
+function drawPlayerFall(camTop) {
+  const sy = R.d - camTop;
+  const blink = R.inv > 0 && Math.sin(R.t * 30) > 0;
+  if (IN.act && R.mode === 'fall') spr('parachute', R.x, sy - 40, 70, 70, { alpha: .95 });
+  if (R.buffRamen > 0) { ctx.fillStyle = 'rgba(255,200,80,.35)'; ctx.beginPath(); ctx.ellipse(R.x, sy - 20, 16, 40, 0, 0, 7); ctx.fill(); }
+  if (!blink) spr(R.inv > .6 ? 'explorer_hurt' : 'explorer_fall', R.x, sy, 60, 60, { flip: R.face < 0, rot: clamp(R.vx / 900, -.3, .3) });
+  // speed streaks
+  const k = clamp((R.vy - 200) / 300, 0, 1);
+  if (k > 0) { ctx.strokeStyle = `rgba(255,255,255,${.25 * k})`; ctx.lineWidth = 1.5; for (let i = 0; i < 10 * k; i++) { const x = rnd(LW), y = rnd(LH); ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y - 40 - 60 * k); ctx.stroke(); } }
+}
+function drawIntro(camTop) {
+  const sy = R.d - camTop;
+  spr(R.introT % 1 < .5 ? 'explorer_idle' : 'explorer_explore', R.x, sy - 26, 60, 60);
+  ctx.textAlign = 'center'; ctx.fillStyle = '#fff'; ctx.font = '400 22px "Dela Gothic One",sans-serif'; ctx.strokeStyle = '#000'; ctx.lineWidth = 4;
+  const t = R.introT < 2.2 ? 'タップ / Space でダイブ！' : `${Math.max(1, 3 - Math.floor((R.introT - 2.2) / .45))}`;
+  ctx.strokeText(t, LW / 2, sy - 90); ctx.fillText(t, LW / 2, sy - 90);
+}
+function drawCave() {
+  const k = R.cave, C = k.desc, w = WORLDS[C.wid - 1], FY = LH - 190, cx = k.camX;
+  const bg = IMG[w.bg]; if (ok(bg)) { const bw = LH * 768 / 1024, off = (cx * .3) % bw; for (let x = -off; x < LW; x += bw) ctx.drawImage(bg, x, 0, bw, LH); }
+  ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.fillRect(0, 0, LW, LH);
+  // ceiling
+  ctx.fillStyle = rgb(w.wall); ctx.beginPath(); ctx.moveTo(0, 0); for (let x = 0; x <= LW + 20; x += 20) { const wx = x + cx; ctx.lineTo(x, 60 + 22 * Math.sin(wx / 80) + 10 * Math.sin(wx / 23)); } ctx.lineTo(LW, 0); ctx.fill();
+  const X = x => x - cx, Y = y => FY + y;
+  // ground
+  for (const [a, b] of C.ground) {
+    if (b < cx - 20 || a > cx + LW + 20) continue;
+    ctx.fillStyle = rgb(w.wall); ctx.fillRect(X(a), Y(0), b - a, LH - FY);
+    ctx.fillStyle = rgb(w.wall2); ctx.fillRect(X(a), Y(0), b - a, 7);
+  }
+  for (const p of C.plats) spr(p.crys ? 'platform_crystal' : 'platform_rock', X(p.x), Y(p.y) + 10, p.w * 1.08, 30);
+  if (C.wall && !C.wall.broken) { ctx.fillStyle = rgb(w.wall2); ctx.fillRect(X(C.wall.x - 14), Y(-150), 34, 150);
+    ctx.strokeStyle = 'rgba(255,230,160,.8)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(X(C.wall.x - 8), Y(-120)); ctx.lineTo(X(C.wall.x + 4), Y(-80)); ctx.lineTo(X(C.wall.x - 4), Y(-40)); ctx.stroke(); }
+  for (const s of C.spikes) spr('rock_spike', X(s.x), Y(-14), 40, 32);
+  for (const v of C.vents) { spr('steam_vent', X(v.x), Y(-16), 40, 36); if (v.on) { const g = ctx.createLinearGradient(0, Y(0), 0, Y(-130)); g.addColorStop(0, 'rgba(230,240,255,.8)'); g.addColorStop(1, 'rgba(230,240,255,0)'); ctx.fillStyle = g; ctx.fillRect(X(v.x) - 14, Y(-130), 28, 130); } }
+  for (const g of C.gems) if (!g.got) spr(g.c, X(g.x), Y(g.y) + Math.sin(R.t * 4 + g.x) * 2, 22, 22);
+  if (C.cp) { spr('checkpoint', X(C.cp.x), Y(-30), 46, 60, { alpha: C.cp.got ? 1 : .8 }); if (C.cp.got) { ctx.fillStyle = '#5fdc9b'; ctx.font = '800 10px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('SAVE', X(C.cp.x), Y(-66)); } }
+  if (C.chest) spr('treasure_chest', X(C.chest.x), Y(-20), 48, 48, { alpha: C.chest.open ? .45 : 1 });
+  if (C.ev) { const E = EVENTS[C.ev.id];
+    if (E.img) spr(E.img, X(C.ev.x), Y(-36), 78, 78, { alpha: C.ev.used ? .5 : 1 });
+    else { ctx.font = '40px sans-serif'; ctx.textAlign = 'center'; ctx.globalAlpha = C.ev.used ? .5 : 1; ctx.fillText(E.e, X(C.ev.x), Y(-12)); ctx.globalAlpha = 1; }
+    if (!C.ev.used) { ctx.fillStyle = '#ffc83d'; ctx.font = '400 18px "Dela Gothic One",sans-serif'; ctx.textAlign = 'center'; ctx.fillText('❗', X(C.ev.x), Y(-86) + Math.sin(R.t * 5) * 3); } }
+  if (C.secret && !C.secret.got) { const sx = X(C.secret.x), sy = C.secret.via === 'ledge' ? Y(C.secret.y) : Y(-30);
+    ctx.fillStyle = `rgba(255,230,120,${.3 + .2 * Math.sin(R.t * 4)})`; ctx.beginPath(); ctx.arc(sx, sy, 22, 0, 7); ctx.fill(); ctx.font = '26px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(C.secret.e, sx, sy + 9); }
+  for (const wk of C.walkers) if (wk.alive) spr('rock_creature', X(wk.x), Y(-22), 46, 46, { flip: wk.dir < 0 });
+  spr('exit_portal', X(C.exit.x), Y(-40), 74, 74, { rot: R.t * 1.5 });
+  ctx.fillStyle = '#fff'; ctx.font = '800 11px "M PLUS Rounded 1c",sans-serif'; ctx.textAlign = 'center'; ctx.fillText('EXIT', X(C.exit.x), Y(-86));
+  // player
+  const blink = R.inv > 0 && Math.sin(R.t * 30) > 0;
+  const pose = R.inv > .6 ? 'explorer_hurt' : !k.onG ? 'explorer_jump' : Math.abs(k.vx) > 20 ? 'explorer_run' : k.act ? 'explorer_explore' : 'explorer_idle';
+  if (!blink) spr(pose, X(k.px), Y(k.py) - 26, 58, 58, { flip: k.face < 0, rot: pose === 'explorer_run' ? Math.sin(R.t * 16) * .06 : 0 });
+  if (k.act) { ctx.fillStyle = '#ffc83d'; ctx.font = '400 13px "Dela Gothic One",sans-serif'; ctx.fillText('● 調べる', X(k.px), Y(k.py) - 66); }
+  // darkness
+  const dark = w.dark * (R.eq.sunglasses ? .4 : 1);
+  if (dark > 0) { const g = ctx.createRadialGradient(X(k.px), Y(k.py) - 26, 60, X(k.px), Y(k.py) - 26, 260); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, `rgba(0,0,0,${dark + .25})`); ctx.fillStyle = g; ctx.fillRect(0, 0, LW, LH); }
+  // progress
+  const pr = clamp(k.px / C.exit.x, 0, 1); ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.fillRect(40, FY + 40, LW - 80, 6); ctx.fillStyle = '#5fe3ff'; ctx.fillRect(40, FY + 40, (LW - 80) * pr, 6);
+  ctx.fillStyle = '#fff'; ctx.font = '700 10px "M PLUS Rounded 1c",sans-serif'; ctx.textAlign = 'left'; ctx.fillText(`探索 ${k.t.toFixed(0)}秒 → 出口`, 40, FY + 36);
+}
+function drawHud() {
+  const top = 8;
+  ctx.fillStyle = 'rgba(10,6,16,.6)'; ctx.fillRect(0, 0, LW, 62);
+  const d = Math.max(0, R.d), km = kmAt(d);
+  ctx.textAlign = 'left'; ctx.fillStyle = '#c7b8d8'; ctx.font = '700 10px "M PLUS Rounded 1c",sans-serif'; ctx.fillText('深度', 10, top + 10);
+  ctx.fillStyle = '#fff'; ctx.font = '400 22px "Dela Gothic One",sans-serif'; ctx.fillText(fmt(km) + ' km', 34, top + 18);
+  ctx.fillStyle = '#ffc83d'; ctx.font = '800 11px "M PLUS Rounded 1c",sans-serif'; ctx.fillText(`地球の中心まで あと ${fmt(CORE_KM - km)} km`, 10, top + 36);
+  ctx.textAlign = 'right'; spr('gem_blue', LW - 76, top + 12, 18, 18); ctx.fillStyle = '#fff'; ctx.font = '400 18px "Dela Gothic One",sans-serif'; ctx.fillText(R.gems, LW - 10, top + 18);
+  ctx.fillStyle = '#c7b8d8'; ctx.font = '700 10px "M PLUS Rounded 1c",sans-serif'; ctx.fillText(`SCORE ${fmt(score())}`, LW - 10, top + 36);
+  // HP / heat bars
+  const bw = 150; ctx.fillStyle = 'rgba(255,255,255,.15)'; ctx.fillRect(10, top + 44, bw, 7);
+  ctx.fillStyle = R.hp / maxHp() < .3 ? '#ff5a5a' : '#ff6f8f'; ctx.fillRect(10, top + 44, bw * clamp(R.hp / maxHp(), 0, 1), 7);
+  ctx.fillStyle = '#fff'; ctx.font = '700 8px sans-serif'; ctx.textAlign = 'left'; ctx.fillText('HP', 12, top + 50.5);
+  const w = worldAt(d);
+  if (w.heat || R.heat > 0) { ctx.fillStyle = 'rgba(255,255,255,.15)'; ctx.fillRect(170, top + 44, 90, 7); ctx.fillStyle = R.heat >= 100 ? (Math.sin(R.t * 20) > 0 ? '#ff2a2a' : '#ffa040') : '#ff9a3d'; ctx.fillRect(170, top + 44, 90 * R.heat / 100, 7);
+    ctx.fillStyle = '#fff'; ctx.fillText('🔥熱', 172, top + 50.5); }
+  if (w.press) { ctx.fillStyle = R.eq.shield ? '#5fdc9b' : (Math.sin(R.t * 10) > 0 ? '#ff5a5a' : '#ffc83d'); ctx.font = '800 9px sans-serif'; ctx.fillText(R.eq.shield ? '🛡 高圧OK' : '⚠ 高圧！', 266, top + 51); }
+  // equipment icons
+  let ix = 18; for (const id of ['para', 'drill', 'heat', 'magnet', 'shield', 'scanner']) { if (!R.eq[id]) continue; spr(EQUIP[id].img, ix, top + 74, 22, 22); ix += 24; }
+  if (R.eq.sunglasses) { ctx.font = '16px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('🕶️', ix, top + 80); }
+  if (R.buffRamen > 0) { ctx.fillStyle = '#ffc83d'; ctx.font = '800 11px sans-serif'; ctx.textAlign = 'left'; ctx.fillText(`🍜 替え玉ブースト ${R.buffRamen.toFixed(0)}s`, 10, top + 100); }
+  // world banner
+  if (R.banner && R.banner.t > 0) {
+    const a = Math.min(1, R.banner.t, (3 - R.banner.t) * 3);
+    ctx.globalAlpha = a; ctx.fillStyle = 'rgba(10,6,16,.75)'; ctx.fillRect(0, LH * .26, LW, 70);
+    ctx.textAlign = 'center'; ctx.fillStyle = R.banner.w.glow; ctx.font = '700 12px "M PLUS Rounded 1c",sans-serif'; ctx.fillText(`WORLD ${R.banner.w.id} ・ ${R.banner.w.en}`, LW / 2, LH * .26 + 24);
+    ctx.fillStyle = '#fff'; ctx.font = '400 24px "Dela Gothic One",sans-serif'; ctx.fillText(R.banner.w.name, LW / 2, LH * .26 + 54); ctx.globalAlpha = 1;
+  }
+  // tutorial (first 10 s)
+  if (R.mode === 'fall' && R.hintT < 11) {
+    const h = R.hintT < 4 ? '◀ ▶ で左右に移動' : R.hintT < 7.5 ? '● 長押しでパラシュート減速' : '左右の洞窟に近づくと探索！';
+    ctx.font = '800 14px "M PLUS Rounded 1c",sans-serif'; const tw = ctx.measureText(h).width + 24; ctx.fillStyle = 'rgba(10,6,16,.8)'; ctx.fillRect(LW / 2 - tw / 2, LH - 196, tw, 28);
+    ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.fillText(h, LW / 2, LH - 177);
+  }
+}
+function drawPops(camTop, caveMode) {
+  for (const p of R.pops) { const sx = caveMode ? p.x - R.cave.camX : p.x, sy = caveMode ? LH - 190 + p.y : p.y - camTop;
+    ctx.globalAlpha = Math.min(1, p.t * 2); ctx.fillStyle = p.col; ctx.font = '400 15px "Dela Gothic One",sans-serif'; ctx.textAlign = 'center'; ctx.strokeStyle = '#000'; ctx.lineWidth = 3;
+    ctx.strokeText(p.text, sx, sy - (1.2 - p.t) * 30); ctx.fillText(p.text, sx, sy - (1.2 - p.t) * 30); ctx.globalAlpha = 1; }
+  for (const q of R.parts) { const sx = caveMode ? q.x - R.cave.camX : q.x, sy = caveMode ? LH - 190 + q.y : q.y - camTop;
+    ctx.globalAlpha = clamp(q.t * 2, 0, 1); ctx.fillStyle = q.col; ctx.fillRect(sx, sy, q.r, q.r); ctx.globalAlpha = 1; }
+}
+function render() {
+  ctx.setTransform(DPR * SC, 0, 0, DPR * SC, 0, 0);
+  ctx.fillStyle = '#140c1e'; ctx.fillRect(0, 0, LW, LH);
+  if (!R) { drawTitleBg(); return; }
+  let sx = 0, sy = 0; if (R.shake > 0) { sx = rnd(-R.shake, R.shake); sy = rnd(-R.shake, R.shake); }
+  ctx.save(); ctx.translate(sx, sy);
+  if (R.mode === 'cave' && R.cave) { drawCave(); drawPops(0, true); }
+  else {
+    const camTop = R.d - LH * .32;
+    drawBg(camTop); drawSurface(camTop); drawShaft(camTop); drawFallObjs(camTop);
+    if (R.mode === 'intro') drawIntro(camTop); else drawPlayerFall(camTop);
+    const w = worldAt(Math.max(0, R.d)), dark = w.dark * (R.eq.sunglasses ? .4 : 1);
+    if (dark > 0) { const g = ctx.createRadialGradient(R.x, R.d - camTop, 70, R.x, R.d - camTop, 320); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, `rgba(0,0,0,${dark})`); ctx.fillStyle = g; ctx.fillRect(0, 0, LW, LH); }
+    if (R.d > TOTAL - 900) { const k = clamp((R.d - (TOTAL - 900)) / 900, 0, 1); const cy = TOTAL + 120 - camTop; const g = ctx.createRadialGradient(LW / 2, cy, 10, LW / 2, cy, 260); g.addColorStop(0, `rgba(255,255,255,${k})`); g.addColorStop(.4, `rgba(200,170,255,${.7 * k})`); g.addColorStop(1, 'rgba(200,170,255,0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, LW, LH); }
+    drawPops(camTop, false);
+  }
+  ctx.restore();
+  if (R.mode !== 'intro') drawHud();
+}
+let titleT = 0;
+function drawTitleBg() {
+  titleT += 1 / 60; const bh = LW * 1024 / 768, keys = ['bg_fuji_crater', 'bg_crystal_cave', 'bg_mantle', 'bg_outer_core', 'bg_inner_core'];
+  const off = (titleT * 40) % (bh * keys.length);
+  for (let i = 0; i < keys.length + 1; i++) { const im = IMG[keys[i % keys.length]]; const y = i * bh - off; if (y > LH || y < -bh) continue; if (ok(im)) ctx.drawImage(im, 0, y, LW, bh); }
+  spr('explorer_fall', LW / 2 + Math.sin(titleT) * 60, LH * .72 + Math.sin(titleT * 2) * 8, 76, 76, { rot: Math.sin(titleT) * .2 });
+}
+
+/* ---------------- loop ---------------- */
+function update(dt) {
+  if (!R) return;
+  R.t += dt; if (R.inv > 0) R.inv -= dt; if (R.shake > 0) R.shake = Math.max(0, R.shake - dt * 30);
+  if (R.banner) R.banner.t -= dt; if (R.magWarn > 0) R.magWarn -= dt;
+  for (const p of R.pops) p.t -= dt; R.pops = R.pops.filter(p => p.t > 0);
+  for (const q of R.parts) { q.x += q.vx * dt; q.y += q.vy * dt; q.vy += 300 * dt; q.t -= dt; } R.parts = R.parts.filter(q => q.t > 0);
+  if (R.mode === 'intro') {
+    R.introT += dt; $('actLbl').textContent = 'ダイブ';
+    if (IN.actEdge || R.introT > 3.6) { R.mode = 'fall'; R.vy = 40; SFX.dive(); R.banner = { w: WORLDS[0], t: 3 }; }
+  } else if (R.mode === 'fall') { R.hintT += dt; $('actLbl').textContent = R.near ? '減速' : '減速'; updateFall(dt); }
+  else if (R.mode === 'cave') updateCave(dt);
+  IN.actEdge = false; IN.actUp = false;
+  // wind sound follows fall speed
+  if (AU.wind && live()) { const on = R.mode === 'fall' ? clamp(R.vy / 500, 0, .5) : 0; AU.wind.g.gain.setTargetAtTime(on * .5, AU.ctx.currentTime, .1); AU.wind.f.frequency.setTargetAtTime(300 + R.vy * 2, AU.ctx.currentTime, .2); }
+}
+const STEP = 1 / 60; let acc = 0, last = 0;
+function frame(now) {
+  const dt = Math.min(.1, (now - (last || now)) / 1000); last = now;
+  if (toastT > 0) { toastT -= dt; if (toastT <= 0) $('toast').classList.remove('on'); }
+  if (G.state === 'play') { acc += dt; while (acc >= STEP && G.state === 'play') { update(STEP); acc -= STEP; } } else acc = 0;
+  render();
+  requestAnimationFrame(frame);
+}
+
+/* ---------------- flow / screens ---------------- */
+function refreshTitle() {
+  $('tDepth').textContent = fmt(SV.best.depth); $('tScore').textContent = fmt(SV.best.score); $('tDex').textContent = `${dexCount()}/${DEX.length}`;
+  $('tMat').textContent = `強化素材 🪨 ${SV.mat} ・ プレイ ${SV.plays}回`;
+}
+function toTitle() { G.state = 'title'; R = null; setPlayUI(false); refreshTitle(); show('scrTitle'); if (AU.wind) AU.wind.g.gain.value = 0; }
+function start() { audioInit(); newRun(); G.state = 'play'; show(null); setPlayUI(true); IN.l = IN.r = IN.act = false; }
+function pause() { if (G.state !== 'play') return; G.state = 'pause'; setPlayUI(false); show('scrPause'); if (AU.wind) AU.wind.g.gain.value = 0; }
+function resume() { if (G.state !== 'pause') return; G.state = 'play'; show(null); setPlayUI(true); last = performance.now(); IN.l = IN.r = IN.act = false; audioInit(); }
+const UPG = [
+  { k: 'hp', name: '最大HP', img: 'heart', dir: 'items', max: 3, cost: [3, 6, 10], desc: l => `最大HP +20（現在 ${100 + 20 * l}）` },
+  { k: 'heat', name: '耐熱スーツ', img: 'heat_suit', dir: 'equipment', max: 3, cost: [3, 6, 10], desc: l => `熱の上昇 -22%/Lv（現在 -${22 * l}%）` },
+  { k: 'para', name: 'パラシュート', img: 'parachute', dir: 'equipment', max: 2, cost: [2, 5], desc: l => `減速がより強くなる（Lv${l}）` },
+  { k: 'mag', name: '宝石レーダー', img: 'magnet', dir: 'equipment', max: 2, cost: [4, 8], desc: l => l >= 2 ? 'マグネットを最初から装備' : `宝石を吸い寄せる範囲アップ（Lv${l}）・Lv2でマグネット常備` },
+  { k: 'shield', name: '高圧シールド', img: 'pressure_shield', dir: 'equipment', max: 1, cost: [12], desc: l => l ? '最初から装備（地球の中心の圧力に耐える）' : '最初から装備できるようになる' }
+];
+function renderUpg() {
+  $('uMat').textContent = SV.mat; const box = $('upgList'); box.innerHTML = '';
+  for (const u of UPG) {
+    const l = SV.upg[u.k], c = u.cost[l], el = document.createElement('div'); el.className = 'item';
+    el.innerHTML = `<img src="assets/${u.dir}/${u.img}.png" alt=""><div><b>${u.name} Lv${l}/${u.max}</b><small>${u.desc(l)}</small></div>`;
+    const b = document.createElement('button'); b.type = 'button';
+    if (l >= u.max) { b.textContent = 'MAX'; b.disabled = true; } else { b.textContent = `🪨${c} 強化`; b.disabled = SV.mat < c; b.onclick = () => { SV.mat -= c; SV.upg[u.k]++; save(); SFX.chest(); renderUpg(); }; }
+    el.appendChild(b); box.appendChild(el);
+  }
+}
+function renderDex() {
+  const box = $('dexGrid'); box.innerHTML = ''; $('dexCount').textContent = `${dexCount()} / ${DEX.length}`;
+  for (const d of DEX) {
+    const got = SV.disco[d.id], el = document.createElement('div'); el.className = (got ? '' : 'no') + (d.rare ? ' rare' : '');
+    const pic = got ? (d.img ? `<img src="assets/${d.id === 'ev_mole' ? 'npcs' : d.id.startsWith('eq_') ? 'equipment' : 'events'}/${d.img}.png" alt="" style="width:40px;height:40px">` : `<span class="e">${d.e || '❔'}</span>`) : '<span class="e">❔</span>';
+    el.innerHTML = `${pic}<b>${got ? d.name : '？？？'}</b>${got ? (d.rare ? '★レア' : '') : ''}`;
+    el.title = got ? d.desc : '未発見';
+    box.appendChild(el);
+  }
+}
+$('bStart').onclick = start;
+$('bUpg').onclick = () => { renderUpg(); show('scrUpg'); };
+$('bUpgBack').onclick = () => { refreshTitle(); show('scrTitle'); };
+$('bDex').onclick = () => { renderDex(); show('scrDex'); };
+$('bDexBack').onclick = () => show('scrTitle');
+$('bPause').onclick = pause; $('bResume').onclick = resume;
+$('bSound').onclick = () => { audioInit(); setMute(!SV.mute); };
+$('bSound2').onclick = () => { audioInit(); setMute(!SV.mute); };
+$('bRetire').onclick = () => { show(null); finish(); };
+$('bRevive').onclick = revive;
+$('bToResult').onclick = finish;
+$('bAgain').onclick = start;
+$('bResTitle').onclick = toTitle;
+$('bShare').onclick = share;
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { if (G.state === 'play') pause(); if (AU.ctx && AU.ctx.state === 'running') AU.ctx.suspend(); }
+  else if (AU.ctx && G.state === 'play') audioInit();
+});
+for (const ev of ['pointerdown', 'touchend', 'keydown']) addEventListener(ev, () => { if (AU.ctx && AU.ctx.state !== 'running' && !document.hidden) AU.ctx.resume(); }, { passive: true, capture: true });
+
+setMute(SV.mute); refreshTitle(); show('scrTitle');
+loadAssets().then(() => requestAnimationFrame(frame));
+// test hook
+window.__fedk = { get R() { return R; }, get G() { return G; }, SV, WORLDS, TOTAL, kmAt, IN, start, finish, score };
+})();
+</script>
+</body>
+</html>

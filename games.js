@@ -13,7 +13,7 @@
  *
  * サイト上の「管理」画面からも追加・削除できます（その場合はこのブラウザだけに保存されます）。
  */
-window.GAMES_VERSION = "24";
+window.GAMES_VERSION = "25";
 
 /* 管理画面のパスワード（SHA-256 ハッシュ。パスワードそのものは書かない）
  * 変更するには: "mini-game-arcade:" + 新しいパスワード を SHA-256 にかけた値に置き換える */
@@ -370,5 +370,14 @@ window.GAMES = [
     emoji: "🤿",
     color: "#0f5d8c",
     accent: "#7fe3ff"
+  },
+  {
+    id: "fuji-earth-dive-king",
+    title: "FUJI EARTH DIVE KING",
+    description: "富士山の火口から地球の中心へダイブ！落ち続けるか、洞窟を探るか。装備と発見を集めて6,371kmの底をめざせ。",
+    path: "games/fuji-earth-dive-king/index.html",
+    emoji: "🌋",
+    color: "#7a2a1e",
+    accent: "#ffc83d"
   }
 ];
