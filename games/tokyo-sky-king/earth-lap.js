@@ -486,7 +486,7 @@ diffuseColor.rgb *= 1.0 + 0.2 * (mix(grain, 0.5, sea * 0.6) - 0.5) * clamp(1.0 -
       cp = P.clone().addScaledVector(s.f, -cd).addScaledVector(up, cd * 0.3);
       cu = up.clone(); look = P.clone().addScaledVector(s.f, cd * 0.55).addScaledVector(up, cd * 0.06);
     } else {
-      const r = 2.25 + s.alt; cp = s.p.clone().multiplyScalar(r * 0.82).addScaledVector(s.f, -r * 0.5); cu = s.f.clone(); look = P.clone().multiplyScalar(0.55);
+      const r = 3.1 + s.alt; cp = s.p.clone().multiplyScalar(r * 0.82).addScaledVector(s.f, -r * 0.5); cu = s.f.clone(); look = P.clone().multiplyScalar(0.55);
     }
     if (s.shake > 0) cp.add(new T.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).multiplyScalar(cd * 0.08 * s.shake));
     if (!s.camP) { s.camP = cp.clone(); s.camU = cu.clone(); s.camL = look.clone(); }
