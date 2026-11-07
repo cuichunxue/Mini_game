@@ -13,7 +13,7 @@
  *
  * サイト上の「管理」画面からも追加・削除できます（その場合はこのブラウザだけに保存されます）。
  */
-window.GAMES_VERSION = "25";
+window.GAMES_VERSION = "26";
 
 /* 管理画面のパスワード（SHA-256 ハッシュ。パスワードそのものは書かない）
  * 変更するには: "mini-game-arcade:" + 新しいパスワード を SHA-256 にかけた値に置き換える */
@@ -379,5 +379,14 @@ window.GAMES = [
     emoji: "🌋",
     color: "#7a2a1e",
     accent: "#ffc83d"
+  },
+  {
+    id: "slap-spin-king",
+    title: "SLAP SPIN KING",
+    description: "回転する腕ガードのすき間を見切ってビンタ！ヘリコプター化やタコ化など、ハプニング満載のタイミングゲーム。",
+    path: "games/slap-spin-king/index.html",
+    emoji: "🌀",
+    color: "#8a1f6a",
+    accent: "#ffd23f"
   }
 ];
