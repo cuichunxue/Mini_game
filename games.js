@@ -13,7 +13,7 @@
  *
  * サイト上の「管理」画面からも追加・削除できます（その場合はこのブラウザだけに保存されます）。
  */
-window.GAMES_VERSION = "28";
+window.GAMES_VERSION = "29";
 
 /* 管理画面のパスワード（SHA-256 ハッシュ。パスワードそのものは書かない）
  * 変更するには: "mini-game-arcade:" + 新しいパスワード を SHA-256 にかけた値に置き換える */
@@ -397,5 +397,32 @@ window.GAMES = [
     emoji: "🚌",
     color: "#3a4a52",
     accent: "#ffb020"
+  },
+  {
+    id: "durian-catch-king",
+    title: "DURIAN CATCH KING",
+    description: "高さ51mの木から落ちるドリアンを麻袋でキャッチ！落ちる瞬間に振り出して包み込め。",
+    path: "games/durian-catch-king/index.html",
+    emoji: "🍈",
+    color: "#1f3a2a",
+    accent: "#c8e04a"
+  },
+  {
+    id: "honey-cliff-king",
+    title: "HONEY CLIFF KING",
+    description: "崖にぶら下がって命がけの蜂蜜採り。欲張るほど帰れなくなる、ロープアクション。",
+    path: "games/honey-cliff-king/index.html",
+    emoji: "🍯",
+    color: "#6a4a1a",
+    accent: "#ffc23d"
+  },
+  {
+    id: "drill-earth-king",
+    title: "DRILL EARTH KING",
+    description: "ドリルで地球を掘り進め！燃料と熱を管理し、コンボでDRILL FEVER。資源を集めて最深記録へ。",
+    path: "games/drill-earth-king/index.html",
+    emoji: "⛏️",
+    color: "#3a2a20",
+    accent: "#ff8a3d"
   }
 ];
