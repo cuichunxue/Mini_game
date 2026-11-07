@@ -28,7 +28,8 @@ html,body{height:100%}
 body{background:var(--night);color:var(--paper);font-family:var(--f-body);overflow:hidden;-webkit-user-select:none;user-select:none;touch-action:none}
 #wrap{position:relative;width:100%;height:100%;overflow:hidden}
 canvas{display:block;width:100%;height:100%}
-.hud{position:absolute;pointer-events:none;font-variant-numeric:tabular-nums}
+.hud{position:absolute;pointer-events:none;font-variant-numeric:tabular-nums;transition:opacity .15s}
+.hud.dim{opacity:.18}
 #hudL{top:12px;left:max(16px,env(safe-area-inset-left,0px));display:grid;gap:6px}
 #hudR{top:12px;right:max(16px,env(safe-area-inset-right,0px));text-align:right;display:grid;gap:2px}
 .lbl{font-size:11px;letter-spacing:.18em;color:var(--dim)}
@@ -380,8 +381,8 @@ function openMap(){
 
 /* ---------- canvas setup ---------- */
 function resize(){DPR=Math.min(2,window.devicePixelRatio||1);const r=cv.getBoundingClientRect();W=r.width;H=r.height;cv.width=W*DPR;cv.height=H*DPR;cx.setTransform(DPR,0,0,DPR,0,0);GROUND=H-Math.max(56,H*0.09);
-  /* arcade: keep the ronin below the HUD corners so he never hides under 体力 / 撃破点 */
-  try{const hb=Math.max(document.getElementById('hudL').getBoundingClientRect().bottom,document.getElementById('hudR').getBoundingClientRect().bottom)-r.top;CEIL=Math.min(Math.max(40,hb+26),GROUND*0.45)}catch(e){CEIL=40}
+  /* arcade: the ronin may fly almost to the top edge; the HUD corners fade out when he passes under them */
+  CEIL=30;
   makeScene()}
 addEventListener('resize',resize);if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>{if(W)resize()});
 
@@ -706,7 +707,14 @@ function update(rdt){
 /* ---------- HUD ---------- */
 function renderHP(){$('hp').innerHTML=[...Array(maxHP())].map((_,i)=>`<span class="pip${i<S.p.hp?'':' off'}"></span>`).join('')}
 let lastScore=-1;
+function hudFade(){
+  const p=S.p,rc=cv.getBoundingClientRect();
+  for(const id of ['hudL','hudR']){const e=$(id);const r=e.getBoundingClientRect();
+    const near=p.x+rc.left>r.left-30&&p.x+rc.left<r.right+30&&p.y+rc.top>r.top-30&&p.y+rc.top<r.bottom+34;
+    if(e.classList.contains('dim')!==near)e.classList.toggle('dim',near)}
+}
 function hud(){
+  hudFade();
   if(S.score!==lastScore){$('score').textContent=S.score.toLocaleString();lastScore=S.score}
   $('town').style.width=S.town+'%';
   const g=Math.floor(S.p.gauge);$('gfill').style.width=g+'%';
