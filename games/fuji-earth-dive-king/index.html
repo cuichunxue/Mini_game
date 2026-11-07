@@ -33,12 +33,18 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
 #bSound.off{filter:grayscale(1) brightness(.6)}
 
 /* fixed virtual pad */
-#ctrl{position:absolute;left:0;right:0;bottom:0;z-index:5;display:grid;grid-template-columns:1fr 1.15fr 1fr;align-items:end;gap:6px;
+#ctrl{position:absolute;left:0;right:0;bottom:0;z-index:5;display:flex;justify-content:flex-end;align-items:end;gap:6px;
   padding:0 max(12px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 12px) max(12px,env(safe-area-inset-left,0px));pointer-events:none}
 #ctrl button{pointer-events:auto;border:0;background-color:transparent;background-position:center;background-size:contain;background-repeat:no-repeat;touch-action:none;justify-self:center;position:relative}
-#bL,#bR{width:84px;height:84px}
-#bL{background-image:url(assets/ui/btn_left.png);justify-self:start}
-#bR{background-image:url(assets/ui/btn_right.png);justify-self:end}
+/* virtual ball stick: touch anywhere in the left zone, the ball appears under the thumb */
+#stickZone{position:absolute;left:0;bottom:0;width:64%;top:110px;z-index:4;touch-action:none}
+#stick{position:absolute;width:124px;height:124px;margin:-62px 0 0 -62px;border-radius:50%;pointer-events:none;
+  background:radial-gradient(circle,rgba(255,255,255,.06) 55%,rgba(255,255,255,.16) 56%,rgba(255,255,255,.05) 70%);border:2px solid rgba(255,246,230,.38);transition:opacity .2s}
+#stick.idle{opacity:.55}
+#knob{position:absolute;left:50%;top:50%;width:58px;height:58px;margin:-29px 0 0 -29px;border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,#ffe9a8,#ffc83d 45%,#d98a10);box-shadow:0 4px 10px rgba(0,0,0,.5),inset 0 -4px 8px rgba(120,60,0,.4)}
+#stickHint{position:absolute;left:50%;top:calc(100% + 4px);transform:translateX(-50%);white-space:nowrap;font:800 11px var(--body);color:var(--ink);text-shadow:0 1px 3px #000}
+#stick:not(.idle) #stickHint{display:none}
 #bAct{width:104px;height:104px;background-image:url(assets/ui/btn_action.png)}
 #actLbl{position:absolute;left:50%;bottom:-2px;transform:translateX(-50%);white-space:nowrap;font:400 14px var(--disp);color:var(--gold);
   text-shadow:0 2px 0 #000,0 0 6px #000;letter-spacing:.04em}
@@ -92,17 +98,16 @@ h2{margin:0;font:400 26px var(--disp)}
 #toast{position:absolute;left:50%;top:38%;transform:translateX(-50%);z-index:8;background:rgba(10,6,16,.88);border:1px solid var(--gold);color:var(--ink);
   font:800 14px var(--body);padding:8px 14px;border-radius:999px;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .25s}
 #toast.on{opacity:1}
-@media (max-height:620px){#bL,#bR{width:70px;height:70px}#bAct{width:86px;height:86px}}
+@media (max-height:620px){#bAct{width:86px;height:86px}}
 </style>
 </head>
 <body>
 <div id="app">
   <canvas id="cv" aria-label="FUJI EARTH DIVE KING ゲーム画面"></canvas>
   <div id="sys" hidden><button id="bPause" type="button" aria-label="一時停止"></button><button id="bSound" type="button" aria-label="音のオン・オフ"></button></div>
+  <div id="stickZone" hidden><div id="stick" class="idle"><div id="knob"></div><div id="stickHint">ボールをドラッグ</div></div></div>
   <div id="ctrl" hidden>
-    <button id="bL" type="button" aria-label="左へ"></button>
     <button id="bAct" type="button" aria-label="アクション"><span id="actLbl">減速</span></button>
-    <button id="bR" type="button" aria-label="右へ"></button>
   </div>
   <div id="toast"></div>
 
@@ -112,8 +117,8 @@ h2{margin:0;font:400 26px var(--disp)}
       <p class="tag">富士山の火口に飛び込んだら、地球の裏側まで行けるのか？ 落ちるか、洞窟を探るか──その迷いを楽しむ地底ダイブ。</p>
       <div class="stats"><div>最深記録<b id="tDepth">0</b>km</div><div>ハイスコア<b id="tScore">0</b></div><div>図鑑<b id="tDex">0</b></div></div>
       <div class="howto">
-        <b>◀ ▶</b> 左右に移動　<b>●</b> 落下中は長押しで減速（パラシュート）<br>
-        左右の<b>洞窟の入口</b>に近づくと探索モードへ。洞窟では <b>●</b> でジャンプ・調べる。<br>
+        画面の左側で<b>ボールをドラッグ</b>して移動（倒した分だけ速く）。落下中は<b>下に引く</b>か <b>●</b> 長押しで減速。<br>
+        左右の<b>洞窟の入口</b>に近づくと探索モードへ。洞窟ではボールを<b>上にはじく</b>か <b>●</b> でジャンプ、<b>●</b> で調べる。<br>
         無視してそのまま落ちれば <b>DIVEボーナス</b>。PC：← → / A D、Space で操作
       </div>
       <button class="btn" id="bStart" type="button">火口へダイブ！</button>
@@ -341,7 +346,8 @@ function setMute(m) {
 }
 
 /* ---------------- input ---------------- */
-const IN = { l: false, r: false, act: false, actEdge: false, actUp: false };
+const IN = { l: false, r: false, act: false, actEdge: false, actUp: false, ax: 0, ay: 0, stick: false, up: false };
+const axisX = () => IN.stick ? IN.ax : (IN.r ? 1 : 0) - (IN.l ? 1 : 0);
 const KEYS = { ArrowLeft: 'l', KeyA: 'l', ArrowRight: 'r', KeyD: 'r', Space: 'act', ArrowUp: 'act', KeyW: 'act', Enter: 'act', ArrowDown: 'act', KeyS: 'act' };
 addEventListener('keydown', e => {
   if (e.code === 'Escape' || e.code === 'KeyP') { if (G.state === 'play') pause(); else if (G.state === 'pause') resume(); return; }
@@ -358,9 +364,34 @@ function bindBtn(el, key) {
   const up = () => { el.classList.remove('on'); if (key === 'act') { if (IN.act) IN.actUp = true; IN.act = false; } else IN[key] = false; };
   el.addEventListener('pointerdown', down); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up); el.addEventListener('lostpointercapture', up);
 }
-bindBtn($('bL'), 'l'); bindBtn($('bR'), 'r'); bindBtn($('bAct'), 'act');
+bindBtn($('bAct'), 'act');
+// ---- ball stick ----
+{
+  const zone = $('stickZone'), stick = $('stick'), knob = $('knob'), RAD = 52; let pid = null, ox = 0, oy = 0;
+  const home = () => { const r = zone.getBoundingClientRect(); stick.style.left = '96px'; stick.style.top = (r.height - 110) + 'px'; knob.style.transform = ''; stick.classList.add('idle'); };
+  const setAxis = (dx, dy) => {
+    const l = Math.hypot(dx, dy), k = l > RAD ? RAD / l : 1; dx *= k; dy *= k;
+    knob.style.transform = `translate(${dx}px,${dy}px)`;
+    const nx = dx / RAD, ny = dy / RAD, dz = v => Math.abs(v) < .15 ? 0 : (v - Math.sign(v) * .15) / .85;
+    IN.ax = dz(nx); IN.ay = dz(ny);
+    const up = IN.ay < -.55;
+    if (up && !IN.up) IN.stickJump = true;            // flick up → jump (cave)
+    if (!up && IN.up) IN.actUp = true;                 // released from up → cut jump height
+    IN.up = up;
+  };
+  zone.addEventListener('pointerdown', e => {
+    e.preventDefault(); audioInit(); if (pid != null) return; pid = e.pointerId; try { zone.setPointerCapture(pid); } catch (er) {}
+    const r = zone.getBoundingClientRect(); ox = e.clientX - r.left; oy = e.clientY - r.top;
+    stick.style.left = ox + 'px'; stick.style.top = oy + 'px'; stick.classList.remove('idle'); IN.stick = true; setAxis(0, 0);
+    if (G.state === 'play' && R && R.mode === 'intro') IN.actEdge = true;
+  });
+  zone.addEventListener('pointermove', e => { if (e.pointerId !== pid) return; const r = zone.getBoundingClientRect(); setAxis(e.clientX - r.left - ox, e.clientY - r.top - oy); });
+  const end = e => { if (e.pointerId !== pid) return; pid = null; IN.stick = false; IN.ax = IN.ay = 0; if (IN.up) IN.actUp = true; IN.up = false; home(); };
+  zone.addEventListener('pointerup', end); zone.addEventListener('pointercancel', end); zone.addEventListener('lostpointercapture', end);
+  window.__stickHome = home; addEventListener('resize', home);
+}
 cv.addEventListener('pointerdown', () => { audioInit(); if (G.state === 'play' && R && R.mode === 'intro') IN.actEdge = true; });
-addEventListener('blur', () => { IN.l = IN.r = IN.act = false; });
+addEventListener('blur', () => { IN.l = IN.r = IN.act = false; IN.stick = false; IN.ax = IN.ay = 0; });
 document.addEventListener('touchmove', e => { if (G.state === 'play') e.preventDefault(); }, { passive: false });
 document.addEventListener('gesturestart', e => e.preventDefault());
 
@@ -368,7 +399,7 @@ document.addEventListener('gesturestart', e => e.preventDefault());
 const G = { state: 'title' };
 const screens = ['scrTitle', 'scrUpg', 'scrDex', 'scrPause', 'scrModal', 'scrDead', 'scrResult'];
 function show(id) { for (const s of screens) $(s).hidden = s !== id; }
-function setPlayUI(on) { $('ctrl').hidden = !on; $('sys').hidden = !on; }
+function setPlayUI(on) { $('ctrl').hidden = !on; $('sys').hidden = !on; $('stickZone').hidden = !on; if (on && window.__stickHome) requestAnimationFrame(window.__stickHome); }
 let toastT = 0;
 function toast(t, sec = 2) { $('toast').textContent = t; $('toast').classList.add('on'); toastT = sec; }
 
@@ -572,9 +603,9 @@ function updateFall(dt) {
     if (!R.worldsReached[w.id]) { R.worldsReached[w.id] = true; R.mat += 1; pop('地層到達！ 🪨+1', R.x, R.d - 40, '#ffc83d'); }
   }
   // horizontal
-  const ax = (IN.r ? 1 : 0) - (IN.l ? 1 : 0);
+  const ax = axisX();
   R.vx = lerp(R.vx, ax * 250, Math.min(1, dt * 9));
-  if (ax) R.face = ax;
+  if (ax) R.face = Math.sign(ax);
   if (w.mag) { // TRIZ: new control twist in the outer core — the magnetic field pushes sideways and flips
     R.magT += dt; if (R.magT > 6.5) { R.magT = 0; R.magDir *= -1; R.magWarn = 1.2; toast('🧲 磁場反転！', 1.2); SFX.tick(); }
     R.vx += R.magDir * 150 * dt * 6;
@@ -593,7 +624,7 @@ function updateFall(dt) {
   R.near = near;
   R.x = clamp(R.x, L + 14, Rr - 14);
   // vertical
-  const para = IN.act;
+  const para = IN.act || IN.ay > .5; R.para = para;
   let target = para ? 125 - 15 * SV.upg.para : w.vmax * (R.buffRamen > 0 ? 1.85 : 1);
   if (near) target = Math.min(target, 95);
   R.vy = lerp(R.vy, target, Math.min(1, dt * (para || near ? 3.2 : 1.1)));
@@ -652,7 +683,7 @@ function enterCave(c) {
   R.cave = { c, desc: c.desc, px: 40, py: 0, vx: 0, vy: 0, onG: true, coyote: 0, safe: 40, camX: 0, t: 0, face: 1, act: null, challenge: false };
   R.cave.camX = c.desc.wall ? -70 : 0;
   R.mode = 'cave'; R.vx = 0; SFX.cave();
-  toast(c.desc.special ? '🛰️ 特別な洞窟を発見！' : '洞窟を探索！ 出口のポータルをめざせ', 1.8);
+  toast(c.desc.special ? '🛰️ 特別な洞窟を発見！' : R.caveCount === 1 ? 'ボールを上にはじく／● でジャンプ！' : '洞窟を探索！ 出口のポータルをめざせ', 1.8);
 }
 function exitCave() {
   const k = R.cave, c = k.c, [L, Rr] = shaft(c.y);
@@ -666,9 +697,9 @@ function updateCave(dt) {
   const k = R.cave, C = k.desc;
   k.t += dt;
   R.heat = Math.max(0, R.heat - 12 * dt); // caves are cool: a reason to DISCOVER in the deep worlds
-  const ax = (IN.r ? 1 : 0) - (IN.l ? 1 : 0);
+  const ax = axisX();
   k.vx = lerp(k.vx, ax * 195, Math.min(1, dt * (k.onG ? 14 : 6)));
-  if (ax) k.face = ax;
+  if (ax) k.face = Math.sign(ax);
   // interactables
   k.act = null;
   const near = (x, r = 34) => Math.abs(k.px - x) < r && k.py > -60;
@@ -676,8 +707,8 @@ function updateCave(dt) {
   else if (C.ev && !C.ev.used && near(C.ev.x, 40)) k.act = { k: 'ev' };
   else if (C.wall && !C.wall.broken && k.px < C.wall.x + 60 && k.py > -50) k.act = { k: 'wall' };
   $('actLbl').textContent = k.act ? (k.act.k === 'wall' ? (R.eq.drill ? '掘る' : '調べる') : '調べる') : 'ジャンプ';
-  if (IN.actEdge) {
-    if (k.act) interact(k.act.k);
+  if (IN.actEdge || IN.stickJump) {
+    if (IN.actEdge && k.act) interact(k.act.k);
     else if (k.onG || k.coyote > 0) { k.vy = -610; k.onG = false; k.coyote = 0; SFX.jump(); }
   }
   if (IN.actUp && k.vy < -260) k.vy = -260; // variable jump height
@@ -959,7 +990,7 @@ function drawFallObjs(camTop) {
 function drawPlayerFall(camTop) {
   const sy = R.d - camTop;
   const blink = R.inv > 0 && Math.sin(R.t * 30) > 0;
-  if (IN.act && R.mode === 'fall') spr('parachute', R.x, sy - 40, 70, 70, { alpha: .95 });
+  if (R.para && R.mode === 'fall') spr('parachute', R.x, sy - 40, 70, 70, { alpha: .95 });
   if (R.buffRamen > 0) { ctx.fillStyle = 'rgba(255,200,80,.35)'; ctx.beginPath(); ctx.ellipse(R.x, sy - 20, 16, 40, 0, 0, 7); ctx.fill(); }
   if (!blink) spr(R.inv > .6 ? 'explorer_hurt' : 'explorer_fall', R.x, sy, 60, 60, { flip: R.face < 0, rot: clamp(R.vx / 900, -.3, .3) });
   // speed streaks
@@ -1045,9 +1076,9 @@ function drawHud() {
   }
   // tutorial (first 10 s)
   if (R.mode === 'fall' && R.hintT < 11) {
-    const h = R.hintT < 4 ? '◀ ▶ で左右に移動' : R.hintT < 7.5 ? '● 長押しでパラシュート減速' : '左右の洞窟に近づくと探索！';
-    ctx.font = '800 14px "M PLUS Rounded 1c",sans-serif'; const tw = ctx.measureText(h).width + 24; ctx.fillStyle = 'rgba(10,6,16,.8)'; ctx.fillRect(LW / 2 - tw / 2, LH - 196, tw, 28);
-    ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.fillText(h, LW / 2, LH - 177);
+    const h = R.hintT < 4 ? '左側でボールをドラッグして移動' : R.hintT < 7.5 ? 'ボールを下に引く／● 長押しで減速' : '左右の洞窟に近づくと探索！';
+    ctx.font = '800 14px "M PLUS Rounded 1c",sans-serif'; const tw = ctx.measureText(h).width + 24; ctx.fillStyle = 'rgba(10,6,16,.8)'; ctx.fillRect(LW / 2 - tw / 2, 112, tw, 28);
+    ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.fillText(h, LW / 2, 131);
   }
 }
 function drawPops(camTop, caveMode) {
@@ -1096,7 +1127,7 @@ function update(dt) {
     if (IN.actEdge || R.introT > 3.6) { R.mode = 'fall'; R.vy = 40; SFX.dive(); R.banner = { w: WORLDS[0], t: 3 }; }
   } else if (R.mode === 'fall') { R.hintT += dt; $('actLbl').textContent = R.near ? '減速' : '減速'; updateFall(dt); }
   else if (R.mode === 'cave') updateCave(dt);
-  IN.actEdge = false; IN.actUp = false;
+  IN.actEdge = false; IN.actUp = false; IN.stickJump = false;
   // wind sound follows fall speed
   if (AU.wind && live()) { const on = R.mode === 'fall' ? clamp(R.vy / 500, 0, .5) : 0; AU.wind.g.gain.setTargetAtTime(on * .5, AU.ctx.currentTime, .1); AU.wind.f.frequency.setTargetAtTime(300 + R.vy * 2, AU.ctx.currentTime, .2); }
 }
@@ -1115,9 +1146,9 @@ function refreshTitle() {
   $('tMat').textContent = `強化素材 🪨 ${SV.mat} ・ プレイ ${SV.plays}回`;
 }
 function toTitle() { G.state = 'title'; R = null; setPlayUI(false); refreshTitle(); show('scrTitle'); if (AU.wind) AU.wind.g.gain.value = 0; }
-function start() { audioInit(); newRun(); G.state = 'play'; show(null); setPlayUI(true); IN.l = IN.r = IN.act = false; }
+function start() { audioInit(); newRun(); G.state = 'play'; show(null); setPlayUI(true); IN.l = IN.r = IN.act = false; IN.stick = false; IN.ax = IN.ay = 0; }
 function pause() { if (G.state !== 'play') return; G.state = 'pause'; setPlayUI(false); show('scrPause'); if (AU.wind) AU.wind.g.gain.value = 0; }
-function resume() { if (G.state !== 'pause') return; G.state = 'play'; show(null); setPlayUI(true); last = performance.now(); IN.l = IN.r = IN.act = false; audioInit(); }
+function resume() { if (G.state !== 'pause') return; G.state = 'play'; show(null); setPlayUI(true); last = performance.now(); IN.l = IN.r = IN.act = false; IN.stick = false; IN.ax = IN.ay = 0; audioInit(); }
 const UPG = [
   { k: 'hp', name: '最大HP', img: 'heart', dir: 'items', max: 3, cost: [3, 6, 10], desc: l => `最大HP +20（現在 ${100 + 20 * l}）` },
   { k: 'heat', name: '耐熱スーツ', img: 'heat_suit', dir: 'equipment', max: 3, cost: [3, 6, 10], desc: l => `熱の上昇 -22%/Lv（現在 -${22 * l}%）` },
