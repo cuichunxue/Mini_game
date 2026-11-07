@@ -13,7 +13,7 @@
  *
  * サイト上の「管理」画面からも追加・削除できます（その場合はこのブラウザだけに保存されます）。
  */
-window.GAMES_VERSION = "21";
+window.GAMES_VERSION = "22";
 
 /* 管理画面のパスワード（SHA-256 ハッシュ。パスワードそのものは書かない）
  * 変更するには: "mini-game-arcade:" + 新しいパスワード を SHA-256 にかけた値に置き換える */
@@ -352,5 +352,14 @@ window.GAMES = [
     emoji: "🏃",
     color: "#b5382c",
     accent: "#ffe066"
+  },
+  {
+    id: "javelin",
+    title: "やり投げ 決勝 2X",
+    description: "夜のスタジアムで8人の決勝！連打で助走、長押しで角度を決めて投てき。3投のベストでメダルを争え。",
+    path: "games/javelin/index.html",
+    emoji: "🎯",
+    color: "#0d1d3a",
+    accent: "#ffc83d"
   }
 ];
