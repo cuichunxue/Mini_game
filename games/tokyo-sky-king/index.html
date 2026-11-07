@@ -50,6 +50,16 @@ body{font-family:var(--body);font-size:15px}
 #rollBtn small{font:600 16px var(--mono);margin-top:2px}
 #rollBtn.held{transform:scale(.92);background:rgba(40,160,220,1)}
 #rollBtn[disabled]{opacity:.3}
+.planes{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin:4px 0 12px}
+.plane{display:grid;grid-template-columns:44px 1fr;grid-template-rows:auto auto;gap:2px 10px;align-items:center;text-align:left;
+  padding:10px 12px;border-radius:14px;border:2px solid rgba(238,243,241,.2);background:rgba(12,23,32,.6);color:var(--paper);cursor:pointer;font:inherit}
+.plane .pic{grid-row:1/3;font-size:30px;text-align:center}
+.plane .pt b{display:block;font:400 16px var(--display)}
+.plane .pt small{display:block;font-size:12px;color:var(--mute)}
+.plane .stat{grid-column:2;font:600 11px var(--mono);color:var(--orange)}
+.plane[aria-checked="true"]{border-color:var(--orange);background:rgba(255,106,26,.16);box-shadow:0 0 0 1px var(--orange) inset}
+.plane[data-plane="fighter"][aria-checked="true"]{border-color:#5fd7ff;background:rgba(95,215,255,.14);box-shadow:0 0 0 1px #5fd7ff inset}
+.plane[data-plane="fighter"] .stat{color:#5fd7ff}
 @media (max-height:520px){
   #touchUI .tcol{flex-direction:row;align-items:flex-end;gap:10px}
   #rollBtn{width:56px;height:56px}
@@ -156,7 +166,8 @@ h1,h2,h3{margin:0;text-wrap:balance}
         <div>機首上げ / 下げ<b>↑ ↓ / W S</b></div>
         <div>左右の傾き（旋回）<b>← → / A D</b></div>
         <div>スロットル増 / 減<b>E / Q</b></div>
-        <div>ブースト（リング区間）<b>Space / B 長押し</b></div>
+        <div>機体選択<b>ルート選択画面で 旅客機 / ステルス戦闘機</b></div>
+        <div>ブースト・アフターバーナー（リング区間）<b>Space / B 長押し</b></div>
         <div>バレルロール<b>Z / X（← →2回押し）</b></div>
         <div>フレア補助（着陸前）<b>Space 長押し</b></div>
         <div>ブレーキ（接地後）<b>Space 長押し</b></div>
@@ -173,6 +184,14 @@ h1,h2,h3{margin:0;text-wrap:balance}
   <div class="sheet">
     <div class="eyebrow">Tokyo · 東京上空 → 羽田空港</div>
     <h2 class="logo" style="font-size:clamp(30px,6vw,44px)">ルートを選ぶ</h2>
+    <div class="planes" id="planes" role="radiogroup" aria-label="機体を選ぶ">
+      <button type="button" class="plane" data-plane="liner" role="radio">
+        <span class="pic">✈</span><span class="pt"><b>旅客機 KING-1</b><small>標準・着陸重視。落ち着いて飛べる</small></span>
+        <span class="stat">最高 150m/s ・ 傾き 40°</span></button>
+      <button type="button" class="plane" data-plane="fighter" role="radio">
+        <span class="pic">🛩</span><span class="pt"><b>ステルス戦闘機 F-X</b><small>米国最新鋭ステルス戦闘機がモデル。超高速・アクロバット</small></span>
+        <span class="stat">最高 マッハ1.1 ・ 9G ・ 高速ロール</span></button>
+    </div>
     <div class="cards" id="cards"></div>
     <div class="row"><button class="btn" id="backTitle" type="button">タイトルへ</button>
       <span class="eyebrow" id="stats"></span></div>
@@ -225,8 +244,20 @@ h1,h2,h3{margin:0;text-wrap:balance}
 const SIM = (() => {
   const G = 9.81, D2R = Math.PI / 180, R2D = 180 / Math.PI, DT = 1 / 60, GS = 3 * D2R;
   const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
-  const AC = { KL: 0.003337, CL0: 0.3, CLA: 0.1, AST: 11, CD0: 0.07, K: 0.06, TMAX: 2.5,
-    PR: 10, BR: 40, BMAX: 40, PMIN: -14, PMAX: 16, VWARN: 56, VMAX: 88, TLIMIT: 180, CEIL: 900 };
+  // Aircraft profiles. AC is the active one (only one flight runs at a time); select() swaps it.
+  const PLANES = {
+    liner: { id: 'liner', KL: 0.003337, CL0: 0.3, CLA: 0.1, AST: 11, CD0: 0.07, K: 0.06, TMAX: 2.5,
+      PR: 10, BR: 40, BMAX: 40, PMIN: -14, PMAX: 16, VWARN: 56, VMAX: 88, TLIMIT: 180, CEIL: 900,
+      NMAX: 3.5, GMIN: -40, GMAX: 30, VCAP: 150, BOOSTA: 7, BDRAIN: 22, VREF: 80, VSTART: 0, VCRUISE: 72,
+      VAPP: [60, 75], TAILMAX: 12, ROLLT: 0.95, RINGK: 1, FIGHTER: false },
+    fighter: { id: 'fighter', KL: 0.003337, CL0: 0.3, CLA: 0.1, AST: 13, CD0: 0.066, K: 0.05, TMAX: 12,
+      PR: 26, BR: 170, BMAX: 88, PMIN: -30, PMAX: 32, VWARN: 58, VMAX: 96, TLIMIT: 180, CEIL: 1500,
+      NMAX: 9, GMIN: -60, GMAX: 60, VCAP: 390, BOOSTA: 50, BDRAIN: 10, VREF: 86, VSTART: 125, VCRUISE: 125,
+      VAPP: [66, 84], TAILMAX: 15, ROLLT: 0.5, RINGK: 1.3, FIGHTER: true }
+  };
+  const AC = Object.assign({}, PLANES.liner);
+  const select = id => Object.assign(AC, PLANES[id] || PLANES.liner);
+  const MACH1 = 340;
 
   // Tokyo, squeezed into a game map. +z = flight direction toward Haneda. Runway threshold at z=0.
   const WD = {
@@ -402,13 +433,14 @@ const SIM = (() => {
   }
   function create(st) {
     const Wd = buildWorld(st), S = st.start, r0 = Wd.rings[0];
-    const v = S.v, gam = 0, tr = trim(v, gam), psi = Math.atan2(r0.x - S.x, r0.z - S.z);
+    const v = AC.VSTART || S.v, gam = 0, tr = trim(v, gam), psi = Math.atan2(r0.x - S.x, r0.z - S.z);
     const s = { st, W: Wd, t: 0, phase: 'air', x: S.x, h: S.h, z: S.z, v, gam,
       pitch: tr.alpha, alpha: tr.alpha, bank: 0, psi, thrCmd: tr.thr, thr: tr.thr,
       w: windAt(st, 0), vx: 0, vy: 0, vz: v, gdot: 0, bounces: 0, td: null, maxDev: 0, stallT: -9,
       trk: 0, result: null, events: [], ring: 0, hits: [],
-      boost: 60, boosting: false, sbrk: false, roll: 0, rollT: -1, rollDir: 1, combo: 0, comboT: -9, nearCD: 0,
-      stars: Wd.stars.map(() => false), sky: { trick: 0, near: 0, star: 0, speed: 0 }, ringT: null };
+      boost: AC.FIGHTER ? 100 : 60, boosting: false, sbrk: false, roll: 0, rollT: -1, rollDir: 1, combo: 0, comboT: -9, nearCD: 0,
+      stars: Wd.stars.map(() => false), sky: { trick: 0, near: 0, star: 0, speed: 0, ace: 0 }, ringT: null,
+      plane: AC.id, n: 1, rollQ: 0, highgT: 0, lowT: 0, aceCD: 0, mach: false, machT: -9 };
     s.vx = v * Math.sin(psi) + s.w.x; s.vz = v * Math.cos(psi) + s.w.z; s.vy = 0;
     return s;
   }
@@ -426,7 +458,7 @@ const SIM = (() => {
     if (d0 < 0 && d1 >= 0) {
       const t = d0 / (d0 - d1), ix = px + (s.x - px) * t, iz = pz + (s.z - pz) * t, ih = ph + (s.h - ph) * t;
       const lat = Math.hypot(Math.hypot(ix - R.x, iz - R.z), ih - R.h);
-      const ok = lat <= R.r, q = ok ? (lat < R.r * 0.45 ? 1 : 0.75) : 0;
+      const RR = R.r * AC.RINGK, ok = lat <= RR, q = ok ? (lat < RR * 0.45 ? 1 : 0.75) : 0;
       const rolling = ok && s.rollT >= 0;
       if (ok) s.boost = Math.min(100, s.boost + 18);
       if (rolling) s.sky.trick = Math.min(TRICK_CAP, s.sky.trick + 400);
@@ -438,13 +470,13 @@ const SIM = (() => {
     }
   }
   // TRIZ #15 dynamics: fast sky section is rewarded, separately from the slow landing
-  const TRICK_CAP = 3000, NEAR_CAP = 2000;
+  const TRICK_CAP = 3000, NEAR_CAP = 2000, ACE_CAP = 3000;
   function speedBonus(s) {
     if (s.ringT != null) return;
     s.ringT = s.t;
     const ch = [s.st.start].concat(s.W.rings); let L = 0;
     for (let i = 1; i < ch.length; i++) L += Math.hypot(ch[i].x - ch[i - 1].x, ch[i].z - ch[i - 1].z);
-    const par = L / 72;
+    const par = L / AC.VCRUISE;
     s.sky.speed = Math.round(1500 * clamp((par - s.t) / (par * 0.3), 0, 1));
     s.events.push({ type: 'speed', pts: s.sky.speed, t: s.t, par });
   }
@@ -465,7 +497,7 @@ const SIM = (() => {
     let f = null, ex = '';
     if (sink > 6) { f = (s.t - s.stallT < 3) ? 'STALL' : 'HARD'; ex = `（降下率 ${sink.toFixed(1)} m/s）`; }
     else if (Math.abs(s.bank) > 20) f = 'WING';
-    else if (s.pitch > 12) f = 'TAIL';
+    else if (s.pitch > AC.TAILMAX) f = 'TAIL';
     else if (s.v > AC.VMAX) f = 'FAST';
     if (f) return finish(s, false, f, ex);
     if (sink > 2.6 || s.pitch < -1.5) {
@@ -499,30 +531,32 @@ const SIM = (() => {
       const alpha = s.pitch - s.gam * R2D; s.alpha = alpha;
       const ge = clamp(1 - s.h / 20, 0, 1);
       const CL = cl(alpha) * (1 + 0.12 * ge);
-      const q = AC.KL * s.v * s.v, L = q * CL;
+      const q = AC.KL * s.v * s.v, L = Math.min(q * CL, AC.NMAX * G); s.n = L / G;
       const CD = AC.CD0 + AC.K * CL * CL * (1 - 0.4 * ge) + (alpha > AC.AST ? 0.02 * (alpha - AC.AST) : 0);
       const bk = s.bank * D2R;
       let vdot = s.thr * AC.TMAX - q * CD - G * Math.sin(s.gam);
       // TRIZ #15/#19: BOOST only in the sky section; auto speed brake once on final (#11 cushion in advance)
       const fl = finalLeg(s);
       s.boosting = !!inp.boost && !fl && s.boost > 0;
-      if (s.boosting) { vdot += 7; s.boost = Math.max(0, s.boost - 22 * DT); }
+      if (s.boosting) { vdot += AC.BOOSTA; s.boost = Math.max(0, s.boost - AC.BDRAIN * DT); }
       else if (!fl) s.boost = Math.min(100, s.boost + 2.5 * DT);
-      if (fl && s.v > 80) { vdot -= (s.v - 80) * 0.55; if (!s.sbrk) { s.sbrk = true; s.events.push({ type: 'sbrk' }); } }
+      if (fl && s.v > AC.VREF) { vdot -= (s.v - AC.VREF) * (AC.FIGHTER ? 0.9 : 0.55); if (!s.sbrk) { s.sbrk = true; s.events.push({ type: 'sbrk' }); } }
       const gdot = (L * Math.cos(bk) - G * Math.cos(s.gam)) / s.v;
       s.gdot = gdot * R2D;
       s.psi += L * Math.sin(bk) / (s.v * Math.cos(s.gam)) * DT;
-      s.v = clamp(s.v + vdot * DT, 25, 150);
-      s.gam = clamp(s.gam + gdot * DT, -40 * D2R, 30 * D2R);
+      s.v = clamp(s.v + vdot * DT, 25, AC.VCAP);
+      s.gam = clamp(s.gam + gdot * DT, AC.GMIN * D2R, AC.GMAX * D2R);
       const vh = s.v * Math.cos(s.gam);
       s.vx = vh * Math.sin(s.psi) + w.x; s.vz = vh * Math.cos(s.psi) + w.z; s.vy = s.v * Math.sin(s.gam) + w.y * clamp(s.h / 30, 0, 1);
       s.x += s.vx * DT; s.z += s.vz * DT; s.h += s.vy * DT;
       if (alpha > AC.AST - 1 || s.v < AC.VWARN) s.stallT = s.t;
       // TRIZ #17 another dimension: the barrel roll is a visual axis on top of the flight model,
       // so it adds thrill without destabilising the physics (#25 self-service: it flies itself)
-      if (inp.trick && s.rollT < 0 && s.h > 25 && !(fl && s.h < 150)) { s.rollT = 0; s.rollDir = inp.trick > 0 ? 1 : -1; s.events.push({ type: 'rollstart' }); }
+      const canRoll = s.h > 25 && !(fl && s.h < 150);
+      if (inp.trick && s.rollT >= 0 && AC.FIGHTER) s.rollQ = inp.trick; // fighter: queue a follow-up roll
+      if (inp.trick && s.rollT < 0 && canRoll) { s.rollT = 0; s.rollDir = inp.trick > 0 ? 1 : -1; s.events.push({ type: 'rollstart' }); }
       if (s.rollT >= 0) {
-        s.rollT += DT; const p = Math.min(1, s.rollT / 0.95), e = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+        s.rollT += DT; const p = Math.min(1, s.rollT / AC.ROLLT), e = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
         s.roll = s.rollDir * 360 * e;
         if (p >= 1) {
           s.roll = 0; s.rollT = -1;
@@ -531,7 +565,22 @@ const SIM = (() => {
           const pts = Math.min(150 + 50 * Math.min(s.combo - 1, 4), Math.max(0, TRICK_CAP - s.sky.trick));
           s.sky.trick += pts; s.boost = Math.min(100, s.boost + 12);
           s.events.push({ type: 'trick', pts, combo: s.combo });
+          if (s.rollQ && canRoll) { s.rollT = 0; s.rollDir = s.rollQ > 0 ? 1 : -1; s.rollQ = 0; s.events.push({ type: 'rollstart' }); }
         }
+      }
+      // fighter "ace" manoeuvres: sustained high-G turn, low fast pass, breaking the sound barrier
+      if (AC.FIGHTER && !fl) {
+        s.highgT = s.n >= 6 ? s.highgT + DT : 0;
+        s.lowT = (s.h < 60 && s.v > 200) ? s.lowT + DT : 0;
+        const award = (kind, pts) => { pts = Math.min(pts, Math.max(0, ACE_CAP - s.sky.ace)); s.sky.ace += pts; s.boost = Math.min(100, s.boost + 10); s.aceCD = s.t + 3; s.events.push({ type: 'ace', kind, pts }); };
+        if (s.t > s.aceCD && s.highgT > 1.2) { s.highgT = 0; award('highg', 300); }
+        if (s.t > s.aceCD && s.lowT > 1.0) { s.lowT = 0; award('lowpass', 350); }
+        if (!s.mach && s.v >= MACH1) {
+          s.mach = true; s.machT = s.t;
+          const pts = s.machDone ? 0 : Math.min(600, Math.max(0, ACE_CAP - s.sky.ace)); s.machDone = true; s.sky.ace += pts;
+          s.events.push({ type: 'mach', pts });
+        }
+        if (s.mach && s.v < MACH1 - 25) s.mach = false; // can be broken again (points only once per pass)
       }
       if (!fl) checkRing(s, px, ph, pz);
       const hc = hitTest(s.W, s.x, s.h, s.z);
@@ -570,7 +619,7 @@ const SIM = (() => {
   function score(s) {
     const st = s.st, td = s.td;
     const dz = Math.abs(td.z - st.aimZ), half = st.width / 2;
-    const spdDev = td.v < 60 ? 60 - td.v : td.v > 75 ? td.v - 75 : 0;
+    const [vlo, vhi] = AC.VAPP, spdDev = td.v < vlo ? vlo - td.v : td.v > vhi ? td.v - vhi : 0;
     const remain = st.length - s.z, N = s.W.rings.length;
     const rq = s.hits.reduce((a, h) => a + h.q, 0) / N;
     const parts = [
@@ -584,7 +633,7 @@ const SIM = (() => {
     parts.forEach(p => p.pts = Math.round(p.pts));
     const landing = parts.reduce((a, p) => a + p.pts, 0);
     const rank = landing >= 9500 ? 'SSS' : landing >= 9000 ? 'SS' : landing >= 8000 ? 'S' : landing >= 6500 ? 'A' : landing >= 5000 ? 'B' : 'C';
-    const sk = s.sky, sky = sk.trick + sk.near + sk.star + sk.speed;
+    const sk = s.sky, sky = sk.trick + sk.near + sk.star + sk.speed + sk.ace;
     return { total: landing + sky, landing, sky, rank, parts };
   }
   function predict(s) {
@@ -622,14 +671,14 @@ const SIM = (() => {
     } else { inp.flare = true; inp.bank = clamp(-s.x * 0.15 - s.trk * R2D * 0.3, -1, 1); }
     return inp;
   }
-  return { G, D2R, R2D, DT, AC, WD, STAGES, FAILS, create, step, predict, papi, glideH, autopilot, trim, windAt, clamp, hitTest, surface, finalLeg, buildWorld, angWrap };
+  return { G, D2R, R2D, DT, AC, PLANES, select, MACH1, WD, STAGES, FAILS, create, step, predict, papi, glideH, autopilot, trim, windAt, clamp, hitTest, surface, finalLeg, buildWorld, angWrap };
 })();
 //SIM-END
 
 /* ================= SAVE ================= */
 const Save = (() => {
   const KEY = 'tsk_v1';
-  let d = { best: {}, perfect: 0, streak: 0, bestStreak: 0, opt: { guide: true, invert: false, sound: true } };
+  let d = { best: {}, perfect: 0, streak: 0, bestStreak: 0, plane: 'liner', opt: { guide: true, invert: false, sound: true } };
   try { const r = localStorage.getItem(KEY); if (r) { const p = JSON.parse(r); d = Object.assign(d, p); d.opt = Object.assign({ guide: true, invert: false, sound: true }, p.opt || {}); } } catch (e) {}
   const write = () => { try { localStorage.setItem(KEY, JSON.stringify(d)); } catch (e) {} };
   return { d, write };
@@ -686,12 +735,17 @@ const Snd = {
     this.eg.gain.setTargetAtTime(on ? 0.05 + thr * 0.10 : 0, t, 0.15);
     this.whg.gain.setTargetAtTime(on ? 0.012 + thr * 0.03 : 0, t, 0.2);
     if (s) {
-      this.o1.frequency.setTargetAtTime(95 + thr * 60, t, 0.3); this.o2.frequency.setTargetAtTime(190 + thr * 125, t, 0.3);
-      this.wh.frequency.setTargetAtTime(520 + thr * 900, t, 0.4);
+      const F = SIM.AC.FIGHTER;
+      this.o1.frequency.setTargetAtTime((F ? 130 : 95) + thr * (F ? 110 : 60), t, 0.3); this.o2.frequency.setTargetAtTime((F ? 262 : 190) + thr * (F ? 230 : 125), t, 0.3);
+      this.wh.frequency.setTargetAtTime((F ? 900 : 520) + thr * (F ? 1600 : 900), t, 0.4);
     }
     const bz = on && s.boosting;
     this.wg.gain.setTargetAtTime(on ? Math.min(0.42, s.v / 300 + (bz ? 0.14 : 0)) : 0, t, 0.2);
     if (s && bz) { this.o1.frequency.setTargetAtTime(170, t, 0.25); this.o2.frequency.setTargetAtTime(345, t, 0.25); this.wh.frequency.setTargetAtTime(1900, t, 0.3); this.eg.gain.setTargetAtTime(0.2, t, 0.15); }
+  },
+  boom() {
+    if (!this.on()) return;
+    this.thump(1.0, 0.9, 180); setTimeout(() => this.thump(0.7, 0.6, 260), 120);
   },
   swish(vol = 0.5, dur = 0.5) {
     if (!this.on()) return;
@@ -1014,7 +1068,7 @@ function drawRing(R, kind) {
   const c0 = toCam(R.x, R.h, R.z); if (c0[2] < 12) return;
   const rx = R.nz, rz = -R.nx, pts = [];
   for (let i = 0; i < 16; i++) {
-    const a = i / 16 * 6.2832, ca = Math.cos(a) * R.r, sa = Math.sin(a) * R.r;
+    const a = i / 16 * 6.2832, RR = R.r * SIM.AC.RINGK, ca = Math.cos(a) * RR, sa = Math.sin(a) * RR;
     pts.push(toCam(R.x + rx * ca, R.h + sa, R.z + rz * ca));
   }
   const lw = SIM.clamp(cam.f * 3.2 / c0[2], 1.5, 40);
@@ -1074,14 +1128,14 @@ function render(s, opt) {
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   const onG = s.phase !== 'air' && s.h <= 0.05;
   boostFx += ((s.boosting ? 1 : 0) - boostFx) * 0.06;
-  const spdFx = SIM.clamp((s.v - 80) / 60, 0, 1);
-  const back = onG ? 62 : 70 + boostFx * 14, up = onG ? 8 : 12;
+  const A = SIM.AC, spdFx = SIM.clamp((s.v - A.VCRUISE) / (A.FIGHTER ? 160 : 60), 0, 1);
+  const back = onG ? 62 : (A.FIGHTER ? 46 : 70) + boostFx * 14 + spdFx * (A.FIGHTER ? 18 : 0), up = onG ? 8 : (A.FIGHTER ? 9 : 12);
   cam.yaw += (s.psi - cam.yaw) * 0.07;
   const fx = Math.sin(cam.yaw), fz = Math.cos(cam.yaw);
   cam.x = s.x - fx * back; cam.z = s.z - fz * back; cam.y = Math.max(2.5, s.h + 3 + up);
   const tp = (-7 + SIM.clamp(s.gam * SIM.R2D, -12, 8) * 0.5) * SIM.D2R;
   cam.pitch += (tp - cam.pitch) * 0.1;
-  cam.roll += (s.bank * 0.22 * SIM.D2R - cam.roll) * 0.1;
+  cam.roll += (s.bank * (SIM.AC.FIGHTER ? 0.3 : 0.22) * SIM.D2R - cam.roll) * 0.1;
   cam.cyw = Math.cos(cam.yaw); cam.syw = Math.sin(cam.yaw); cam.cp = Math.cos(cam.pitch); cam.sp = Math.sin(cam.pitch);
   cam.f = Math.min(W * 0.95, H * 1.55) / (1 + 0.22 * boostFx + 0.12 * spdFx); cam.cx = W / 2; cam.cy = H * 0.5;
   let sx = 0, sy = 0;
@@ -1271,8 +1325,64 @@ function render(s, opt) {
   ctx.restore();
 }
 
+function drawFighter(s, k, px, py) {
+  const A = SIM.AC, t = performance.now() / 1000;
+  const nose = SIM.clamp((s.pitch * SIM.D2R - cam.pitch) * 1.2, -0.3, 0.4);
+  const yawRel = SIM.clamp(s.psi - cam.yaw, -0.3, 0.3) * 6;
+  ctx.save(); ctx.translate(px, py); ctx.scale(k * 1.35, k * 1.35);
+  ctx.rotate((s.bank + (s.roll || 0)) * SIM.D2R);
+  if (s.result && !s.result.ok) ctx.rotate(Math.sin(t * 11) * 0.06);
+  const gray = '#8d979e', dark = '#5d676e', light = '#b7c0c5';
+  // afterburner (two nozzles)
+  const ab = s.phase === 'air' ? (s.boosting ? 1 : s.thr * 0.45) : 0;
+  if (ab > 0.05) for (const nx of [-1.05, 1.05]) {
+    const L = (2.2 + 6.5 * ab) * (0.85 + 0.15 * Math.sin(t * 60 + nx));
+    const g = ctx.createRadialGradient(nx, 0.6, 0.1, nx, 0.6 + L * 0.5, L);
+    g.addColorStop(0, s.boosting ? 'rgba(255,255,255,.95)' : 'rgba(255,220,170,.9)');
+    g.addColorStop(0.35, s.boosting ? 'rgba(90,180,255,.85)' : 'rgba(255,140,40,.7)');
+    g.addColorStop(1, 'rgba(255,120,30,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(nx, 0.6 + L * 0.35, 0.75 + ab * 0.3, L * 0.55, 0, 0, 6.2832); ctx.fill();
+  }
+  // main wing (trapezoid, stealth planform) + stabilators
+  ctx.fillStyle = dark;
+  ctx.beginPath(); ctx.moveTo(-1.6, -1.2 - nose * 2); ctx.lineTo(-9.5, 0.4 - nose * 3); ctx.lineTo(-9.3, 1.2 - nose * 2.6); ctx.lineTo(-1.5, 0.9 + nose);
+  ctx.lineTo(1.5, 0.9 + nose); ctx.lineTo(9.3, 1.2 - nose * 2.6); ctx.lineTo(9.5, 0.4 - nose * 3); ctx.lineTo(1.6, -1.2 - nose * 2); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = gray;
+  ctx.beginPath(); ctx.moveTo(-1.4, -0.3 - nose * 2); ctx.lineTo(-8.6, 0.6 - nose * 3); ctx.lineTo(-1.4, 0.6 + nose); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(1.4, -0.3 - nose * 2); ctx.lineTo(8.6, 0.6 - nose * 3); ctx.lineTo(1.4, 0.6 + nose); ctx.closePath(); ctx.fill();
+  // fuselage
+  const fg = ctx.createLinearGradient(-2, 0, 2, 0); fg.addColorStop(0, dark); fg.addColorStop(0.5, light); fg.addColorStop(1, dark);
+  ctx.fillStyle = fg; ctx.beginPath(); ctx.ellipse(yawRel * 0.08, 0.2, 2.1, 1.25, 0, 0, 6.2832); ctx.fill();
+  // nozzles
+  ctx.fillStyle = '#2b3136'; for (const nx of [-1.05, 1.05]) { ctx.beginPath(); ctx.arc(nx, 0.6, 0.62, 0, 6.2832); ctx.fill(); }
+  ctx.fillStyle = s.boosting ? '#bfe6ff' : '#ff9a4a'; for (const nx of [-1.05, 1.05]) { ctx.beginPath(); ctx.arc(nx, 0.6, 0.32, 0, 6.2832); ctx.fill(); }
+  // canted twin tails
+  ctx.fillStyle = gray;
+  for (const sd of [-1, 1]) { ctx.beginPath(); ctx.moveTo(sd * 1.0, -0.6); ctx.lineTo(sd * 1.5, -0.6); ctx.lineTo(sd * 2.7 + yawRel * 0.15, -4.4); ctx.lineTo(sd * 2.2 + yawRel * 0.15, -4.5); ctx.closePath(); ctx.fill(); }
+  // canopy glint
+  ctx.fillStyle = 'rgba(255,200,90,.85)'; ctx.beginPath(); ctx.ellipse(yawRel * 0.1, -1.05, 0.6, 0.32, 0, 0, 6.2832); ctx.fill();
+  // wingtip vapour at high G
+  if (s.phase === 'air' && s.n > 4.5) {
+    ctx.strokeStyle = `rgba(255,255,255,${Math.min(0.8, (s.n - 4.5) / 4)})`; ctx.lineWidth = 0.35;
+    for (const sd of [-1, 1]) { ctx.beginPath(); ctx.moveTo(sd * 9.3, 0.8 - nose * 2.6); ctx.lineTo(sd * 9.9, 6 + s.n * 0.6); ctx.stroke(); }
+  }
+  ctx.restore();
+  // vapour cone when breaking the sound barrier
+  if (s.machT != null && performance.now() / 1000 - machWall < 0.9) {
+    const a = 1 - (performance.now() / 1000 - machWall) / 0.9;
+    ctx.save(); ctx.translate(px, py); ctx.strokeStyle = `rgba(255,255,255,${a * 0.85})`; ctx.lineWidth = 3 + 6 * a;
+    ctx.beginPath(); ctx.ellipse(0, 0, k * (6 + (1 - a) * 22), k * (3 + (1 - a) * 11), 0, 0, 6.2832); ctx.stroke(); ctx.restore();
+  }
+}
+let machWall = -9;
 function drawPlane(s) {
   const c = toCam(s.x, s.h + 3, s.z); if (c[2] < 2) return;
+  if (SIM.AC.FIGHTER) {
+    const px0 = cam.cx + cam.f * c[0] / c[2], py0 = cam.cy - cam.f * c[1] / c[2], k0 = cam.f / c[2];
+    drawFighter(s, k0, px0, py0);
+    if (s.result && !s.result.ok) drawCrashBurst(s, k0, px0, py0);
+    return;
+  }
   const px = cam.cx + cam.f * c[0] / c[2], py = cam.cy - cam.f * c[1] / c[2], k = cam.f / c[2];
   ctx.save(); ctx.translate(px, py); ctx.scale(k, k);
   ctx.rotate((s.bank + (s.roll || 0)) * SIM.D2R);
@@ -1306,7 +1416,10 @@ function drawPlane(s) {
     ctx.fillStyle = '#39e27a'; ctx.beginPath(); ctx.arc(17, -1.3 - nose * 3, 0.45, 0, 6.2832); ctx.fill();
   }
   ctx.restore();
-  if (crashed) {
+  if (crashed) drawCrashBurst(s, k, px, py);
+}
+function drawCrashBurst(s, k, px, py) {
+  {
     ctx.save(); ctx.translate(px, py - 10);
     const r = Math.max(36, k * 9);
     ctx.fillStyle = '#ffc83d'; ctx.strokeStyle = '#0c1720'; ctx.lineWidth = 3;
@@ -1345,7 +1458,7 @@ function pullUp(s) {
 let pops = [];
 function pop(text, col) { pops.push({ text, col: col || C_HUD, t: 1.4 }); if (pops.length > 4) pops.shift(); }
 function speedLines(s) {
-  const k = SIM.clamp((s.v - 85) / 50, 0, 1) * 0.7 + boostFx * 0.6; if (k < 0.04 || s.phase !== 'air') return;
+  const A = SIM.AC, k = SIM.clamp((s.v - A.VCRUISE - 10) / (A.FIGHTER ? 180 : 50), 0, 1) * 0.75 + boostFx * 0.6; if (k < 0.04 || s.phase !== 'air') return;
   const cx = W / 2, cy = H * 0.5, n = Math.round(10 + 34 * k), R0 = Math.min(W, H) * 0.32, R1 = Math.hypot(W, H) * 0.6;
   ctx.save(); ctx.lineCap = 'round';
   for (let i = 0; i < n; i++) {
@@ -1433,7 +1546,11 @@ function drawHUD(s, mode) {
   txt('SPD', lx + 10 * u, by + 17 * u, mono(10), C_MUTE);
   txt(s.v.toFixed(0), lx + bw - 32 * u, by + 46 * u, disp(28), spdCol, 'right');
   txt('m/s', lx + bw - 8 * u, by + 46 * u, mono(10), C_MUTE, 'right');
-  txt(`${kt.toFixed(0)} kt`, lx + bw - 8 * u, by + 64 * u, mono(11), C_MUTE, 'right');
+  if (SIM.AC.FIGHTER) {
+    const mach = s.v / SIM.MACH1;
+    txt(`M${mach.toFixed(2)}`, lx + 10 * u, by + 64 * u, mono(12), mach >= 1 ? '#5fd7ff' : C_HUD);
+    txt(`${s.n.toFixed(1)}G`, lx + bw - 8 * u, by + 64 * u, mono(11), s.n >= 6 ? C_WARN : C_MUTE, 'right');
+  } else txt(`${kt.toFixed(0)} kt`, lx + bw - 8 * u, by + 64 * u, mono(11), C_MUTE, 'right');
   const sink = -s.vy;
   const vsCol = s.phase === 'air' && s.h < 40 ? (sink > 4 ? C_BAD : sink > 1.5 ? C_WARN : C_GOOD) : C_HUD;
   hudBox(rx, by, bw, bh + 20 * u);
@@ -1456,7 +1573,7 @@ function drawHUD(s, mode) {
     const gy = by + bh + (Inp.touch ? 10 : 46) * u, gw = bw;
     hudBox(lx, gy, gw, 30 * u);
     if (!fin && s.phase === 'air') {
-      txt('BOOST', lx + 8 * u, gy + 19 * u, mono(9), s.boosting ? '#5fd7ff' : C_MUTE);
+      txt(SIM.AC.FIGHTER ? 'A/B' : 'BOOST', lx + 8 * u, gy + 19 * u, mono(9), s.boosting ? '#5fd7ff' : C_MUTE);
       const bx = lx + 50 * u, bww = gw - 58 * u;
       ctx.fillStyle = 'rgba(238,247,251,.15)'; ctx.fillRect(bx, gy + 10 * u, bww, 10 * u);
       const g2 = ctx.createLinearGradient(bx, 0, bx + bww, 0); g2.addColorStop(0, '#1a6fff'); g2.addColorStop(1, '#5fd7ff');
@@ -1465,7 +1582,7 @@ function drawHUD(s, mode) {
   }
   // SKY score + combo (under the wind compass)
   {
-    const sk = s.sky, tot = sk.trick + sk.near + sk.star + sk.speed;
+    const sk = s.sky, tot = sk.trick + sk.near + sk.star + sk.speed + (sk.ace || 0);
     const sx2 = R - 8 * u, sy2 = top + 34 * u + 26 * u + 40 * u;
     txt('SKY', sx2 - 70 * u, sy2, mono(10), C_MUTE, 'right');
     txt(tot.toLocaleString(), sx2, sy2, disp(18), '#ffd23f', 'right');
@@ -1500,7 +1617,7 @@ function drawHUD(s, mode) {
     const Rn = Wd.rings[s.ring], p = toScreen(Rn.x, Rn.h, Rn.z);
     const m = 40 * u, on = p[2] > 0 && p[0] > m && p[0] < W - m && p[1] > m + 60 * u && p[1] < H - m;
     if (on) {
-      const r = Math.max(14 * u, cam.f * Rn.r / p[2]) + 8 * u, k = r * 0.35;
+      const r = Math.max(14 * u, cam.f * Rn.r * SIM.AC.RINGK / p[2]) + 8 * u, k = r * 0.35;
       ctx.strokeStyle = C_OR; ctx.lineWidth = 2.5 * u; ctx.beginPath();
       for (const [ax, ay] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
         ctx.moveTo(p[0] + ax * r, p[1] + ay * (r - k)); ctx.lineTo(p[0] + ax * r, p[1] + ay * r); ctx.lineTo(p[0] + ax * (r - k), p[1] + ay * r);
@@ -1554,6 +1671,8 @@ function drawHUD(s, mode) {
 function hintFor(s) {
   if (s.result) return null;
   const T = Inp.touch, st = s.st, fin = SIM.finalLeg(s);
+  if (SIM.AC.FIGHTER && !fin && s.phase === 'air' && s.t >= 8 && s.t < 15) return T ? 'A/B長押しでアフターバーナー。ROLLを連打でダブルロール' : 'Space/B でアフターバーナー（マッハ1で音速突破）・Z/X 連打でダブルロール';
+  if (SIM.AC.FIGHTER && !fin && s.phase === 'air' && s.t >= 15 && s.t < 21) return '強く旋回し続けるとハイGターン、高度60m以下を高速で抜けるとローパス';
   if (!fin && s.phase === 'air' && s.t >= 8 && s.t < 15) return T ? '青いボタン長押しでブースト・ROLLでバレルロール' : 'Space/B 長押しでブースト・Z/X（←→2回押し）でバレルロール';
   if (!fin && s.phase === 'air' && s.t >= 15 && s.t < 20) return 'ビルや塔のそばを抜けるとニアミスでブースト回復。★も拾おう';
   if (s.phase === 'roll') return T ? '丸ボタン長押しでブレーキ・左ドラッグで操向' : 'Space 長押しでブレーキ・← → で操向';
@@ -1576,13 +1695,14 @@ let mode = 'title', sim = null, stageIdx = 0, acc = 0, last = 0, resultTimer = 0
 function show(name) { for (const k in screens) screens[k].hidden = k !== name; }
 
 function startAttract() {
+  SIM.select('liner'); // the attract-mode autopilot is tuned for the airliner
   attract = true; const st = SIM.STAGES[attractIdx % SIM.STAGES.length]; attractIdx++;
   buildScene(st); sim = SIM.create(st); parts.length = 0; flash = null; cam.yaw = sim.psi;
 }
 function startStage(i) {
   Snd.init();
   Snd.beep(660, 0.12, 'triangle', 0.1); setTimeout(() => Snd.beep(990, 0.16, 'triangle', 0.1), 110);
-  stageIdx = i; attract = false; const st = SIM.STAGES[i];
+  stageIdx = i; attract = false; const st = SIM.STAGES[i]; SIM.select(Save.d.plane);
   buildScene(st); sim = SIM.create(st); Inp.thr = sim.thrCmd; Inp.trickQ = 0; parts.length = 0; flash = null; pops = []; shake = 0; resultTimer = 0; boostFx = 0;
   cam.yaw = sim.psi; cam.pitch = -7 * SIM.D2R; cam.roll = 0;
   mode = 'play'; show(null); setPlayUI(true); acc = 0;
@@ -1605,6 +1725,14 @@ function handleEvents(s) {
     else if (e.type === 'near') { pop(`ニアミス！ +${e.pts}`, C_WARN); Snd.swish(0.7, 0.35); if (navigator.vibrate) try { navigator.vibrate(15); } catch (er) {} }
     else if (e.type === 'star') { pop(`★ ${e.got}/${e.n}  +120`, '#ffd23f'); Snd.beep(1568, 0.1, 'sine', 0.08); setTimeout(() => Snd.beep(2093, 0.16, 'sine', 0.07), 60); }
     else if (e.type === 'speed') { pop(e.pts > 0 ? `スピードボーナス +${e.pts}` : `スカイ区間 ${e.t.toFixed(1)}s`, e.pts > 0 ? '#5fd7ff' : C_MUTE); }
+    else if (e.type === 'ace') {
+      const nm = e.kind === 'highg' ? 'ハイGターン！' : 'ローパス！';
+      flash = { big: nm, sub: `+${e.pts}`, col: C_WARN, t: 1.0 }; Snd.swish(0.6, 0.5);
+    } else if (e.type === 'mach') {
+      machWall = performance.now() / 1000; shake = 14;
+      flash = { big: '音速突破！', sub: e.pts ? `MACH 1  +${e.pts}` : 'MACH 1', col: '#5fd7ff', t: 1.3 };
+      Snd.boom(); if (navigator.vibrate) try { navigator.vibrate([40, 30, 60]); } catch (er) {}
+    }
     else if (e.type === 'sbrk') { pop('スピードブレーキ展開', C_WARN); Snd.thump(0.25, 0.4, 400); }
     else if (e.type === 'ring') {
       if (e.ok && e.rolling) { pop('ローリング通過！ +400', '#5fd7ff'); }
@@ -1650,8 +1778,8 @@ function frame(now) {
     $('thrFill').style.height = (sim.thr * 100) + '%';
     $('thrKnob').style.bottom = `calc(${Inp.thr * 100}% - 3px)`;
     const fin = SIM.finalLeg(sim), ab2 = $('actBtn');
-    const lbl = sim.phase === 'roll' ? 'BRAKE' : fin ? 'FLARE' : 'BOOST';
-    if (ab2.textContent !== lbl) { ab2.textContent = lbl; ab2.classList.toggle('boost', lbl === 'BOOST'); }
+    const lbl = sim.phase === 'roll' ? 'BRAKE' : fin ? 'FLARE' : SIM.AC.FIGHTER ? 'A/B' : 'BOOST';
+    if (ab2.textContent !== lbl) { ab2.textContent = lbl; ab2.classList.toggle('boost', lbl === 'BOOST' || lbl === 'A/B'); }
     $('rollBtn').disabled = sim.phase !== 'air' || (fin && sim.h < 150);
   }
   requestAnimationFrame(frame);
@@ -1661,11 +1789,11 @@ const LANDING_FAILS = new Set(['UNDERSHOOT', 'MISSED', 'OFFSIDE', 'HARD', 'STALL
 function showResult() {
   mode = 'result'; setPlayUI(false);
   const s = sim, r = s.result, st = s.st, d = Save.d, N = s.W.rings.length, got = s.hits.filter(h => h.ok).length;
-  $('resStage').textContent = `${st.code} · ${st.name} → 羽田`;
+  $('resStage').textContent = `${st.code} · ${st.name} → 羽田 · ${SIM.AC.FIGHTER ? 'ステルス戦闘機 F-X' : '旅客機 KING-1'}`;
   let newBest = false;
   if (r.ok) {
-    const b = d.best[st.id];
-    if (!b || r.total > b.score) { d.best[st.id] = { score: r.total, rank: r.rank }; newBest = true; }
+    const b = d.best[bestKey(st.id)];
+    if (!b || r.total > b.score) { d.best[bestKey(st.id)] = { score: r.total, rank: r.rank }; newBest = true; }
     d.streak++; d.bestStreak = Math.max(d.bestStreak, d.streak); if (r.rank === 'SSS') d.perfect++;
   } else d.streak = 0;
   Save.write();
@@ -1691,6 +1819,7 @@ function showResult() {
     addBar('ニアミス', sk.near, 2000, sc);
     addBar(`★スター ${s.stars.filter(Boolean).length}/${s.stars.length}`, sk.star, Math.max(120, s.stars.length * 120), sc);
     addBar('スピードボーナス', sk.speed, 1500, sc);
+    if (SIM.AC.FIGHTER) addBar('エース技（ハイG・ローパス・音速）', sk.ace, 3000, '#ffc83d');
   }
   const data = $('resData'); data.innerHTML = '';
   const td = s.td;
@@ -1703,7 +1832,7 @@ function showResult() {
     ['機首角', td.pitch.toFixed(1) + '°', td.pitch >= 1 && td.pitch <= 7],
     ['バウンド', s.bounces + ' 回', s.bounces === 0]
   ] : [['飛行時間', s.t.toFixed(1) + ' s', false], ['最終高度', Math.max(0, s.h).toFixed(0) + ' m', false],
-        ['スカイ（参考）', (s.sky.trick + s.sky.near + s.sky.star + s.sky.speed).toLocaleString(), false]]);
+        ['スカイ（参考）', (s.sky.trick + s.sky.near + s.sky.star + s.sky.speed + (s.sky.ace || 0)).toLocaleString(), false]]);
   for (const [k, v, good] of items) { const el = document.createElement('div'); el.innerHTML = `<span>${k}</span><b class="${good ? 'ok' : 'ng'}">${v}</b>`; data.appendChild(el); }
   $('btnNext').hidden = stageIdx >= SIM.STAGES.length - 1;
   show('result');
@@ -1719,10 +1848,18 @@ function windText(st) {
   return p.join(' · ');
 }
 const TIME_JP = { day: '昼', dusk: '夕暮れ', night: '夜' };
+const bestKey = id => Save.d.plane === 'fighter' ? 'f' + id : id;
+function renderPlanes() {
+  document.querySelectorAll('.plane').forEach(b => b.setAttribute('aria-checked', String(b.dataset.plane === Save.d.plane)));
+}
+document.querySelectorAll('.plane').forEach(b => b.addEventListener('click', () => {
+  Save.d.plane = b.dataset.plane; Save.write(); renderPlanes(); renderCards(); Snd.init(); Snd.beep(b.dataset.plane === 'fighter' ? 1320 : 880, 0.12, 'triangle', 0.09);
+}));
 function renderCards() {
+  renderPlanes();
   const wrap = $('cards'); wrap.innerHTML = '';
   SIM.STAGES.forEach((st, i) => {
-    const b = Save.d.best[st.id];
+    const b = Save.d.best[bestKey(st.id)];
     const el = document.createElement('button'); el.className = 'card'; el.type = 'button';
     el.innerHTML = `<div class="strip"><span>${st.code}</span><small>${TIME_JP[st.time]}</small></div>
       <div class="body"><h3>${st.name}</h3><p>${st.desc}</p>
