@@ -250,7 +250,7 @@ button.card kbd{font-size:10px;color:var(--dim);border:1px solid var(--line);pad
 const cv=document.getElementById('cv'),cx=cv.getContext('2d');
 const $=id=>document.getElementById(id);
 if(matchMedia('(pointer:coarse)').matches) document.documentElement.classList.add('coarse');
-let W=0,H=0,DPR=1,GROUND=0,CEIL=40;
+let W=0,H=0,DPR=1,GROUND=0,CEIL=40,SKY=0;
 
 /* ---------- journey ---------- */
 const STAGES=[
@@ -288,6 +288,7 @@ const UPG=[
 ];
 const U=k=>PROG.lv.up[k]||0;
 const maxHP=()=>5+U('hp');
+const ghostLen=()=>Math.min(24,3+Math.floor(PROG.lv.lv/1.4)+U('speed'));
 function tier(){const l=PROG.lv.lv;return l>=15?3:l>=10?2:l>=5?1:0}
 const TIER_COL=['#eef2ff','#ffd36b','#ff5a3a','#7ff4ff'],TIER_GLOW=['rgba(255,255,255,0)','rgba(255,200,90,.9)','rgba(255,80,40,.95)','rgba(110,240,255,.95)'];
 function saveProg(){try{localStorage.setItem('tenwari-journey',JSON.stringify(PROG))}catch(e){}}
@@ -382,7 +383,7 @@ function openMap(){
 /* ---------- canvas setup ---------- */
 function resize(){DPR=Math.min(2,window.devicePixelRatio||1);const r=cv.getBoundingClientRect();W=r.width;H=r.height;cv.width=W*DPR;cv.height=H*DPR;cx.setTransform(DPR,0,0,DPR,0,0);GROUND=H-Math.max(56,H*0.09);
   /* arcade: the ronin may fly almost to the top edge; the HUD corners fade out when he passes under them */
-  CEIL=30;
+  SKY=Math.round(H*.95);CEIL=30-SKY; // the sky reaches almost a full screen above the view; the camera follows the ronin up
   makeScene()}
 addEventListener('resize',resize);if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>{if(W)resize()});
 
@@ -425,7 +426,7 @@ let S=null;
 function newGame(idx){
   const st=STAGES[idx];
   S={idx,st,t:0,score:0,wave:0,toSpawn:0,spawnT:0,spawnGap:1,meteors:[],longs:[],parts:[],slashes:[],bolts:[],texts:[],cuts:[],craters:[],
-     town:100,shake:0,slow:1,hakiT:0,flash:0,combo:0,comboT:0,kills:0,running:true,ended:false,
+     town:100,camY:0,shake:0,slow:1,hakiT:0,flash:0,combo:0,comboT:0,kills:0,running:true,ended:false,
      waves2:[],lvQ:0,paused:false,
      p:{x:W/2,y:GROUND-30,vx:0,vy:0,face:1,hp:maxHP(),inv:0,atk:0,atkT:0,chainT:0,dashT:0,dashCd:0,trail:[],gauge:0}};
   renderHP();lastScore=-1;
@@ -451,12 +452,12 @@ function spd(){return S.st.speed*(1+lvl()*.04)}
 
 function spawnMeteor(r,x,y,vx,vy){
   r=r||(Math.random()<.25?30+Math.random()*16:12+Math.random()*14);
-  S.meteors.push({x:x??(40+Math.random()*(W-80)),y:y??-r-10,r,vx:vx??(Math.random()-.5)*60,vy:vy??(70+Math.random()*90)*spd(),
+  S.meteors.push({x:x??(40+Math.random()*(W-80)),y:y??(S.camY||0)-r-10,r,vx:vx??(Math.random()-.5)*60,vy:vy??(70+Math.random()*90)*spd(),
     hp:Math.ceil(r/14),maxhp:Math.ceil(r/14),rot:Math.random()*6,vr:(Math.random()-.5)*2,flash:0,boss:false,
     shape:[...Array(9)].map(()=>.78+Math.random()*.28)});
 }
 function spawnBoss(){
-  spawnMeteor(Math.min(110,W*.16),W*(.3+Math.random()*.4),-120,0,30+S.idx*3);
+  spawnMeteor(Math.min(110,W*.16),W*(.3+Math.random()*.4),(S.camY||0)-120,0,30+S.idx*3);
   const m=S.meteors[S.meteors.length-1];m.boss=true;m.hp=m.maxhp=16+S.idx*3;
 }
 /* long meteor: a rocky capsule along an axis. cut at the hit point -> two pieces */
@@ -467,11 +468,11 @@ function makeLong(x,y,len,w,ang,vx,vy,va,o={}){
 function spawnLong(){
   const len=Math.min(H*.42,140+Math.random()*140+S.idx*12),w=16+Math.random()*12;
   const ang=Math.PI/2+(Math.random()-.5)*1.1;
-  S.longs.push(makeLong(60+Math.random()*(W-120),-len/2-20,len,w,ang,(Math.random()-.5)*40,(55+Math.random()*50)*spd(),(Math.random()-.5)*.25));
+  S.longs.push(makeLong(60+Math.random()*(W-120),(S.camY||0)-len/2-20,len,w,ang,(Math.random()-.5)*40,(55+Math.random()*50)*spd(),(Math.random()-.5)*.25));
 }
 function spawnLongBoss(){
   const len=Math.min(H*.85,W*1.1),w=Math.min(52,W*.08);
-  S.longs.push(makeLong(W*(.35+Math.random()*.3),-len/2-30,len,w,Math.PI/2+(Math.random()<.5?-.35:.35),0,26+S.idx*2,(Math.random()-.5)*.08,{boss:true,need:2}));
+  S.longs.push(makeLong(W*(.35+Math.random()*.3),(S.camY||0)-len/2-30,len,w,Math.PI/2+(Math.random()<.5?-.35:.35),0,26+S.idx*2,(Math.random()-.5)*.08,{boss:true,need:2}));
 }
 function longEnds(m){const dx=Math.cos(m.ang)*m.len/2,dy=Math.sin(m.ang)*m.len/2;return[m.x-dx,m.y-dy,m.x+dx,m.y+dy]}
 function segDist(px,py,m){
@@ -580,7 +581,7 @@ function releaseHaki(){
     if(m.boss){m.cd=0;m.hits=9;cutLong(m,0,0,true)}
     else{m.dead=true;S.kills++;gainXP(4);const e=longEnds(m);for(let k=0;k<=4;k++)burst(e[0]+(e[2]-e[0])*k/4,e[1]+(e[3]-e[1])*k/4,8,'#ffad4d',260);S.score+=Math.round(m.len)}
   }
-  for(let i=0;i<6+U('ki')*4;i++)S.bolts.push(makeBolt(S.p.x,S.p.y,Math.random()*W,-20));
+  for(let i=0;i<6+U('ki')*4;i++)S.bolts.push(makeBolt(S.p.x,S.p.y,Math.random()*W,S.camY-20));
   gainXP(0);
 }
 function makeBolt(x0,y0,x1,y1){const pts=[[x0,y0]],n=10;for(let i=1;i<n;i++){const t=i/n;pts.push([x0+(x1-x0)*t+(Math.random()-.5)*60,y0+(y1-y0)*t+(Math.random()-.5)*60])}pts.push([x1,y1]);return{pts,t:0,life:.6}}
@@ -628,8 +629,8 @@ function update(rdt){
   }else{
     p.vx+=ix*2600*dt;p.vx*=Math.pow(.0015,dt);
     if(Math.abs(ix)>.2)p.face=Math.sign(ix);
-    p.vy+=(up?-1500:1100)*dt+(down?1600*dt:0);
-    p.vy=Math.max(-520,Math.min(down?900:600,p.vy));
+    p.vy+=(up?-1750:1100)*dt+(down?1600*dt:0);
+    p.vy=Math.max(-640,Math.min(down?900:600,p.vy));
   }
   p.x+=p.vx*dt;p.y+=p.vy*dt;
   if(p.x<16){p.x=16;p.vx=0}if(p.x>W-16){p.x=W-16;p.vx=0}
@@ -637,6 +638,12 @@ function update(rdt){
   if(p.y>GROUND-22){p.y=GROUND-22;p.vy=0}
   p.atkT-=dt;p.chainT-=dt;p.dashCd-=dt;p.inv-=dt;
   p.trail.unshift([p.x,p.y]);if(p.trail.length>14)p.trail.pop();
+  { const ty=Math.max(-SKY,Math.min(0,p.y-H*.4));S.camY+=(ty-S.camY)*Math.min(1,rdt*6); }
+  // 残影 afterimages: longer as the ronin levels up
+  p.ghosts=p.ghosts||[];const GN=ghostLen(),moving=Math.hypot(p.vx,p.vy)>60||p.atkT>0||p.dashT>0;
+  if(moving)p.ghosts.unshift({x:p.x,y:p.y,face:p.face,lean:Math.max(-.4,Math.min(.4,p.vx/1200)),sw:p.atkT>0?(1-p.atkT/(p.atkMax||.2)):-1,dash:p.dashT>0});
+  else if(p.ghosts.length)p.ghosts.pop();
+  while(p.ghosts.length>GN*2)p.ghosts.pop();
 
   // spawning
   if(!S.waiting){
@@ -710,7 +717,7 @@ let lastScore=-1;
 function hudFade(){
   const p=S.p,rc=cv.getBoundingClientRect();
   for(const id of ['hudL','hudR']){const e=$(id);const r=e.getBoundingClientRect();
-    const near=p.x+rc.left>r.left-30&&p.x+rc.left<r.right+30&&p.y+rc.top>r.top-30&&p.y+rc.top<r.bottom+34;
+    const sy=p.y-S.camY+rc.top,near=p.x+rc.left>r.left-30&&p.x+rc.left<r.right+30&&sy>r.top-30&&sy<r.bottom+34;
     if(e.classList.contains('dim')!==near)e.classList.toggle('dim',near)}
 }
 function hud(){
@@ -766,10 +773,15 @@ function draw(){
   cx.fillStyle='#e9e4d6';cx.globalAlpha=.85;cx.beginPath();cx.arc(W*.82,H*.2,mr,0,7);cx.fill();
   cx.fillStyle=st.sky[0];cx.globalAlpha=.92;cx.beginPath();cx.arc(W*.82+mr*.42,H*.2-mr*.25,mr*.92,0,7);cx.fill();cx.globalAlpha=1;
   if(S&&S.hakiT>0){cx.fillStyle='rgba(0,0,0,'+Math.min(.7,(1.4-S.hakiT)*1.4)+')';cx.fillRect(-30,-30,W+60,H+60)}
+  const camY=S?S.camY:0;
+  if(camY<-2){ // high sky: fade toward deep night and add extra stars
+    const k=Math.min(1,-camY/SKY);cx.fillStyle='rgba(2,3,10,'+k*.55+')';cx.fillRect(-30,-30,W+60,H+60);
+    for(const s2 of stars){cx.globalAlpha=k*(.3+.5*Math.abs(Math.sin(t*1.1+s2.t*2)));cx.fillStyle='#ffffff';cx.fillRect(((s2.x*1.7)%1)*W,((s2.y*1.3+.1)%1)*H,s2.s,s2.s)}cx.globalAlpha=1}
+  cx.save();cx.translate(0,-camY);
   drawScene(st.scene,t);
   cx.fillStyle='#07080f';cx.fillRect(-30,GROUND,W+60,H-GROUND+30);
   if(st.scene==='snow'){cx.fillStyle='rgba(233,228,214,.7)';for(const f of flakes)cx.fillRect(f.x,f.y,f.s,f.s)}
-  if(!S){cx.restore();return}
+  if(!S){cx.restore();cx.restore();return}
   const townA=S.town/100;
   cx.strokeStyle='rgba(242,207,115,'+(.08+.12*townA)+')';cx.lineWidth=1;cx.beginPath();cx.ellipse(W/2,GROUND,W*.62,H*.22,0,Math.PI,0);cx.stroke();
   for(const c of S.craters){cx.fillStyle='rgba(255,122,46,.25)';cx.beginPath();cx.ellipse(c.x,GROUND,c.r,6,0,0,7);cx.fill()}
@@ -783,6 +795,7 @@ function draw(){
   for(const w of S.waves2){const a=1-w.t/w.life,col=TIER_COL[w.tr];cx.save();cx.translate(w.x,w.y);cx.scale(w.face,1);cx.shadowColor=TIER_GLOW[Math.max(1,w.tr)];cx.shadowBlur=18;
     cx.strokeStyle=col;cx.globalAlpha=a;cx.lineCap='round';cx.lineWidth=6;cx.beginPath();cx.arc(-w.R*.5,0,w.R,-1.15,1.15);cx.stroke();
     cx.strokeStyle='#fff';cx.lineWidth=2;cx.beginPath();cx.arc(-w.R*.5,0,w.R,-1,1);cx.stroke();cx.restore()}
+  drawGhosts(S.p);
   drawPlayer(S.p);
   for(const s of S.slashes)drawSlash(s);
   for(const c of S.cuts){const a=1-c.t/.35,L=c.len*(1+c.t*3);cx.save();cx.translate(c.x,c.y);cx.rotate(c.ang);
@@ -794,6 +807,11 @@ function draw(){
   for(const tx of S.texts){cx.globalAlpha=1-tx.t;cx.fillStyle='#f2cf73';cx.fillText(tx.s,tx.x,tx.y)}cx.globalAlpha=1;
   if(S.hakiT>0){const p=S.p,k=(1.4-S.hakiT);cx.strokeStyle='rgba(224,38,63,.8)';cx.lineWidth=3;
     for(let i=0;i<3;i++){cx.beginPath();cx.arc(p.x,p.y,(k*400+i*60)%420,0,7);cx.stroke()}}
+  cx.restore();
+  if(S.camY<-H*.35){ // the town is out of view: show how high we are and danger below
+    cx.fillStyle='rgba(242,207,115,.85)';cx.font='12px "Zen Kaku Gothic New",sans-serif';cx.textAlign='center';
+    cx.fillText('▼ 町まで '+Math.round(-S.camY/10)*10+' 尺',W/2,H-56);
+    const low=S.meteors.concat(S.longs).filter(m=>m.y-S.camY>H).length;if(low){cx.fillStyle='rgba(224,38,63,'+(.6+.4*Math.sin(t*10))+')';cx.fillText('隕石 '+low+' 個が町へ落下中',W/2,H-74)}}
   cx.restore();
   if(S.flash>0){cx.fillStyle='rgba(255,240,240,'+S.flash*.7+')';cx.fillRect(0,0,W,H)}
 }
@@ -827,6 +845,19 @@ function drawLong(m){
   for(let i=0;i<=n;i++){const x=-L+i*(2*L/n);cx.lineTo(x,Math.sin(i*1.7)*hw*.25)}cx.stroke();
   // hardened marks (needs 2 hits)
   if(m.need>1&&m.hits>0){cx.strokeStyle='rgba(255,255,255,.7)';cx.lineWidth=2;cx.beginPath();cx.moveTo(-6,-hw);cx.lineTo(6,hw);cx.stroke()}
+  cx.restore();
+}
+function drawGhosts(p){
+  const g=p.ghosts;if(!g||g.length<3)return;
+  const tr=tier(),col=tr?TIER_COL[tr]:'#e0263f',n=g.length,bl=36*(1+.15*U('blade'));
+  cx.save();cx.globalCompositeOperation='lighter';
+  for(let i=n-1;i>=2;i-=2){const q=g[i],a=(1-i/n)*(q.dash?.6:.42);
+    cx.save();cx.translate(q.x,q.y);cx.scale(q.face,1);cx.rotate(q.lean);cx.globalAlpha=a;cx.fillStyle=col;cx.strokeStyle=col;
+    cx.beginPath();cx.moveTo(-9,-8);cx.lineTo(9,-8);cx.lineTo(12,14);cx.lineTo(-12,14);cx.closePath();cx.fill();
+    cx.beginPath();cx.arc(0,-13,5.5,0,7);cx.fill();cx.beginPath();cx.moveTo(-15,-14);cx.lineTo(0,-25);cx.lineTo(15,-14);cx.closePath();cx.fill();
+    cx.lineWidth=4;cx.beginPath();cx.moveTo(-5,14);cx.lineTo(-7,22);cx.moveTo(5,14);cx.lineTo(7,22);cx.stroke();
+    cx.translate(6,0);cx.rotate(q.sw>=0?-1.9+q.sw*3.2:.9);cx.lineWidth=2.6;cx.beginPath();cx.moveTo(0,-2);cx.quadraticCurveTo(2,-bl*.55,0,-bl);cx.stroke();
+    cx.restore()}
   cx.restore();
 }
 function drawPlayer(p){
