@@ -60,6 +60,9 @@ body{font-family:var(--body);font-size:15px}
 .plane[aria-checked="true"]{border-color:var(--orange);background:rgba(255,106,26,.16);box-shadow:0 0 0 1px var(--orange) inset}
 .plane[data-plane="fighter"][aria-checked="true"]{border-color:#5fd7ff;background:rgba(95,215,255,.14);box-shadow:0 0 0 1px #5fd7ff inset}
 .plane[data-plane="fighter"] .stat{color:#5fd7ff}
+.plane[data-plane="x100"][aria-checked="true"]{border-color:#b084f5;background:rgba(176,132,245,.16);box-shadow:0 0 0 1px #b084f5 inset}
+.plane[data-plane="x100"] .stat{color:#b084f5}
+.card.earth .strip{background:linear-gradient(90deg,#1b3a8f,#2456b8)}
 @media (max-height:520px){
   #touchUI .tcol{flex-direction:row;align-items:flex-end;gap:10px}
   #rollBtn{width:56px;height:56px}
@@ -173,6 +176,8 @@ h1,h2,h3{margin:0;text-wrap:balance}
         <div>フレア補助（着陸前）<b>Space 長押し</b></div>
         <div>ブレーキ（接地後）<b>Space 長押し</b></div>
         <div>接地後の操向<b>← →</b></div>
+        <div>X-100（地球一周）：旋回<b>← →</b></div>
+        <div>X-100：上昇/降下・視点<b>↑ ↓ ・ V</b></div>
         <div>リトライ<b>R</b></div>
         <div>一時停止<b>Esc</b></div>
       </div>
@@ -192,6 +197,9 @@ h1,h2,h3{margin:0;text-wrap:balance}
       <button type="button" class="plane" data-plane="fighter" role="radio">
         <span class="pic">🛩</span><span class="pt"><b>ステルス戦闘機 F-X</b><small>米国最新鋭ステルス戦闘機がモデル。超高速・アクロバット</small></span>
         <span class="stat">最高 マッハ1.1 ・ 9G ・ 高速ロール</span></button>
+      <button type="button" class="plane" data-plane="x100" role="radio">
+        <span class="pic">🚀</span><span class="pt"><b>ハイパー機 X-100</b><small>戦闘機F-Xの100倍の速さ。地球をまるごと一周する</small></span>
+        <span class="stat">最高 マッハ115（39km/s）・ 地球一周</span></button>
     </div>
     <div class="cards" id="cards"></div>
     <div class="row"><button class="btn" id="backTitle" type="button">タイトルへ</button>
@@ -241,6 +249,7 @@ h1,h2,h3{margin:0;text-wrap:balance}
   </div>
 </section>
 
+<script src="earth-lap.js?v=30"></script>
 <script>
 //SIM-START
 const SIM = (() => {
@@ -1796,6 +1805,7 @@ function startAttract() {
 }
 function startStage(i) {
   Snd.init();
+  if (Save.d.plane === 'x100') { startEarth(i); return; }
   Snd.beep(660, 0.12, 'triangle', 0.1); setTimeout(() => Snd.beep(990, 0.16, 'triangle', 0.1), 110);
   stageIdx = i; attract = false; const st = SIM.STAGES[i]; SIM.select(Save.d.plane);
   buildScene(st); sim = SIM.create(st); Inp.thr = sim.thrCmd; Inp.trickQ = 0; parts.length = 0; flash = null; pops = []; shake = 0; resultTimer = 0; boostFx = 0;
@@ -1855,6 +1865,7 @@ function handleEvents(s) {
 
 let warnBeepT = 0, slowFx = 1;
 function frame(now) {
+  if (mode === 'earth') { last = now; requestAnimationFrame(frame); return; }
   const dt = Math.min(0.1, (now - (last || now)) / 1000); last = now;
   if (mode === 'play' || (mode !== 'pause' && attract)) {
     let tsc = 1;
@@ -1954,16 +1965,35 @@ function windText(st) {
 }
 const TIME_JP = { day: '昼', dusk: '夕暮れ', night: '夜' };
 const bestKey = id => Save.d.plane === 'fighter' ? 'f' + id : id;
+window.EarthLapHost = { Snd, Save, onExit() { mode = 'select'; Inp.keys.clear(); toSelect(); } };
+function startEarth(i) {
+  if (!window.EarthLap) return;
+  Snd.beep(660, 0.12, 'triangle', 0.1); setTimeout(() => Snd.beep(1175, 0.18, 'triangle', 0.1), 110);
+  mode = 'earth'; setPlayUI(false); show(null); Snd.update(null, false); window.EarthLap.start(i);
+}
+function renderEarthCards(wrap) {
+  window.EarthLap.COURSES.forEach((c, i) => {
+    const b = window.EarthLap.best(c.id), free = !c.ring.length;
+    const el = document.createElement('button'); el.className = 'card earth'; el.type = 'button';
+    el.innerHTML = `<div class="strip"><span>${c.code}</span><small>${c.time}</small></div>
+      <div class="body"><h3>${c.name}</h3><p>${c.desc}</p>
+      <div class="chips">${free ? '<span class="chip">リングなし</span><span class="chip">名所と動物 118</span>' : `<span class="chip">リング ${c.ring.length}</span><span class="chip">スタート ${c.start}</span>`}<span class="chip">時間圧縮 ×${window.EarthLap.TW}</span></div>
+      <div class="best"><span>${free ? '図鑑 ' + window.EarthLap.found() + '/118' : b ? 'ベスト ' + b.score.toLocaleString() : '未クリア'}</span><b>${free ? '🌍' : b ? b.rank : '—'}</b></div></div>`;
+    el.addEventListener('click', () => startStage(i));
+    wrap.appendChild(el);
+  });
+}
 function renderPlanes() {
   document.querySelectorAll('.plane').forEach(b => b.setAttribute('aria-checked', String(b.dataset.plane === Save.d.plane)));
 }
 document.querySelectorAll('.plane').forEach(b => b.addEventListener('click', () => {
-  Save.d.plane = b.dataset.plane; Save.write(); renderPlanes(); renderCards(); Snd.init(); Snd.beep(b.dataset.plane === 'fighter' ? 1320 : 880, 0.12, 'triangle', 0.09);
+  Save.d.plane = b.dataset.plane; Save.write(); renderPlanes(); renderCards(); Snd.init(); Snd.beep(b.dataset.plane === 'x100' ? 1760 : b.dataset.plane === 'fighter' ? 1320 : 880, 0.12, 'triangle', 0.09);
 }));
 function renderCards() {
   renderPlanes();
   const wrap = $('cards'); wrap.innerHTML = '';
-  SIM.STAGES.forEach((st, i) => {
+  if (Save.d.plane === 'x100' && window.EarthLap) renderEarthCards(wrap);
+  else SIM.STAGES.forEach((st, i) => {
     const b = Save.d.best[bestKey(st.id)];
     const el = document.createElement('button'); el.className = 'card'; el.type = 'button';
     el.innerHTML = `<div class="strip"><span>${st.code}</span><small>${TIME_JP[st.time]}</small></div>
@@ -2076,6 +2106,7 @@ ab.addEventListener('pointerup', endAct); ab.addEventListener('pointercancel', e
 document.addEventListener('touchmove', e => { if (mode === 'play') e.preventDefault(); }, { passive: false });
 document.addEventListener('gesturestart', e => e.preventDefault());
 
+if (Save.d.plane === 'x100' && !window.EarthLap) Save.d.plane = 'liner';
 resize(); startAttract(); show('title');
 (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(() => requestAnimationFrame(frame));
 </script>

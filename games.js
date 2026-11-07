@@ -13,7 +13,7 @@
  *
  * サイト上の「管理」画面からも追加・削除できます（その場合はこのブラウザだけに保存されます）。
  */
-window.GAMES_VERSION = "29";
+window.GAMES_VERSION = "30";
 
 /* 管理画面のパスワード（SHA-256 ハッシュ。パスワードそのものは書かない）
  * 変更するには: "mini-game-arcade:" + 新しいパスワード を SHA-256 にかけた値に置き換える */
@@ -311,7 +311,7 @@ window.GAMES = [
   {
     id: "tokyo-sky-king",
     title: "TOKYO SKY KING",
-    description: "ビルの谷間をすり抜けて羽田に降りろ！新宿・東京タワー・スカイツリーを飛ぶ着陸ゲーム。",
+    description: "ビルの谷間をすり抜けて羽田に降りろ！戦闘機の100倍速いX-100で地球一周レースも。",
     path: "games/tokyo-sky-king/index.html",
     emoji: "🗼",
     color: "#1b2f5c",
