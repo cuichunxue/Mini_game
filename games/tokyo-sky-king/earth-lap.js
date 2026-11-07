@@ -28,9 +28,9 @@
   ];
   const BATTLES = [
     { id: 'sat1', battle: true, code: 'MISSION 1', name: '暴走衛星 迎撃作戦', time: '3ウェーブ＋ボス', start: '種子島宇宙センター', startLL: [30.40, 130.97], ring: [], waves: [3, 4, 5], boss: true,
-      desc: '種子島から打ち上げ、軌道上の暴走衛星を撃破せよ。赤い照準線が固まったら回避！最後に巨大衛星が待つ。' },
+      desc: '飛行ロボで種子島から発進、高度1,900kmの暗い宇宙で暴走衛星と戦え。赤い照準線が固まったら回避！最後に巨大な影が待つ。' },
     { id: 'sat2', battle: true, code: 'MISSION ∞', name: '衛星エンドレス', time: 'サバイバル', start: '種子島宇宙センター', startLL: [30.40, 130.97], ring: [], waves: null, boss: false,
-      desc: 'シールドが尽きるまで衛星を撃ち落とし続ける。ウェーブごとに数が増え、4ウェーブごとに巨大衛星が出現。' }
+      desc: 'シールドが尽きるまで衛星を撃ち落とし続ける。倒すほどデブリが増えていく、終わりのない宇宙の戦い。' }
   ];
 
   /* ---------------- save ---------------- */
@@ -148,7 +148,7 @@
   }
 
   /* ---------------- scene ---------------- */
-  let renderer, scene, camera, earth, earthMat, clouds, atmo, stars, starMat, plane, flame, glow, trail, trailGeo, guide, guideGeo, beacon;
+  let amb, hemi, renderer, scene, camera, earth, earthMat, clouds, atmo, stars, starMat, plane, flame, glow, trail, trailGeo, guide, guideGeo, beacon;
   const rings = []; const sprites = [];
   let mini = null;
   function build(col, hgt, ids, cld) {
@@ -222,9 +222,9 @@ diffuseColor.rgb *= 1.0 + 0.2 * (mix(grain, 0.5, sea * 0.6) - 0.5) * clamp(1.0 -
         transparent: true, depthWrite: false, blending: T.AdditiveBlending });
       stars = new T.Points(g, starMat); stars.frustumCulled = false; scene.add(stars); }
 
-    scene.add(new T.AmbientLight(0x8090c0, 0.55));
+    amb = new T.AmbientLight(0x8090c0, 0.55); scene.add(amb);
     const sun = new T.DirectionalLight(0xffffff, 1.55); sun.position.set(1, 0.35, 0.55); scene.add(sun);
-    scene.add(new T.HemisphereLight(0xbfe4ff, 0x1a2040, 0.25));
+    hemi = new T.HemisphereLight(0xbfe4ff, 0x1a2040, 0.25); scene.add(hemi);
 
     plane = makePlane(); scene.add(plane);
 
@@ -273,15 +273,28 @@ diffuseColor.rgb *= 1.0 + 0.2 * (mix(grain, 0.5, sea * 0.6) - 0.5) * clamp(1.0 -
     const jet = new T.Group(), rk = new T.Group();
     jet.add(new T.Mesh(body, m(0xdfe6ee, 0.45, 0.35, 0x1a1d22)), new T.Mesh(wing, m(0x2d3646, 0.4, 0.45, 0x0b0f16)), new T.Mesh(tail, m(0x2d3646, 0.4, 0.45, 0x0b0f16)),
       new T.Mesh(tips, m(0xff6a1a, 0.2, 0.5, 0x5a1800)), new T.Mesh(canopy, m(0x101826, 0.9, 0.15, 0x0a2a40)));
-    // rocket R-1 (nose toward -Z, nozzle at the shared flame position)
-    { const cyl = new T.CylinderGeometry(0.42, 0.46, 3.2, 18); cyl.rotateX(Math.PI / 2);
-      const nose = new T.ConeGeometry(0.42, 1.6, 18); nose.rotateX(-Math.PI / 2); nose.translate(0, 0, -2.4);
-      const band = new T.CylinderGeometry(0.435, 0.435, 0.32, 18); band.rotateX(Math.PI / 2); band.translate(0, 0, -0.9);
-      const smooth = (c, mt, rg, em) => new T.MeshStandardMaterial({ color: c, metalness: mt, roughness: rg, emissive: em || 0 });
-      rk.add(new T.Mesh(cyl, smooth(0xf2f4f7, 0.3, 0.4, 0x1a1c20)), new T.Mesh(nose, smooth(0xff6a1a, 0.2, 0.45, 0x401000)), new T.Mesh(band, smooth(0x1a2a6a, 0.4, 0.4, 0x060c30)));
-      for (let i = 0; i < 4; i++) { const fin = new T.Mesh(new T.BoxGeometry(0.06, 0.95, 1.0), m(0xff6a1a, 0.2, 0.5, 0x401000)); const a = i * Math.PI / 2 + Math.PI / 4;
-        fin.position.set(Math.cos(a) * 0.72, Math.sin(a) * 0.72, 1.1); fin.rotation.z = a - Math.PI / 2; rk.add(fin); }
-      const win = new T.Mesh(new T.SphereGeometry(0.16, 10, 8), smooth(0x5fd7ff, 0.9, 0.1, 0x0a4060)); win.position.set(0, 0.36, -1.35); rk.add(win); }
+    // flying robot SG-1 "SORA-GUARD": superman pose, head toward -Z, back (+Y) to the chase camera
+    { const sm = (c, mt, rg, em) => new T.MeshStandardMaterial({ color: c, metalness: mt, roughness: rg, emissive: em || 0, flatShading: true });
+      const W = sm(0xeef1f6, 0.35, 0.4, 0x1c1e24), BL = sm(0x1f4fc8, 0.4, 0.4, 0x0a1a50), RD = sm(0xd8323c, 0.3, 0.45, 0x400a0e), GR = sm(0x5a6270, 0.6, 0.4, 0x101318), YL = sm(0xffd23f, 0.4, 0.4, 0x403000);
+      const box = (w, h, l, x, y, z, mt, rz) => { const b = new T.Mesh(new T.BoxGeometry(w, h, l), mt); b.position.set(x, y, z); if (rz) b.rotation.z = rz; rk.add(b); return b; };
+      box(1.2, 0.7, 1.5, 0, 0, 0, W);                    // torso
+      box(0.9, 0.18, 0.9, 0, 0.38, -0.25, BL);           // back armour
+      box(0.55, 0.5, 0.55, 0, 0.05, -1.05, W);           // head
+      const visor = new T.Mesh(new T.BoxGeometry(0.44, 0.13, 0.06), new T.MeshBasicMaterial({ color: 0x66f0ff })); visor.position.set(0, 0.08, -1.34); rk.add(visor);
+      box(0.08, 0.36, 0.08, -0.16, 0.42, -1.2, YL, 0.5); box(0.08, 0.36, 0.08, 0.16, 0.42, -1.2, YL, -0.5); // V antenna
+      box(0.48, 0.52, 0.55, 0.84, 0.02, -0.45, RD); box(0.48, 0.52, 0.55, -0.84, 0.02, -0.45, RD); // shoulders
+      box(0.3, 0.3, 1.0, 0.84, -0.12, -1.1, W); box(0.2, 0.24, 1.5, 0.84, -0.32, -1.95, GR); box(0.1, 0.1, 0.3, 0.84, -0.32, -2.8, GR); // right arm + beam rifle
+      box(0.3, 0.3, 1.1, -0.86, -0.06, 0.2, W);         // left arm
+      box(0.95, 0.55, 0.42, 0, -0.02, 0.92, GR);        // waist
+      box(0.38, 0.42, 1.3, 0.32, -0.04, 1.75, W); box(0.38, 0.42, 1.3, -0.32, -0.04, 1.75, W); // legs
+      box(0.42, 0.34, 0.38, 0.32, -0.14, 2.5, BL); box(0.42, 0.34, 0.38, -0.32, -0.14, 2.5, BL); // feet
+      box(0.95, 0.42, 0.95, 0, 0.56, 0.12, GR);         // backpack
+      box(1.5, 0.06, 0.55, 0.95, 0.66, 0.25, BL, 0.32); box(1.5, 0.06, 0.55, -0.95, 0.66, 0.25, BL, -0.32); // wings
+      const fl = [];
+      for (const x of [-0.28, 0.28]) { const n = new T.Mesh(new T.CylinderGeometry(0.15, 0.2, 0.35, 10), GR); n.rotation.x = Math.PI / 2; n.position.set(x, 0.56, 0.7); rk.add(n);
+        const cg = new T.ConeGeometry(0.17, 1, 10, 1, true); cg.rotateX(Math.PI / 2); cg.translate(0, 0, 0.5);
+        const f = new T.Mesh(cg, new T.MeshBasicMaterial({ color: 0x8fe8ff, transparent: true, opacity: 0.75, blending: T.AdditiveBlending, depthWrite: false })); f.position.set(x, 0.56, 0.86); rk.add(f); fl.push(f); }
+      rk.userData.flames = fl; }
     rk.visible = false; g.add(jet, rk); g.userData.jet = jet; g.userData.rk = rk;
     const cg = new T.ConeGeometry(0.3, 1, 12, 1, true); cg.rotateX(Math.PI / 2); cg.translate(0, 0, 0.5);
     flame = new T.Mesh(cg, new T.MeshBasicMaterial({ color: 0x66d9ff, transparent: true, opacity: 0.6, blending: T.AdditiveBlending, depthWrite: false }));
@@ -321,7 +334,7 @@ diffuseColor.rgb *= 1.0 + 0.2 * (mix(grain, 0.5, sea * 0.6) - 0.5) * clamp(1.0 -
     else { f = new T.Vector3(0, 1, 0).cross(p).normalize(); } // eastward
     const bt = !!course.battle;
     return { B: bt ? { launch: true, sats: [], missiles: Array.from({ length: 24 }, (_, i) => ({ on: false, pos: new T.Vector3(), dir: new T.Vector3(), spd: 0, life: 0, target: null, i })),
-        wave: 0, lvl: 0, kills: 0, shots: 0, hits: 0, dmg: 0, waveDmg: 0, shield: 4, inv: 0, lock: null, cand: null, lockT: 0, fireCD: 0, waveT: 0, warn: 0, dodges: 0, rollCD: 0, boss: false, bossDone: false } : null,
+        wave: 0, lvl: 0, kills: 0, shots: 0, hbT: 0, breathT: 2, nightN: 0, radio: null, muzT: 0, hits: 0, dmg: 0, waveDmg: 0, shield: 4, inv: 0, lock: null, cand: null, lockT: 0, fireCD: 0, waveT: 0, warn: 0, dodges: 0, rollCD: 0, boss: false, bossDone: false } : null,
       p, f, alt: bt ? sampleH(p) + 6 / R_KM : 75 / R_KM, vs: 0, v: bt ? 1 : V_CRUISE * 0.7, boost: 1, boosting: false, turn: 0, climb: 0, bank: 0, pitch: 0,
       roll: 0, rollDir: 0, rollT: 0, t: 0, count: 3.2, ring: 0, got: 0, missed: 0, score: 0, center: 0, tricks: 0, found: 0, foundSet: new Set(),
       flash: null, pops: [], fact: null, placeT: 0, shake: 0, maxMach: 0, space: false, low: 0, dayN: 0, sunSide: null, crashes: 0,
@@ -383,7 +396,7 @@ diffuseColor.rgb *= 1.0 + 0.2 * (mix(grain, 0.5, sea * 0.6) - 0.5) * clamp(1.0 -
   function step(s, inp, dt) {
     const T = THREE;
     if (s.count > 0) { const c0 = Math.ceil(s.count); s.count -= dt; const c1 = Math.ceil(s.count);
-      if (c1 !== c0) { if (c1 > 0) snd('beep', 660, 0.12, 'triangle', 0.1); else { snd('beep', 1320, 0.25, 'triangle', 0.12); snd('swish', 0.7, 0.8); s.flash = course.battle ? { big: 'リフトオフ！', sub: '種子島から軌道へ', col: '#ffd23f', t: 1.2 } : { big: 'GO!', sub: 'マッハ115の世界へ', col: '#ffd23f', t: 1.0 }; } }
+      if (c1 !== c0) { if (c1 > 0) snd('beep', 660, 0.12, 'triangle', 0.1); else { snd('beep', 1320, 0.25, 'triangle', 0.12); snd('swish', 0.7, 0.8); s.flash = course.battle ? { big: 'SG-1 発進！', sub: '種子島から宇宙へ', col: '#ffd23f', t: 1.2 } : { big: 'GO!', sub: 'マッハ115の世界へ', col: '#ffd23f', t: 1.0 }; } }
       return; }
     s.t += dt;
     const B = s.B;
@@ -401,7 +414,7 @@ diffuseColor.rgb *= 1.0 + 0.2 * (mix(grain, 0.5, sea * 0.6) - 0.5) * clamp(1.0 -
     s.turn += (yaw - s.turn) * Math.min(1, dt * 6);
     let turnRate = -s.turn * TURN;
     s.climb += (inp.climb - s.climb) * Math.min(1, dt * 5);
-    let vsT = s.climb * (0.004 + s.alt * 0.8);
+    let vsT = B ? s.climb * 0.045 : s.climb * (0.004 + s.alt * 0.8);
     if (R && SV.assist !== false) {
       const P = s.p.clone().multiplyScalar(1 + s.alt), dd = P.distanceTo(R.C), ahead = R.C.clone().sub(P).dot(s.f) > 0;
       if (dd < 0.14 && ahead) {
@@ -416,9 +429,9 @@ diffuseColor.rgb *= 1.0 + 0.2 * (mix(grain, 0.5, sea * 0.6) - 0.5) * clamp(1.0 -
       const tg = B.lock || B.cand;
       if (tg) { const w = 0.55 * (1 - Math.abs(inp.turn) * 0.8), d = tg.q.clone().sub(s.p.clone().multiplyScalar(s.p.dot(tg.q))).normalize();
         const err = Math.atan2(s.p.dot(s.f.clone().cross(d)), s.f.dot(d));
-        turnRate += clamp(err * 2.5, -0.8, 0.8) * w; vsT += clamp((tg.alt - s.alt) * 3, -0.01, 0.01) * w * (1 - Math.abs(inp.climb) * 0.7); }
+        turnRate += clamp(err * 2.5, -0.8, 0.8) * w; vsT += clamp((tg.alt - s.alt) * 3, -0.03, 0.03) * w * (1 - Math.abs(inp.climb) * 0.7); }
     }
-    if (B && B.launch) vsT = 0.03;
+    if (B && B.launch) vsT = 0.12;
     s.f.applyAxisAngle(s.p, turnRate * dt); s.turnRate = turnRate;
     // terrain look-ahead: automatic pull-up (overridable by diving hard)
     let hA = sampleH(s.p);
@@ -427,7 +440,7 @@ diffuseColor.rgb *= 1.0 + 0.2 * (mix(grain, 0.5, sea * 0.6) - 0.5) * clamp(1.0 -
     const floor = hA + 9 / R_KM; s.terrWarn = s.alt < floor + 6 / R_KM;
     if (s.alt < floor) vsT = Math.max(vsT, (floor - s.alt) * 5 * (1 - Math.max(0, -inp.climb) * 0.8));
     s.vs += (vsT - s.vs) * Math.min(1, dt * 4);
-    s.alt = clamp(s.alt + s.vs * dt, 0, ALT_MAX);
+    s.alt = clamp(s.alt + s.vs * dt, 0, ALT_MAX); if (B && !B.launch) s.alt = clamp(s.alt, 0.22, 0.55);
     // --- move along great circle
     const ang = s.v * TWm * dt / (R_KM * (1 + s.alt));
     const ax = s.p.clone().cross(s.f).normalize();
@@ -437,7 +450,7 @@ diffuseColor.rgb *= 1.0 + 0.2 * (mix(grain, 0.5, sea * 0.6) - 0.5) * clamp(1.0 -
     // --- visuals: bank/pitch/roll
     s.bank += (-turnRate * 0.9 * 60 * D - s.bank) * Math.min(1, dt * 5);
     s.pitch += (clamp(s.vs / (0.004 + s.alt * 0.8), -1, 1) * 22 * D - s.pitch) * Math.min(1, dt * 5);
-    if (B && B.launch) s.pitch = Math.max(s.pitch, clamp(1 - s.alt / 0.05, 0, 1) * 78 * D);
+    if (B && B.launch) s.pitch = Math.max(s.pitch, clamp(1 - s.alt / 0.3, 0, 1) * 78 * D);
     if (inp.roll && s.rollT <= 0 && !(B && B.rollCD > 0)) { s.rollT = 0.7; s.rollDir = inp.roll; snd('swish', 0.6, 0.55); if (B) B.rollCD = 1.6; }
     if (s.rollT > 0) { s.rollT -= dt; s.roll = s.rollDir * (1 - Math.max(0, s.rollT) / 0.7) * Math.PI * 2; if (s.rollT <= 0) { s.roll = 0; s.tricks++; if (!B) addScore(s, 300, 'バレルロール +300', '#ff9f43'); } }
     // --- terrain
@@ -506,7 +519,7 @@ diffuseColor.rgb *= 1.0 + 0.2 * (mix(grain, 0.5, sea * 0.6) - 0.5) * clamp(1.0 -
     trail.userData.n = n; trailGeo.setDrawRange(0, n); trailGeo.attributes.position.needsUpdate = true;
   }
 
-  /* ---------------- satellite battle (rocket R-1) ----------------
+  /* ---------------- satellite battle (flying robot SG-1) ----------------
      Journey-map pain points → TRIZ fixes:
        aiming at Mach 20+ on a phone      → auto lock-on cone + homing missiles (#15 dynamics, #10 prior action)
        lasers that kill "from nowhere"    → 3-stage telegraph: thin tracking line → thick frozen line → beam (#11 beforehand cushioning)
@@ -537,11 +550,16 @@ diffuseColor.rgb *= 1.0 + 0.2 * (mix(grain, 0.5, sea * 0.6) - 0.5) * clamp(1.0 -
     };
     BT.laserGeo = new T.CylinderGeometry(1, 1, 1, 8, 1, true); BT.laserGeo.translate(0, 0.5, 0);
     BT.mis = []; for (let i = 0; i < 24; i++) { const sp = spr(0xffb040); sp.visible = false; scene.add(sp); BT.mis.push(sp); }
+    BT.bolt = []; for (let i = 0; i < 24; i++) { const b = new T.Mesh(BT.laserGeo, new T.MeshBasicMaterial({ color: 0x66f0ff, transparent: true, opacity: 0.9, blending: T.AdditiveBlending, depthWrite: false })); b.visible = false; b.frustumCulled = false; scene.add(b); BT.bolt.push(b); }
+    BT.muz = spr(0x9ff4ff); BT.muz.visible = false; scene.add(BT.muz);
+    const dm = new T.MeshStandardMaterial({ color: 0xa8b0bc, metalness: 0.8, roughness: 0.3, flatShading: true, emissive: 0x15181c });
+    BT.deb = []; for (let i = 0; i < 48; i++) { const g = i % 3 ? new T.TetrahedronGeometry(1) : new T.BoxGeometry(1.6, 0.15, 1); const mesh = new T.Mesh(g, i % 3 ? dm : BT.panelM);
+      mesh.visible = false; scene.add(mesh); BT.deb.push({ mesh, on: false, life: 0, pos: new T.Vector3(), vel: new T.Vector3(), spin: 0, ax: new T.Vector3(Math.random() - .5, Math.random() - .5, Math.random() - .5).normalize() }); }
     BT.fxs = []; for (let i = 0; i < 40; i++) { const sp = spr(0xff8030); sp.visible = false; scene.add(sp); BT.fxs.push({ sp, life: 0 }); }
   }
   function clearBattle() {
     if (S && S.B) for (const t of S.B.sats) { scene.remove(t.mesh); scene.remove(t.laser); t.laser.material.dispose(); }
-    if (BT.built) { BT.mis.forEach(m => { m.visible = false; }); BT.fxs.forEach(f => { f.life = 0; f.sp.visible = false; }); }
+    if (BT.built) { BT.mis.forEach(m => { m.visible = false; }); BT.bolt.forEach(m => { m.visible = false; }); BT.fxs.forEach(f => { f.life = 0; f.sp.visible = false; }); BT.deb.forEach(d => { d.on = false; d.mesh.visible = false; }); BT.muz.visible = false; }
     if (plane) plane.visible = true;
   }
   function boomFx(pos, size, col, n) {
@@ -562,7 +580,7 @@ diffuseColor.rgb *= 1.0 + 0.2 * (mix(grain, 0.5, sea * 0.6) - 0.5) * clamp(1.0 -
     const laser = new T.Mesh(BT.laserGeo, new T.MeshBasicMaterial({ color: 0xff2840, transparent: true, opacity: 0.6, blending: T.AdditiveBlending, depthWrite: false }));
     laser.visible = false; laser.frustumCulled = false; scene.add(mesh); scene.add(laser);
     const lv = B.lvl, t = { mesh, laser, q: dir, axis, w: (boss ? 0.004 : 0.006 + Math.random() * 0.006) * (Math.random() < 0.5 ? -1 : 1),
-      alt: clamp(s.alt + (Math.random() - 0.5) * 0.018, 0.04, 0.095), pos: new T.Vector3(), hp: boss ? 30 : 4 + Math.floor(lv / 2), r: boss ? 0.014 : 0.0065, boss,
+      alt: clamp(s.alt + (Math.random() - 0.5) * 0.05, 0.24, 0.5), pos: new T.Vector3(), hp: boss ? 30 : 4 + Math.floor(lv / 2), r: boss ? 0.014 : 0.0065, boss,
       state: 'idle', t: 0, cd: 1.4 + k * 0.9 + Math.random(), charge: boss ? 1.15 : Math.max(0.95, 1.65 - lv * 0.12), aim: new T.Vector3(), from: new T.Vector3(), spin: Math.random() * 6 };
     t.maxHp = t.hp; t.pos.copy(dir).multiplyScalar(1 + t.alt); mesh.position.copy(t.pos); B.sats.push(t);
   }
@@ -570,14 +588,16 @@ diffuseColor.rgb *= 1.0 + 0.2 * (mix(grain, 0.5, sea * 0.6) - 0.5) * clamp(1.0 -
     const B = s.B, m = course; B.wave++; B.waveDmg = 0;
     if (m.waves) {
       if (B.wave <= m.waves.length) { B.lvl = B.wave - 1; const n = m.waves[B.wave - 1]; for (let k = 0; k < n; k++) spawnSat(s, k, n, false);
-        s.flash = { big: `WAVE ${B.wave}`, sub: `暴走衛星 ${n}機 接近中`, col: '#ff5b5b', t: 1.4 }; }
+        s.flash = { big: `WAVE ${B.wave}`, sub: `暴走衛星 ${n}機 接近中`, col: '#ff5b5b', t: 1.4 };
+        radio(s, ['未確認の衛星群、接近。…こちらを見ている。', '次の群れだ。数が増えている…', '反応多数。囲まれるな、SG-1。'][(B.wave - 1) % 3]); }
       else if (m.boss && !B.bossDone) { B.boss = true; B.lvl = 3; spawnSat(s, 1, 3, true); spawnSat(s, 0, 3, false); spawnSat(s, 2, 3, false);
-        s.flash = { big: 'BOSS 出現', sub: '巨大衛星「メガ・サテライト」', col: '#ff2840', t: 1.8 }; snd('boom'); return; }
+        s.flash = { big: 'BOSS 出現', sub: '巨大衛星「メガ・サテライト」', col: '#ff2840', t: 1.8 }; snd('boom'); radio(s, '…なんだ、あの影は。衛星なんかじゃない。'); return; }
       else return battleEnd(s, true);
     } else {
       B.lvl = B.wave - 1; const n = Math.min(7, 2 + B.wave); for (let k = 0; k < n; k++) spawnSat(s, k, n, false);
       if (B.wave % 4 === 0) { spawnSat(s, n, n + 1, true); B.boss = true; }
       s.flash = { big: `WAVE ${B.wave}`, sub: `衛星 ${n + (B.wave % 4 === 0 ? 1 : 0)}機`, col: '#ff5b5b', t: 1.4 };
+      radio(s, ['未確認の衛星群、接近。…こちらを見ている。', '次の群れだ。数が増えている…', '反応多数。囲まれるな、SG-1。', 'まだ来る…この宇宙に終わりはないのか。'][(B.wave - 1) % 4]);
     }
     snd('beep', 440, 0.3, 'sawtooth', 0.06, 880);
   }
@@ -586,6 +606,7 @@ diffuseColor.rgb *= 1.0 + 0.2 * (mix(grain, 0.5, sea * 0.6) - 0.5) * clamp(1.0 -
     B.shield--; B.dmg++; B.waveDmg++; B.inv = 1.3; s.shake = 1.2;
     s.flash = { big: '被弾！', sub: `シールド残り ${Math.max(0, B.shield)}`, col: '#ff2840', t: 1.0 }; snd('boom');
     try { navigator.vibrate && navigator.vibrate([60, 40, 90]); } catch (e) {}
+    if (B.shield === 1) radio(s, 'シールド限界！もう一度当たれば…');
     if (B.shield <= 0) battleEnd(s, false);
   }
   function kill(s, t) {
@@ -594,12 +615,24 @@ diffuseColor.rgb *= 1.0 + 0.2 * (mix(grain, 0.5, sea * 0.6) - 0.5) * clamp(1.0 -
     if (t.boss) { addScore(s, 6000, 'メガ衛星 撃破！ +6000', '#ff2840'); s.flash = { big: 'メガ衛星 撃破！', sub: '大爆発！', col: '#ffd23f', t: 1.6 }; snd('boom'); setTimeout(() => snd('boom'), 250); }
     else { addScore(s, 800, '衛星 撃破！ +800', '#ffd23f'); snd('thump', 0.9, 0.6, 500); snd('beep', 990, 0.12, 'triangle', 0.08); }
     if (B.kills % 3 === 0 && B.shield < 4) { B.shield++; pop(s, 'シールド回復 +1', '#5fd7ff'); }
+    const n = t.boss ? 10 : 5; // Kessler: every kill leaves fragments that keep flying
+    for (let k = 0; k < n; k++) { const d = BT.deb.find(q => !q.on); if (!d) break;
+      d.on = true; d.life = 14; d.pos.copy(t.pos).add(new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).multiplyScalar(0.006));
+      d.vel.set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize().multiplyScalar(0.006 + Math.random() * 0.01); d.spin = Math.random() * 6; }
+    if (B.kills === 1) radio(s, '撃破確認。…待て、破片が散らばった。デブリは止まらないぞ。');
   }
+  function radio(s, txt) { const B = s.B; B.radio = { txt, t: 0, life: 4.5 + txt.length * 0.06 }; snd('swish', 0.12, 0.3); }
   function battleStep(s, inp, dt) {
     const B = s.B, P = s.p.clone().multiplyScalar(1 + s.alt);
     const vel = s.f.clone().multiplyScalar(s.v * TWm / R_KM).addScaledVector(s.p, s.vs);
     B.inv = Math.max(0, B.inv - dt); B.rollCD = Math.max(0, B.rollCD - dt);
-    if (B.launch && s.alt > 0.045) { B.launch = false; s.flash = { big: '軌道投入！', sub: '暴走衛星を撃破せよ', col: '#5fd7ff', t: 1.6 }; snd('jingle', true); B.waveT = 1.6; }
+    if (B.launch && s.alt > 0.29) { B.launch = false; s.flash = { big: '戦闘宙域 到達', sub: '高度 1,900 km', col: '#5fd7ff', t: 1.6 }; snd('jingle', true); B.waveT = 2.2;
+      radio(s, '管制：戦闘宙域に到達。空気も音もない。聞こえるのは自分の鼓動だけだ。'); }
+    if (!B.r0) { B.r0 = true; radio(s, '管制：SG-1、発進を確認。目標高度1,900km…そこは、誰も助けに行けない場所だ。'); }
+    // fear: heartbeat when the shield is low, Earth's shadow, debris
+    B.hbT -= dt; if (B.shield <= 2 && B.hbT <= 0) { B.hbT = B.shield <= 1 ? 0.55 : 0.85; snd('thump', 0.55, 0.12, 140); setTimeout(() => snd('thump', 0.4, 0.1, 120), 140); }
+    const night = s.p.dot(SUN) < -0.05; if (night && !B.night && !B.launch) radio(s, B.nightN++ ? '…また影の中だ。赤い光から目を離すな。' : '地球の影に入った。真っ暗だ…赤い光だけを頼りにしろ。'); B.night = night;
+    B.breathT -= dt; if (B.breathT <= 0) { B.breathT = B.shield <= 1 ? 1.6 : 3.4; snd('swish', 0.05, 1.1); }
     if (B.waveT > 0) { B.waveT -= dt; if (B.waveT <= 0) { nextWave(s); if (s.done) return; } }
     // satellites: orbit, charge, fire
     let charging = 0; for (const t of B.sats) if (t.state === 'charge' || t.state === 'lock') charging++;
@@ -609,7 +642,8 @@ diffuseColor.rgb *= 1.0 + 0.2 * (mix(grain, 0.5, sea * 0.6) - 0.5) * clamp(1.0 -
       const d = t.pos.distanceTo(P);
       if (t.state === 'idle') {
         t.cd -= dt;
-        if (t.cd <= 0 && d < 0.14 && !B.launch && charging < (B.boss || B.lvl >= 2 ? 3 : 2) && los(t.pos, P)) { t.state = 'charge'; t.t = t.charge; charging++; snd('beep', 260, Math.min(1, t.charge), 'sawtooth', 0.025, 800); }
+        if (t.cd <= 0 && d < 0.14 && !B.launch && charging < (B.boss || B.lvl >= 2 ? 3 : 2) && los(t.pos, P)) { t.state = 'charge'; t.t = t.charge; charging++; snd('beep', 260, Math.min(1, t.charge), 'sawtooth', 0.025, 800);
+          if (!B.rc) { B.rc = true; radio(s, '衛星がこちらを照準！赤い線の先がお前の未来位置だ。進路を変えろ！'); } }
       } else if (t.state === 'charge' || t.state === 'lock') {
         t.t -= dt;
         if (t.state === 'charge') { const tl = Math.max(0, t.t); // predict along the current turn: keep turning the same way and you get hit
@@ -634,16 +668,26 @@ diffuseColor.rgb *= 1.0 + 0.2 * (mix(grain, 0.5, sea * 0.6) - 0.5) * clamp(1.0 -
     // missiles
     B.fireCD -= dt;
     if (inp.fire && B.fireCD <= 0 && !B.launch) { const m = B.missiles.find(q => !q.on);
-      if (m) { B.fireCD = 0.25; B.shots++; const right = s.f.clone().cross(s.p).normalize();
-        m.on = true; m.pos.copy(P).addScaledVector(right, (B.shots % 2 ? 1 : -1) * planeScale(s) * 0.9); m.dir.copy(vel).normalize(); m.spd = vel.length() + 0.09; m.life = 2.2; m.target = B.lock;
-        snd('beep', 520, 0.07, 'square', 0.035, 180); } }
+      if (m) { B.fireCD = 0.25; B.shots++; const right = s.f.clone().cross(s.p).normalize(), ps = planeScale(s);
+        m.on = true; m.pos.copy(P).addScaledVector(right, 0.84 * ps).addScaledVector(s.p, -0.3 * ps).addScaledVector(s.f, 2.9 * ps);
+        m.dir.copy(B.lock ? B.lock.pos.clone().sub(m.pos).normalize() : vel.clone().normalize()); m.spd = vel.length() + 0.2; m.life = 1.3; m.target = B.lock; B.muzT = 0.07;
+        snd('beep', 1200, 0.09, 'sawtooth', 0.03, 300); } }
     for (const m of B.missiles) { if (!m.on) continue; m.life -= dt;
-      if (m.target && !m.target.dead) { const want = m.target.pos.clone().sub(m.pos).normalize(); m.dir.lerp(want, Math.min(1, dt * 7)).normalize(); }
+      if (m.target && !m.target.dead) { const want = m.target.pos.clone().sub(m.pos).normalize(); m.dir.lerp(want, Math.min(1, dt * 6)).normalize(); }
       m.pos.addScaledVector(m.dir, m.spd * dt);
       if (m.life <= 0 || m.pos.length() < 1.001) { m.on = false; continue; }
       for (const t of B.sats) if (!t.dead && m.pos.distanceTo(t.pos) < t.r) { m.on = false; B.hits++; t.hp--; boomFx(m.pos, t.boss ? 0.006 : 0.004, 0xffc060, 2); snd('thump', 0.3, 0.15, 1400);
         if (t.hp <= 0) kill(s, t); break; }
     }
+    B.muzT = Math.max(0, (B.muzT || 0) - dt);
+    B.debWarn = false;
+    for (const d of BT.deb) { if (!d.on) continue; d.life -= dt; d.pos.addScaledVector(d.vel, dt);
+      if (d.life <= 0 || d.pos.length() < 1.01) { d.on = false; continue; }
+      const rel = d.pos.clone().sub(P), dist = rel.length();
+      if (dist < 0.0035) { d.on = false; boomFx(d.pos, 0.004, 0xcfd8e0, 2); if (s.rollT > 0) addScore(s, 200, 'デブリをロールで回避 +200', '#5fd7ff'); else { snd('thump', 0.8, 0.3, 300); hurt(s); if (s.done) return; } continue; }
+      if (dist < 0.035 && rel.dot(d.vel.clone().sub(vel)) < 0) B.debWarn = true; }
+    if (B.debWarn && !B.rd) { B.rd = true; radio(s, '破片が飛んでくる！当たれば穴が開くぞ。避けるかロールだ！'); }
+    if (B.radio) { B.radio.t += dt; if (B.radio.t > B.radio.life) B.radio = null; }
     // remove dead, wave clear
     if (B.sats.some(t => t.dead)) { for (const t of B.sats) if (t.dead) { scene.remove(t.mesh); scene.remove(t.laser); t.laser.material.dispose(); }
       B.sats = B.sats.filter(t => !t.dead); if (B.lock && B.lock.dead) B.lock = null; if (B.cand && B.cand.dead) B.cand = null;
@@ -664,14 +708,22 @@ diffuseColor.rgb *= 1.0 + 0.2 * (mix(grain, 0.5, sea * 0.6) - 0.5) * clamp(1.0 -
       eye.scale.setScalar(danger ? 1.1 + Math.sin(now * 0.03) * 0.3 + (t.state === 'fire' ? 0.8 : 0) : 0.7);
       const L = t.laser;
       if (!danger) { L.visible = false; continue; }
-      const dir = t.aim.clone().sub(t.from), len = beamLen(t); dir.normalize();
+      const dir = t.aim.clone().sub(t.from), len = Math.min(beamLen(t), dir.length() + 0.012); dir.normalize(); // drawn only a little past the aim point so it never sweeps across the camera
       L.visible = true; L.position.copy(t.state === 'charge' ? t.pos : t.from); L.quaternion.setFromUnitVectors(Y, dir);
       const r = t.state === 'charge' ? 0.00035 : t.state === 'lock' ? 0.0007 : (t.boss ? 0.0045 : 0.0028);
       L.scale.set(r, len, r);
       L.material.color.setHex(t.state === 'lock' ? 0xff90a0 : 0xff2840);
       L.material.opacity = t.state === 'charge' ? 0.35 + 0.35 * (Math.floor(now / 60) % 2) : t.state === 'lock' ? 0.95 : 1;
     }
-    B.missiles.forEach((m, i) => { const sp = BT.mis[i]; sp.visible = m.on; if (m.on) { sp.position.copy(m.pos); sp.scale.setScalar(0.0026 + Math.random() * 0.0008); } });
+    const ps = planeScale(s);
+    B.missiles.forEach((m, i) => { const sp = BT.mis[i], b = BT.bolt[i]; sp.visible = b.visible = m.on;
+      if (m.on) { sp.position.copy(m.pos); sp.scale.setScalar(0.004 + Math.random() * 0.001);
+        b.position.copy(m.pos); b.quaternion.setFromUnitVectors(Y, m.dir.clone().negate()); b.scale.set(0.0005, 0.014, 0.0005); } });
+    BT.muz.visible = B.muzT > 0; if (BT.muz.visible) { BT.muz.position.copy(plane.localToWorld(new T.Vector3(0.84, -0.32, -2.95))); BT.muz.scale.setScalar(ps * 2.2); }
+    for (const d of BT.deb) { d.mesh.visible = d.on; if (!d.on) continue; d.spin += dt * 3; d.mesh.position.copy(d.pos); d.mesh.setRotationFromAxisAngle(d.ax, d.spin); d.mesh.scale.setScalar(0.0011); }
+    // Earth's shadow: the night side goes nearly black
+    const nk = clamp(-s.p.dot(SUN) * 3 + 0.3, 0, 1); amb.intensity = 0.55 - 0.47 * nk; hemi.intensity = 0.25 * (1 - nk);
+    const fls = plane.userData.rk.userData.flames, fz = s.boosting ? 2.4 + Math.random() * 0.6 : 0.9 + Math.random() * 0.3; fls.forEach(f => f.scale.set(1, 1, fz)); flame.visible = glow.visible = false;
     for (const f of BT.fxs) { if (f.life <= 0) continue; f.life -= dt; if (f.life <= 0) { f.sp.visible = false; continue; }
       const k = 1 - f.life / f.max; f.pos.addScaledVector(f.vel, dt); f.sp.position.copy(f.pos); f.sp.scale.setScalar(f.size * (0.4 + k * 1.2)); f.sp.material.opacity = 1 - k; }
   }
@@ -703,11 +755,34 @@ diffuseColor.rgb *= 1.0 + 0.2 * (mix(grain, 0.5, sea * 0.6) - 0.5) * clamp(1.0 -
         const bw = Math.max(26, rad * 2); hx.fillStyle = 'rgba(2,6,14,.6)'; hx.fillRect(sx - bw / 2, sy2 + rad + 11, bw, 4); hx.fillStyle = '#ff5b5b'; hx.fillRect(sx - bw / 2, sy2 + rad + 11, bw * t.hp / t.maxHp, 4);
       } else edgeArrow(sx, sy2, behind, col);
     }
+    const scr = v3 => { const v = v3.clone().project(camera), bh = v3.clone().sub(camera.position).dot(camDir) < 0; return [(v.x * 0.5 + 0.5) * W, (-v.y * 0.5 + 0.5) * H, bh]; };
+    // helmet: dark vignette (always), red pulse + visor cracks when the shield is low
+    { const g = hx.createRadialGradient(cx, H * 0.5, Math.min(W, H) * 0.35, cx, H * 0.5, Math.max(W, H) * 0.75); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, `rgba(0,0,0,${0.55 + (B.night ? 0.2 : 0)})`); hx.fillStyle = g; hx.fillRect(0, 0, W, H);
+      if (B.shield <= 1 && !B.launch) { const a = 0.12 + 0.1 * Math.sin(now * 0.008); const g2 = hx.createRadialGradient(cx, H * 0.5, Math.min(W, H) * 0.3, cx, H * 0.5, Math.max(W, H) * 0.7); g2.addColorStop(0, 'rgba(255,0,30,0)'); g2.addColorStop(1, `rgba(255,0,30,${a})`); hx.fillStyle = g2; hx.fillRect(0, 0, W, H);
+        hx.strokeStyle = 'rgba(220,240,255,.45)'; hx.lineWidth = 1.2; hx.beginPath(); const ox = W * 0.82, oy = H * 0.18;
+        for (let k = 0; k < 7; k++) { let x = ox, y = oy, an = k * 0.9 + 0.3; hx.moveTo(x, y); for (let q = 0; q < 4; q++) { an += Math.sin(k * 7 + q * 3) * 0.5; x += Math.cos(an) * (30 + q * 12); y += Math.sin(an) * (30 + q * 12); hx.lineTo(x, y); } } hx.stroke(); } }
+    // my aim: crosshair where the beam rifle points; a line to the locked target
+    if (!B.launch) { const [ax, ay, ab] = scr(P.clone().addScaledVector(s.f, 0.12));
+      if (!ab) { hx.strokeStyle = B.lock ? '#ff2840' : '#66f0ff'; hx.lineWidth = 2; hx.beginPath(); hx.arc(ax, ay, 15, 0, 6.2832);
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { hx.moveTo(ax + dx * 8, ay + dy * 8); hx.lineTo(ax + dx * 22, ay + dy * 22); } hx.stroke();
+        if (B.lock) { const [lx, ly, lb] = scr(B.lock.pos); if (!lb) { hx.setLineDash([6, 6]); hx.strokeStyle = 'rgba(255,40,64,.8)'; hx.beginPath(); hx.moveTo(ax, ay); hx.lineTo(lx, ly); hx.stroke(); hx.setLineDash([]); } }
+        else txt('照準', ax, ay + 32, `500 10px ${FD}`, '#66f0ff', 'center'); } }
+    // being aimed at: red ring around my robot
+    if (B.warn) { const [rx, ry] = scr(P), rr = 34 + (B.warn === 2 ? 6 * Math.sin(now * 0.04) : 0);
+      hx.strokeStyle = B.warn === 2 ? '#ff2840' : 'rgba(255,90,110,.7)'; hx.lineWidth = B.warn === 2 ? 3 : 2; hx.setLineDash(B.warn === 2 ? [] : [5, 5]);
+      hx.beginPath(); hx.arc(rx, ry, rr, 0, 6.2832); hx.stroke(); hx.setLineDash([]); txt('狙われている', rx, ry + rr + 12, `400 11px ${FD}`, '#ff5b5b', 'center'); }
+    if (B.debWarn) txt('⚠ デブリ接近', cx, Math.max(H * 0.4, 192) + 30, `400 ${sm ? 13 : 16}px ${FD}`, Math.floor(now / 150) % 2 ? '#ffb040' : '#ffffff', 'center');
+    // radio from mission control (typewriter)
+    if (B.radio) { const port = H > W, maxW = port ? W - 120 : Math.min(W - 280, 520), n = Math.floor(B.radio.t * 22), shown = B.radio.txt.slice(0, n);
+      hx.font = `500 12px ${FD}`; const lines = wrapText(shown, maxW - 16), y0 = port ? H - 112 : H - 26, h = 22 + lines.length * 17;
+      hx.globalAlpha = Math.min(1, (B.radio.life - B.radio.t) * 2); hx.fillStyle = 'rgba(2,10,6,.62)'; roundRect(10, y0 - h, maxW, h, 8); hx.fill();
+      txt('📻 通信', 18, y0 - h + 10, `600 10px ${FM}`, '#7dffb0', 'left', false);
+      lines.forEach((l, i) => txt(l, 18, y0 - h + 26 + i * 17, `500 12px ${FD}`, '#c8ffe0', 'left', false)); hx.globalAlpha = 1; }
     if (B.warn === 2) txt('⚠ 回避！ 赤線から外れろ', cx, Math.max(H * 0.4, 192), `400 ${sm ? 18 : 24}px ${FD}`, Math.floor(now / 100) % 2 ? '#ff2840' : '#ffffff', 'center');
-    else if (B.warn === 1) txt('レーザー照準中…', cx, Math.max(H * 0.4, 192), `400 ${sm ? 13 : 16}px ${FD}`, '#ff8080', 'center');
+    else if (B.warn === 1 && H >= 420) txt('レーザー照準中…', cx, Math.max(H * 0.4, 192), `400 ${sm ? 13 : 16}px ${FD}`, '#ff8080', 'center');
     if (B.rollCD > 0) txt(`ROLL ${B.rollCD.toFixed(1)}s`, 12, sy + 18, `600 10px ${FM}`, '#6f8790');
     if (B.inv > 0) { hx.fillStyle = `rgba(255,40,64,${Math.min(0.3, B.inv * 0.22)})`; hx.fillRect(0, 0, W, H); }
-    if (B.launch) txt(`高度 ${Math.round(s.alt * R_KM)} km → 軌道 290 km`, cx, H * 0.72, `400 ${sm ? 14 : 17}px ${FD}`, '#5fd7ff', 'center');
+    if (B.launch) txt(`高度 ${Math.round(s.alt * R_KM).toLocaleString()} km → 戦闘宙域 1,900 km`, cx, Math.max(H * 0.4, 192), `400 ${sm ? 14 : 17}px ${FD}`, '#5fd7ff', 'center');
   }
   function battleEnd(s, win) {
     if (s.done) return; const B = s.B;
@@ -728,8 +803,8 @@ diffuseColor.rgb *= 1.0 + 0.2 * (mix(grain, 0.5, sea * 0.6) - 0.5) * clamp(1.0 -
   }
 
   /* ---------------- camera & render ---------------- */
-  const camDist = s => s.B ? 0.014 + s.alt * 0.12 : 0.0105 + s.alt * 1.55;
-  const planeScale = s => camDist(s) * 0.105;
+  const camDist = s => s.B ? (s.B.launch ? 0.018 + s.alt * 0.04 : 0.03) : 0.0105 + s.alt * 1.55;
+  const planeScale = s => camDist(s) * (s.B && !s.B.launch ? 0.072 : 0.105);
   function toggleView() { if (!S) return; S.view = S.view ? 0 : 1; snd('beep', S.view ? 520 : 780, 0.1, 'triangle', 0.08); }
   function updateScene(s, dt, now) {
     const T = THREE;
@@ -747,9 +822,10 @@ diffuseColor.rgb *= 1.0 + 0.2 * (mix(grain, 0.5, sea * 0.6) - 0.5) * clamp(1.0 -
     const cd = camDist(s);
     let cp, cu, look;
     if (s.view === 0) {
-      const hi = s.B ? 0.5 : 0.3, lk = s.B ? 0.24 : 0.06; // battle: sit higher so targets ahead are not hidden by the rocket
+      // battle: camera high above the robot and tilted down, so the robot sits low, enemies show above it and Earth's limb curves along the bottom
+      const bt = s.B && !s.B.launch, hi = bt ? 0.8 : 0.3, lk = bt ? -0.13 : 0.06;
       cp = P.clone().addScaledVector(s.f, -cd).addScaledVector(up, cd * hi);
-      cu = up.clone(); look = P.clone().addScaledVector(s.f, cd * 0.55).addScaledVector(up, cd * lk);
+      cu = up.clone(); look = P.clone().addScaledVector(s.f, cd * (bt ? 1 : 0.55)).addScaledVector(up, cd * lk);
     } else {
       const r = 3.1 + s.alt; cp = s.p.clone().multiplyScalar(r * 0.82).addScaledVector(s.f, -r * 0.5); cu = s.f.clone(); look = P.clone().multiplyScalar(0.55);
     }
@@ -760,8 +836,8 @@ diffuseColor.rgb *= 1.0 + 0.2 * (mix(grain, 0.5, sea * 0.6) - 0.5) * clamp(1.0 -
     if (s.camP.length() < 1 + sampleH(s.camP) + 0.0012) s.camP.setLength(1 + sampleH(s.camP) + 0.0012);
     camera.position.copy(s.camP); camera.up.copy(s.camU); camera.lookAt(s.camL);
     const camR = s.camP.length() - 1;
-    camera.near = clamp(camR * 0.05, 0.0003, 0.08); camera.far = 260;
-    camera.fov = s.view ? 50 : 60 + clamp((s.v - VC) / (VM - VC), -0.5, 1) * 14; camera.updateProjectionMatrix();
+    camera.near = s.B ? 0.002 : clamp(camR * 0.05, 0.0003, 0.08); camera.far = 260;
+    camera.fov = s.B ? 62 + (s.boosting ? 6 : 0) : s.view ? 50 : 60 + clamp((s.v - VC) / (VM - VC), -0.5, 1) * 14; camera.updateProjectionMatrix();
     // rings & guide
     rings.forEach((r, i) => { r.mesh.visible = i >= s.ring && i <= s.ring + 1; if (!r.mesh.visible) return; const nx = i === s.ring;
       r.mesh.material.color.setHex(nx ? 0xff6a1a : 0xffd23f); r.mesh.material.opacity = nx ? 0.95 : 0.35;
@@ -780,7 +856,7 @@ diffuseColor.rgb *= 1.0 + 0.2 * (mix(grain, 0.5, sea * 0.6) - 0.5) * clamp(1.0 -
     const sf = clamp(1 + camR * 2.2, 1, 3.2);
     for (const sp of sprites) { const z = Math.min(sp.userData.sz * sf, sp.position.distanceTo(camera.position) * 0.055); sp.scale.set(z, z, 1); }
     earthMat.userData.uCam.value = camR;
-    if (s.B) battleScene(s, dt, now); else plane.visible = true;
+    if (s.B) battleScene(s, dt, now); else { plane.visible = true; flame.visible = glow.visible = true; }
     earthMat.userData.uTime.value = now / 1000; starMat.uniforms.time.value = now / 1000; stars.rotation.y = now * 0.000003;
     clouds.rotation.y += dt * 0.004;
     renderer.render(scene, camera);
@@ -894,9 +970,15 @@ diffuseColor.rgb *= 1.0 + 0.2 * (mix(grain, 0.5, sea * 0.6) - 0.5) * clamp(1.0 -
   function engine(s, on) {
     const sn = (window.EarthLapHost || {}).Snd; if (!sn || !sn.ok || !sn.ctx || sn.ctx.state !== 'running') return;
     const t = sn.ctx.currentTime, go = on && sn.on() && s && s.count <= 0 && !s.done, k = s ? clamp((s.v - VC * 0.4) / (VM - VC * 0.4), 0, 1) : 0;
-    sn.eg.gain.setTargetAtTime(go ? 0.08 + k * 0.12 : 0, t, 0.15);
-    sn.whg.gain.setTargetAtTime(go ? 0.015 + k * 0.03 : 0, t, 0.2);
-    sn.wg.gain.setTargetAtTime(go ? 0.18 + k * 0.24 : 0, t, 0.2);
+    const vac = go && s.B && !s.B.launch; // in vacuum: no wind, only a muffled hum through the suit and a deep drone
+    sn.eg.gain.setTargetAtTime(go ? (vac ? 0.025 + k * 0.04 : 0.08 + k * 0.12) : 0, t, 0.15);
+    sn.whg.gain.setTargetAtTime(go ? (vac ? 0.004 : 0.015 + k * 0.03) : 0, t, 0.2);
+    sn.wg.gain.setTargetAtTime(go && !vac ? 0.18 + k * 0.24 : 0, t, 0.2);
+    if (!BT.drone && vac) { const c = sn.ctx, g = c.createGain(); g.gain.value = 0; g.connect(sn.master);
+      const o1 = c.createOscillator(), o2 = c.createOscillator(), lfo = c.createOscillator(), lg = c.createGain();
+      o1.frequency.value = 41; o2.frequency.value = 61.7; o2.type = 'triangle'; lfo.frequency.value = 0.13; lg.gain.value = 0.03;
+      lfo.connect(lg); lg.connect(g.gain); o1.connect(g); o2.connect(g); o1.start(); o2.start(); lfo.start(); BT.drone = g; }
+    if (BT.drone) BT.drone.gain.setTargetAtTime(vac ? 0.09 + (s.B.shield <= 1 ? 0.05 : 0) : 0, t, 0.8);
     if (s) { sn.o1.frequency.setTargetAtTime(120 + k * 90, t, 0.3); sn.o2.frequency.setTargetAtTime(242 + k * 185, t, 0.3); sn.wh.frequency.setTargetAtTime(1100 + k * 1300, t, 0.4); }
   }
 
@@ -920,8 +1002,9 @@ diffuseColor.rgb *= 1.0 + 0.2 * (mix(grain, 0.5, sea * 0.6) - 0.5) * clamp(1.0 -
     clearBattle();
     wrap.classList.toggle('battle', bt); plane.userData.jet.visible = !bt; plane.userData.rk.visible = bt;
     el.elRoll.innerHTML = bt ? 'ROLL<small>無敵回避</small>' : 'ROLL<small>Z/X</small>';
+    el.elFire.innerHTML = 'FIRE<small>BEAM</small>'; amb.intensity = 0.55; hemi.intensity = 0.25;
     el.elBoost.innerHTML = bt ? 'BOOST<small>B</small>' : 'BOOST<small>×100</small>';
-    el.elHelp.innerHTML = bt ? '左側ドラッグ：旋回・上昇/降下　FIRE：ミサイル（正面の衛星を自動ロックオンして追尾）　ROLL：無敵回避（1.6秒に1回）　BOOST：加速<br>赤い細線＝照準中、線が太く固まったら0.5秒後に発射。進路を変えて外れろ！<br>PC：←→↑↓ 操作　Space/F 発射　B/Shift ブースト　Z/X ロール　Esc 一時停止'
+    el.elHelp.innerHTML = bt ? '左側ドラッグ：旋回・上昇/降下　FIRE：ビームライフル（照準の＋に向けて発射。正面の衛星は自動ロックオンして追尾）　ROLL：無敵回避（1.6秒に1回）　BOOST：加速<br>赤い細線＝照準中、線が太く固まったら0.5秒後に発射。進路を変えて外れろ！<br>PC：←→↑↓ 操作　Space/F 発射　B/Shift ブースト　Z/X ロール　Esc 一時停止'
       : '左側ドラッグ：左右で旋回・上下で上昇/降下　BOOST：A/B（最高マッハ115）　ROLL：バレルロール　🌍：宇宙ビュー切替<br>PC：←→旋回 ↑↓上昇/降下 Space/B ブースト Z/X ロール V 視点 Esc 一時停止';
     makeRings(course);
     for (const sp of sprites) sp.material.opacity = 1;
