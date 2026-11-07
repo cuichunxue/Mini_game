@@ -169,6 +169,7 @@ h1,h2,h3{margin:0;text-wrap:balance}
         <div>機体選択<b>ルート選択画面で 旅客機 / ステルス戦闘機</b></div>
         <div>ブースト・アフターバーナー（リング区間）<b>Space / B 長押し</b></div>
         <div>バレルロール<b>Z / X（← →2回押し）</b></div>
+        <div>背面飛行（戦闘機）<b>Z / X 押し続ける</b></div>
         <div>フレア補助（着陸前）<b>Space 長押し</b></div>
         <div>ブレーキ（接地後）<b>Space 長押し</b></div>
         <div>接地後の操向<b>← →</b></div>
@@ -230,6 +231,7 @@ h1,h2,h3{margin:0;text-wrap:balance}
       <label><input type="checkbox" id="optGuide" checked> 進入ガイド・接地予測・リング矢印を表示</label>
       <label><input type="checkbox" id="optInvert"> 機首操作を反転（下で機首上げ）</label>
       <label><input type="checkbox" id="optSound" checked> 効果音</label>
+      <label><input type="checkbox" id="optAssist" checked> リングアシスト・スロー（戦闘機）</label>
     </div>
     <div class="row">
       <button class="btn primary" id="btnResume" type="button">再開 <span class="k">Esc</span></button>
@@ -249,11 +251,11 @@ const SIM = (() => {
     liner: { id: 'liner', KL: 0.003337, CL0: 0.3, CLA: 0.1, AST: 11, CD0: 0.07, K: 0.06, TMAX: 2.5,
       PR: 10, BR: 40, BMAX: 40, PMIN: -14, PMAX: 16, VWARN: 56, VMAX: 88, TLIMIT: 180, CEIL: 900,
       NMAX: 3.5, GMIN: -40, GMAX: 30, VCAP: 150, BOOSTA: 7, BDRAIN: 22, VREF: 80, VSTART: 0, VCRUISE: 72,
-      VAPP: [60, 75], TAILMAX: 12, ROLLT: 0.95, RINGK: 1, FIGHTER: false },
+      VAPP: [60, 75], TAILMAX: 12, ROLLT: 0.95, RINGK: 1, FIGHTER: false, ASSIST: false },
     fighter: { id: 'fighter', KL: 0.003337, CL0: 0.3, CLA: 0.1, AST: 13, CD0: 0.066, K: 0.05, TMAX: 12,
-      PR: 26, BR: 170, BMAX: 88, PMIN: -30, PMAX: 32, VWARN: 58, VMAX: 96, TLIMIT: 180, CEIL: 1500,
+      PR: 18, BR: 120, BMAX: 88, PMIN: -30, PMAX: 32, VWARN: 58, VMAX: 96, TLIMIT: 180, CEIL: 1500,
       NMAX: 9, GMIN: -60, GMAX: 60, VCAP: 390, BOOSTA: 50, BDRAIN: 10, VREF: 86, VSTART: 125, VCRUISE: 125,
-      VAPP: [66, 84], TAILMAX: 15, ROLLT: 0.5, RINGK: 1.3, FIGHTER: true }
+      VAPP: [66, 84], TAILMAX: 15, ROLLT: 0.5, RINGK: 1.8, FIGHTER: true, ASSIST: true }
   };
   const AC = Object.assign({}, PLANES.liner);
   const select = id => Object.assign(AC, PLANES[id] || PLANES.liner);
@@ -440,7 +442,7 @@ const SIM = (() => {
       trk: 0, result: null, events: [], ring: 0, hits: [],
       boost: AC.FIGHTER ? 100 : 60, boosting: false, sbrk: false, roll: 0, rollT: -1, rollDir: 1, combo: 0, comboT: -9, nearCD: 0,
       stars: Wd.stars.map(() => false), sky: { trick: 0, near: 0, star: 0, speed: 0, ace: 0 }, ringT: null,
-      plane: AC.id, n: 1, rollQ: 0, highgT: 0, lowT: 0, aceCD: 0, mach: false, machT: -9 };
+      plane: AC.id, n: 1, rollQ: [], invT: 0, kinds: [], chainT: -9, highgT: 0, lowT: 0, aceCD: 0, mach: false, machT: -9 };
     s.vx = v * Math.sin(psi) + s.w.x; s.vz = v * Math.cos(psi) + s.w.z; s.vy = 0;
     return s;
   }
@@ -459,10 +461,15 @@ const SIM = (() => {
       const t = d0 / (d0 - d1), ix = px + (s.x - px) * t, iz = pz + (s.z - pz) * t, ih = ph + (s.h - ph) * t;
       const lat = Math.hypot(Math.hypot(ix - R.x, iz - R.z), ih - R.h);
       const RR = R.r * AC.RINGK, ok = lat <= RR, q = ok ? (lat < RR * 0.45 ? 1 : 0.75) : 0;
-      const rolling = ok && s.rollT >= 0;
+      const inverted = ok && s.rollT >= 0 && Math.abs(Math.abs(s.roll) - 180) < 45;
+      const rolling = ok && s.rollT >= 0 && !inverted;
+      const knife = ok && !inverted && Math.abs(s.bank) > 65;
       if (ok) s.boost = Math.min(100, s.boost + 18);
-      if (rolling) s.sky.trick = Math.min(TRICK_CAP, s.sky.trick + 400);
-      s.hits.push({ ok, q, lat: Math.round(lat) }); s.events.push({ type: 'ring', ok, q, idx: s.ring, n: s.W.rings.length, rolling }); s.ring++;
+      const capT = AC.FIGHTER ? TRICK_CAP_F : TRICK_CAP;
+      if (rolling) s.sky.trick = Math.min(capT, s.sky.trick + 400);
+      if (inverted) { s.sky.trick = Math.min(capT, s.sky.trick + 700); noteKind(s, 'inv-ring'); }
+      if (knife) { s.sky.trick = Math.min(capT, s.sky.trick + 500); noteKind(s, 'knife'); }
+      s.hits.push({ ok, q, lat: Math.round(lat) }); s.events.push({ type: 'ring', ok, q, idx: s.ring, n: s.W.rings.length, rolling, inverted, knife }); s.ring++;
       if (s.ring === s.W.rings.length) speedBonus(s);
     } else if (d1 > 350) {
       s.hits.push({ ok: false, q: 0, lat: 999 }); s.events.push({ type: 'ring', ok: false, q: 0, idx: s.ring, n: s.W.rings.length }); s.ring++;
@@ -470,7 +477,32 @@ const SIM = (() => {
     }
   }
   // TRIZ #15 dynamics: fast sky section is rewarded, separately from the slow landing
-  const TRICK_CAP = 3000, NEAR_CAP = 2000, ACE_CAP = 3000;
+  const TRICK_CAP = 3000, TRICK_CAP_F = 6000, NEAR_CAP = 2000, ACE_CAP = 4000;
+  // trick chain: 3 different kinds of trick within 8 s → bonus
+  function noteKind(s, kind) {
+    s.kinds = s.kinds.filter(k => s.t - k.t < 8 && k.kind !== kind); s.kinds.push({ kind, t: s.t });
+    if (s.kinds.length >= 3 && s.t - s.chainT > 8) {
+      s.chainT = s.t; const pts = Math.min(800, Math.max(0, ACE_CAP - s.sky.ace)); s.sky.ace += pts;
+      s.events.push({ type: 'chain', pts, n: s.kinds.length }); s.kinds = [];
+    }
+  }
+  // Fighter flight assist: gently steer toward the next ring when already roughly pointed at it
+  function ringAssist(s, inp) {
+    const R = s.W.rings[s.ring]; if (!R) return inp;
+    const dx = R.x - s.x, dz = R.z - s.z, dist = Math.hypot(dx, dz); if (dist > 1500 || dist < 15) return inp;
+    const track = Math.atan2(s.vx, s.vz), herr = angWrap(Math.atan2(dx - R.nx * Math.min(dist * 0.3, 150), dz - R.nz * Math.min(dist * 0.3, 150)) - track);
+    if (Math.abs(herr) > 1.4) return inp;
+    const verr = Math.atan2(R.h - s.h, Math.max(dist, 60)) - s.gam;
+    const near = clamp(1 - dist / 1500, 0, 1), own = 1 - clamp(Math.max(Math.abs(inp.bank), Math.abs(inp.pitch)) * 1.2, 0, 0.6);
+    const k = (0.55 + 0.45 * near) * own;
+    const bcmd = clamp(herr * R2D * 3, -80, 80);
+    s.assistTurn = Math.abs(herr) > 0.2 && dist < 1100; // needs a real turn: corner-speed brake (see step)
+    return Object.assign({}, inp, {
+      bank: clamp(inp.bank + clamp((bcmd - s.bank) / 18, -1, 1) * k, -1, 1),
+      pitch: clamp(inp.pitch + clamp(verr * R2D * 0.3 - s.gdot * 0.06, -1, 1) * k, -1, 1)
+    });
+  }
+  const expo = v => Math.sign(v) * Math.pow(Math.abs(v), 1.7);
   function speedBonus(s) {
     if (s.ringT != null) return;
     s.ringT = s.t;
@@ -521,7 +553,14 @@ const SIM = (() => {
       const px = s.x, ph = s.h, pz = s.z;
       const fx = Math.sin(s.psi), fz = Math.cos(s.psi);
       s.v += -((w.x - wp.x) * fx + (w.z - wp.z) * fz);
+      s.assistTurn = false;
+      if (AC.FIGHTER) {
+        inp = Object.assign({}, inp, { pitch: expo(inp.pitch || 0), bank: expo(inp.bank || 0) });
+        if (inp.assist !== false && !finalLeg(s)) inp = ringAssist(s, inp);
+      }
       let pr = inp.pitch * AC.PR;
+      // fly-by-wire: with the stick centred the fighter holds its flight path instead of drifting
+      if (AC.FIGHTER && Math.abs(inp.pitch) < 0.05) pr = clamp(-s.gdot * 1.2, -12, 12);
       if (inp.flare && s.h < 15) pr += clamp((-s.vy - 1.2) * 2.5, -2, 6);
       s.pitch = clamp(s.pitch + pr * DT, AC.PMIN, AC.PMAX);
       let br = inp.bank * AC.BR;
@@ -537,9 +576,12 @@ const SIM = (() => {
       let vdot = s.thr * AC.TMAX - q * CD - G * Math.sin(s.gam);
       // TRIZ #15/#19: BOOST only in the sky section; auto speed brake once on final (#11 cushion in advance)
       const fl = finalLeg(s);
-      s.boosting = !!inp.boost && !fl && s.boost > 0;
+      // assist: afterburner is cut automatically while a hard turn to the next ring is needed
+      s.boosting = !!inp.boost && !fl && s.boost > 0 && !(s.assistTurn && s.v > 200);
       if (s.boosting) { vdot += AC.BOOSTA; s.boost = Math.max(0, s.boost - AC.BDRAIN * DT); }
       else if (!fl) s.boost = Math.min(100, s.boost + 2.5 * DT);
+      // corner-speed brake: too fast to make the turn to the next ring → bleed speed toward 200 m/s (assist only)
+      if (s.assistTurn && s.v > 200) vdot -= (s.v - 200) * 0.6;
       if (fl && s.v > AC.VREF) { vdot -= (s.v - AC.VREF) * (AC.FIGHTER ? 0.9 : 0.55); if (!s.sbrk) { s.sbrk = true; s.events.push({ type: 'sbrk' }); } }
       const gdot = (L * Math.cos(bk) - G * Math.cos(s.gam)) / s.v;
       s.gdot = gdot * R2D;
@@ -549,23 +591,48 @@ const SIM = (() => {
       const vh = s.v * Math.cos(s.gam);
       s.vx = vh * Math.sin(s.psi) + w.x; s.vz = vh * Math.cos(s.psi) + w.z; s.vy = s.v * Math.sin(s.gam) + w.y * clamp(s.h / 30, 0, 1);
       s.x += s.vx * DT; s.z += s.vz * DT; s.h += s.vy * DT;
+      // ring capture (fighter assist): within 200 m of a ring, a near-miss trajectory is drawn into the ring
+      if (AC.FIGHTER && inp.assist !== false && !fl) {
+        const R = s.W.rings[s.ring];
+        if (R) {
+          const dn = (R.x - s.x) * R.nx + (R.z - s.z) * R.nz, vn = s.vx * R.nx + s.vz * R.nz;
+          if (dn > 0 && dn < 200 && vn > 1) {
+            const t = dn / vn, ex = s.x + s.vx * t - R.x, ez = s.z + s.vz * t - R.z, eh = s.h + s.vy * t - R.h;
+            const lx = ex - (ex * R.nx + ez * R.nz) * R.nx, lz = ez - (ex * R.nx + ez * R.nz) * R.nz; // lateral part (in ring plane)
+            const err = Math.hypot(lx, lz, eh), RR = R.r * AC.RINGK;
+            if (err > RR * 0.3 && err < RR * 1.7) {
+              const m = Math.min(40 * DT, (err - RR * 0.3)) / err;
+              s.x -= lx * m; s.z -= lz * m; s.h -= eh * m;
+            }
+          }
+        }
+      }
       if (alpha > AC.AST - 1 || s.v < AC.VWARN) s.stallT = s.t;
       // TRIZ #17 another dimension: the barrel roll is a visual axis on top of the flight model,
       // so it adds thrill without destabilising the physics (#25 self-service: it flies itself)
       const canRoll = s.h > 25 && !(fl && s.h < 150);
-      if (inp.trick && s.rollT >= 0 && AC.FIGHTER) s.rollQ = inp.trick; // fighter: queue a follow-up roll
-      if (inp.trick && s.rollT < 0 && canRoll) { s.rollT = 0; s.rollDir = inp.trick > 0 ? 1 : -1; s.events.push({ type: 'rollstart' }); }
+      if (inp.trick && s.rollT >= 0 && AC.FIGHTER && s.rollQ.length < 2) s.rollQ.push(inp.trick); // fighter: queue up to a triple roll
+      if (inp.trick && s.rollT < 0 && canRoll) { s.rollT = 0; s.rollDir = inp.trick > 0 ? 1 : -1; s.invT = 0; s.events.push({ type: 'rollstart' }); }
       if (s.rollT >= 0) {
-        s.rollT += DT; const p = Math.min(1, s.rollT / AC.ROLLT), e = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+        s.rollT += DT; let p = Math.min(1, s.rollT / AC.ROLLT);
+        // inverted flight: holding the roll input parks the plane upside down (fighter)
+        if (AC.FIGHTER && inp.rollHold && p >= 0.5 && canRoll) { p = 0.5; s.rollT = 0.5 * AC.ROLLT; s.invT += DT; }
+        else if (s.invT > 0.6 && p > 0.5 && !s.invDone) {
+          s.invDone = true; const pts = Math.min(Math.round(250 + s.invT * 180), 900, Math.max(0, TRICK_CAP_F - s.sky.trick));
+          s.sky.trick += pts; noteKind(s, 'inverted'); s.events.push({ type: 'inverted', pts, t: s.invT });
+        }
+        const e = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
         s.roll = s.rollDir * 360 * e;
         if (p >= 1) {
           s.roll = 0; s.rollT = -1;
           if (s.t - s.comboT > 6) s.combo = 0;
           s.combo++; s.comboT = s.t;
-          const pts = Math.min(150 + 50 * Math.min(s.combo - 1, 4), Math.max(0, TRICK_CAP - s.sky.trick));
+          const pts = Math.min(150 + 50 * Math.min(s.combo - 1, 4), Math.max(0, (AC.FIGHTER ? TRICK_CAP_F : TRICK_CAP) - s.sky.trick));
           s.sky.trick += pts; s.boost = Math.min(100, s.boost + 12);
           s.events.push({ type: 'trick', pts, combo: s.combo });
-          if (s.rollQ && canRoll) { s.rollT = 0; s.rollDir = s.rollQ > 0 ? 1 : -1; s.rollQ = 0; s.events.push({ type: 'rollstart' }); }
+          noteKind(s, s.combo >= 3 ? 'multi-roll' : 'roll');
+          s.invT = 0; s.invDone = false;
+          if (s.rollQ.length && canRoll) { const d = s.rollQ.shift(); s.rollT = 0; s.rollDir = d > 0 ? 1 : -1; s.events.push({ type: 'rollstart' }); }
         }
       }
       // fighter "ace" manoeuvres: sustained high-G turn, low fast pass, breaking the sound barrier
@@ -573,12 +640,12 @@ const SIM = (() => {
         s.highgT = s.n >= 6 ? s.highgT + DT : 0;
         s.lowT = (s.h < 60 && s.v > 200) ? s.lowT + DT : 0;
         const award = (kind, pts) => { pts = Math.min(pts, Math.max(0, ACE_CAP - s.sky.ace)); s.sky.ace += pts; s.boost = Math.min(100, s.boost + 10); s.aceCD = s.t + 3; s.events.push({ type: 'ace', kind, pts }); };
-        if (s.t > s.aceCD && s.highgT > 1.2) { s.highgT = 0; award('highg', 300); }
-        if (s.t > s.aceCD && s.lowT > 1.0) { s.lowT = 0; award('lowpass', 350); }
+        if (s.t > s.aceCD && s.highgT > 1.2) { s.highgT = 0; award('highg', 300); noteKind(s, 'highg'); }
+        if (s.t > s.aceCD && s.lowT > 1.0) { s.lowT = 0; award('lowpass', 350); noteKind(s, 'lowpass'); }
         if (!s.mach && s.v >= MACH1) {
           s.mach = true; s.machT = s.t;
           const pts = s.machDone ? 0 : Math.min(600, Math.max(0, ACE_CAP - s.sky.ace)); s.machDone = true; s.sky.ace += pts;
-          s.events.push({ type: 'mach', pts });
+          s.events.push({ type: 'mach', pts }); noteKind(s, 'mach');
         }
         if (s.mach && s.v < MACH1 - 25) s.mach = false; // can be broken again (points only once per pass)
       }
@@ -678,7 +745,7 @@ const SIM = (() => {
 /* ================= SAVE ================= */
 const Save = (() => {
   const KEY = 'tsk_v1';
-  let d = { best: {}, perfect: 0, streak: 0, bestStreak: 0, plane: 'liner', opt: { guide: true, invert: false, sound: true } };
+  let d = { best: {}, perfect: 0, streak: 0, bestStreak: 0, plane: 'liner', opt: { guide: true, invert: false, sound: true, assist: true } };
   try { const r = localStorage.getItem(KEY); if (r) { const p = JSON.parse(r); d = Object.assign(d, p); d.opt = Object.assign({ guide: true, invert: false, sound: true }, p.opt || {}); } } catch (e) {}
   const write = () => { try { localStorage.setItem(KEY, JSON.stringify(d)); } catch (e) {} };
   return { d, write };
@@ -789,7 +856,8 @@ const Inp = {
     if (dn) this.thr = Math.max(0, this.thr - 0.5 * dt);
     const trick = this.trickQ; this.trickQ = 0;
     const hold = k.has('Space') || this.act;
-    return { pitch: SIM.clamp(pitch, -1, 1), bank: SIM.clamp(bank, -1, 1), thr: this.thr, flare: hold, boost: hold || k.has('KeyB'), trick };
+    const rollHold = this.rollHeld || k.has('KeyZ') || k.has('KeyX');
+    return { pitch: SIM.clamp(pitch, -1, 1), bank: SIM.clamp(bank, -1, 1), thr: this.thr, flare: hold, boost: hold || k.has('KeyB'), trick, rollHold, assist: Save.d.opt.assist !== false };
   }
 };
 
@@ -1612,6 +1680,22 @@ function drawHUD(s, mode) {
   } else if (s.phase === 'roll') {
     txt(`残り滑走路 ${(st.length - s.z).toFixed(0)}m`, W / 2, pY + 34 * u, mono(12), (st.length - s.z) < 300 ? C_WARN : C_HUD, 'center');
   }
+  // predicted crossing point on the next ring plane ("you will pass here")
+  if (!fin && s.phase === 'air' && Save.d.opt.guide && mode === 'play') {
+    const Rn = Wd.rings[s.ring], dn = (Rn.x - s.x) * Rn.nx + (Rn.z - s.z) * Rn.nz, vn = s.vx * Rn.nx + s.vz * Rn.nz;
+    if (vn > 1 && dn > 0 && dn / vn < 6) {
+      const t = dn / vn, X = s.x + s.vx * t, Y = s.h + s.vy * t, Z = s.z + s.vz * t;
+      const err = Math.hypot(Math.hypot(X - Rn.x, Z - Rn.z), Y - Rn.h), RR = Rn.r * SIM.AC.RINGK, ok = err <= RR;
+      const pp = toScreen(X, Y, Z);
+      if (pp[2] > 0) {
+        const r = 9 * u, c = ok ? C_GOOD : C_OR;
+        ctx.strokeStyle = c; ctx.lineWidth = 3 * u; ctx.beginPath(); ctx.arc(pp[0], pp[1], r, 0, 6.2832); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(pp[0] - r * 1.8, pp[1]); ctx.lineTo(pp[0] - r, pp[1]); ctx.moveTo(pp[0] + r, pp[1]); ctx.lineTo(pp[0] + r * 1.8, pp[1]); ctx.moveTo(pp[0], pp[1] - r * 1.8); ctx.lineTo(pp[0], pp[1] - r); ctx.stroke();
+        if (t < 2.5) txt(ok ? 'IN' : 'OUT', pp[0], pp[1] + r * 3, mono(11), c, 'center');
+      }
+    }
+  }
+  if (slowFx < 0.9 && mode === 'play') txt('SLOW', W / 2, H * 0.74, disp(16), 'rgba(95,215,255,.85)', 'center');
   // next ring marker
   if (!fin && s.phase === 'air' && Save.d.opt.guide && mode === 'play') {
     const Rn = Wd.rings[s.ring], p = toScreen(Rn.x, Rn.h, Rn.z);
@@ -1661,18 +1745,29 @@ function drawHUD(s, mode) {
   }
   const hint = hintFor(s);
   if (hint && mode === 'play') {
-    ctx.font = body(14); const tw = Math.min(W - 40, ctx.measureText(hint).width + 28);
-    const hy = H - INS.b - (Inp.touch ? 26 : 22) * u - 20;
-    const hx = Inp.touch ? Math.min(W / 2, (W - 180) / 2 + 10) : W / 2;
-    ctx.fillStyle = 'rgba(12,23,32,.68)'; rr(hx - tw / 2, hy - 20 * u, tw, 30 * u, 8); ctx.fill();
-    txt(hint, hx, hy, body(14), C_HUD, 'center');
+    // fit the hint into the space left of the touch controls: shrink, then wrap to two lines
+    const aw = Math.max(140, Inp.touch ? W - 200 : W - 40);
+    let fs = 14, lines = [hint];
+    ctx.font = body(fs);
+    while (fs > 11 && ctx.measureText(hint).width + 24 > aw) { fs--; ctx.font = body(fs); }
+    if (ctx.measureText(hint).width + 24 > aw) {
+      const cut = (() => { const mid = hint.length / 2; let best = -1; for (let i = 0; i < hint.length; i++) if ('。、・ '.includes(hint[i]) && (best < 0 || Math.abs(i - mid) < Math.abs(best - mid))) best = i; return best < 0 ? Math.round(mid) : best + 1; })();
+      lines = [hint.slice(0, cut).trim(), hint.slice(cut).trim()];
+    }
+    const lh = (fs + 6) * u, tw = Math.min(aw, Math.max(...lines.map(l => ctx.measureText(l).width)) + 24);
+    const hx = Inp.touch ? 10 + aw / 2 : W / 2;
+    const hb = H - INS.b - (Inp.touch ? 20 : 16) * u - 10;
+    const boxH = lh * lines.length + 10 * u;
+    ctx.fillStyle = 'rgba(12,23,32,.68)'; rr(hx - tw / 2, hb - boxH, tw, boxH, 8); ctx.fill();
+    lines.forEach((l, i) => txt(l, hx, hb - boxH + 5 * u + lh * (i + 0.72), body(fs), C_HUD, 'center'));
   }
 }
 function hintFor(s) {
   if (s.result) return null;
   const T = Inp.touch, st = s.st, fin = SIM.finalLeg(s);
-  if (SIM.AC.FIGHTER && !fin && s.phase === 'air' && s.t >= 8 && s.t < 15) return T ? 'A/B長押しでアフターバーナー。ROLLを連打でダブルロール' : 'Space/B でアフターバーナー（マッハ1で音速突破）・Z/X 連打でダブルロール';
-  if (SIM.AC.FIGHTER && !fin && s.phase === 'air' && s.t >= 15 && s.t < 21) return '強く旋回し続けるとハイGターン、高度60m以下を高速で抜けるとローパス';
+  if (SIM.AC.FIGHTER && !fin && s.phase === 'air' && s.t >= 4 && s.t < 10) return '緑の◎が予測通過点。リングの中に重ねれば通る（アシストつき）';
+  if (SIM.AC.FIGHTER && !fin && s.phase === 'air' && s.t >= 10 && s.t < 16) return T ? 'ROLL連打でトリプルロール、長押しで背面飛行。背面のままリング通過は+700' : 'Z/X 連打でトリプルロール、押し続けて背面飛行。背面でリング通過は+700';
+  if (SIM.AC.FIGHTER && !fin && s.phase === 'air' && s.t >= 16 && s.t < 22) return '大きく傾けてリング通過＝ナイフエッジ。違う技を3つ続けるとトリックチェーン';
   if (!fin && s.phase === 'air' && s.t >= 8 && s.t < 15) return T ? '青いボタン長押しでブースト・ROLLでバレルロール' : 'Space/B 長押しでブースト・Z/X（←→2回押し）でバレルロール';
   if (!fin && s.phase === 'air' && s.t >= 15 && s.t < 20) return 'ビルや塔のそばを抜けるとニアミスでブースト回復。★も拾おう';
   if (s.phase === 'roll') return T ? '丸ボタン長押しでブレーキ・左ドラッグで操向' : 'Space 長押しでブレーキ・← → で操向';
@@ -1725,6 +1820,8 @@ function handleEvents(s) {
     else if (e.type === 'near') { pop(`ニアミス！ +${e.pts}`, C_WARN); Snd.swish(0.7, 0.35); if (navigator.vibrate) try { navigator.vibrate(15); } catch (er) {} }
     else if (e.type === 'star') { pop(`★ ${e.got}/${e.n}  +120`, '#ffd23f'); Snd.beep(1568, 0.1, 'sine', 0.08); setTimeout(() => Snd.beep(2093, 0.16, 'sine', 0.07), 60); }
     else if (e.type === 'speed') { pop(e.pts > 0 ? `スピードボーナス +${e.pts}` : `スカイ区間 ${e.t.toFixed(1)}s`, e.pts > 0 ? '#5fd7ff' : C_MUTE); }
+    else if (e.type === 'inverted') { flash = { big: '背面飛行！', sub: `${e.t.toFixed(1)}秒  +${e.pts}`, col: '#5fd7ff', t: 1.1 }; Snd.swish(0.5, 0.5); }
+    else if (e.type === 'chain') { flash = { big: 'トリックチェーン！', sub: `${e.n}種の技  +${e.pts}`, col: '#ffd23f', t: 1.3 }; Snd.jingle(true); }
     else if (e.type === 'ace') {
       const nm = e.kind === 'highg' ? 'ハイGターン！' : 'ローパス！';
       flash = { big: nm, sub: `+${e.pts}`, col: C_WARN, t: 1.0 }; Snd.swish(0.6, 0.5);
@@ -1736,6 +1833,8 @@ function handleEvents(s) {
     else if (e.type === 'sbrk') { pop('スピードブレーキ展開', C_WARN); Snd.thump(0.25, 0.4, 400); }
     else if (e.type === 'ring') {
       if (e.ok && e.rolling) { pop('ローリング通過！ +400', '#5fd7ff'); }
+      if (e.ok && e.inverted) { pop('背面通過！！ +700', '#ffd23f'); }
+      if (e.ok && e.knife) { pop('ナイフエッジ通過！ +500', C_WARN); }
       if (e.ok) {
         flash = { big: e.q === 1 ? 'ど真ん中！' : 'ナイス！', sub: `RING ${e.idx + 1}/${e.n}`, col: e.q === 1 ? C_OR : C_GOOD, t: 1.1 };
         Snd.beep(880, 0.1, 'triangle', 0.09); setTimeout(() => Snd.beep(1320, 0.14, 'triangle', 0.09), 80);
@@ -1754,11 +1853,17 @@ function handleEvents(s) {
   }
 }
 
-let warnBeepT = 0;
+let warnBeepT = 0, slowFx = 1;
 function frame(now) {
   const dt = Math.min(0.1, (now - (last || now)) / 1000); last = now;
   if (mode === 'play' || (mode !== 'pause' && attract)) {
-    acc += dt;
+    let tsc = 1;
+    if (!attract && SIM.AC.FIGHTER && Save.d.opt.assist !== false && sim.phase === 'air' && !SIM.finalLeg(sim) && sim.v > 170) {
+      const R = sim.W.rings[sim.ring], dn = (R.x - sim.x) * R.nx + (R.z - sim.z) * R.nz, vn = sim.vx * R.nx + sim.vz * R.nz;
+      if (vn > 1 && dn > 0 && dn / vn < 0.8) tsc = 0.5;
+    }
+    slowFx += (tsc - slowFx) * 0.2;
+    acc += dt * slowFx;
     while (acc >= SIM.DT) {
       acc -= SIM.DT;
       const inp = attract ? SIM.autopilot(sim) : Inp.read(SIM.DT);
@@ -1885,8 +1990,8 @@ $('btnResume').onclick = resume;
 $('btnPRetry').onclick = () => startStage(stageIdx);
 $('btnPSel').onclick = toSelect;
 $('pauseBtn').onclick = pause;
-for (const [id, key] of [['optGuide', 'guide'], ['optInvert', 'invert'], ['optSound', 'sound']]) {
-  $(id).checked = Save.d.opt[key];
+for (const [id, key] of [['optGuide', 'guide'], ['optInvert', 'invert'], ['optSound', 'sound'], ['optAssist', 'assist']]) {
+  $(id).checked = Save.d.opt[key] !== false;
   $(id).onchange = e => { Save.d.opt[key] = e.target.checked; Save.write(); };
 }
 
@@ -1922,7 +2027,7 @@ window.addEventListener('keydown', e => {
   }
 });
 window.addEventListener('keyup', e => Inp.keys.delete(e.code));
-window.addEventListener('blur', () => { Inp.keys.clear(); Inp.act = false; Inp.stick = null; });
+window.addEventListener('blur', () => { Inp.keys.clear(); Inp.act = false; Inp.stick = null; Inp.rollHeld = false; });
 
 for (const ev of ['pointerdown', 'touchend', 'keydown', 'click']) window.addEventListener(ev, () => Snd.init(), true);
 $('optSound').addEventListener('change', e => { if (e.target.checked) { Snd.init(); Snd.beep(880, 0.15, 'triangle', 0.12); } });
@@ -1959,10 +2064,10 @@ tt.addEventListener('pointerdown', e => { e.preventDefault(); tt.setPointerCaptu
 tt.addEventListener('pointermove', e => { if (tt.hasPointerCapture(e.pointerId)) setThr(e); });
 const rb = $('rollBtn');
 rb.addEventListener('pointerdown', e => {
-  e.preventDefault(); rb.classList.add('held');
+  e.preventDefault(); rb.classList.add('held'); Inp.rollHeld = true; try { rb.setPointerCapture(e.pointerId); } catch (er) {}
   const nx = Inp.stick ? Inp.stick.nx : 0; Inp.trickQ = nx < -0.2 ? -1 : nx > 0.2 ? 1 : (sim && sim.bank < -3 ? -1 : 1);
 });
-const endRoll = () => rb.classList.remove('held');
+const endRoll = () => { rb.classList.remove('held'); Inp.rollHeld = false; };
 rb.addEventListener('pointerup', endRoll); rb.addEventListener('pointercancel', endRoll);
 const ab = $('actBtn');
 ab.addEventListener('pointerdown', e => { e.preventDefault(); ab.setPointerCapture(e.pointerId); Inp.act = true; ab.classList.add('held'); });
