@@ -31,6 +31,7 @@ canvas{position:fixed;inset:0;display:block;touch-action:none}
 /* arcade: keep START on screen while the stage list scrolls on phones */
 #startBtn{position:sticky;bottom:calc(-14px - env(safe-area-inset-bottom,0px) + 8px);z-index:3;box-shadow:0 6px 0 #b85d12,0 -14px 24px rgba(9,13,32,.95)}
 [hidden]{display:none!important}
+#result .btns{position:sticky;bottom:calc(-14px - env(safe-area-inset-bottom,0px) + 6px);z-index:3;background:linear-gradient(180deg,rgba(9,13,32,0),rgba(9,13,32,.96) 30%);padding-bottom:4px}
 .logo{font-size:30px;font-weight:900;letter-spacing:.04em;text-align:center;
   background:linear-gradient(90deg,#ffe37a,#ff9b4a,#ff5c7a);-webkit-background-clip:text;background-clip:text;color:transparent}
 .sub{text-align:center;font-size:13px;opacity:.8;margin:6px 0 14px;line-height:1.5}
@@ -225,7 +226,7 @@ function tone(f,dur,o={}){const c=AU.c;if(!c)return;const t=c.currentTime+(o.del
  os.type=o.type||'sine';os.frequency.setValueAtTime(f,t);if(o.to)os.frequency.exponentialRampToValueAtTime(o.to,t+dur);
  g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(o.vol||0.2,t+0.01);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
  os.connect(g);g.connect(AU.master);os.start(t);os.stop(t+dur+0.05);}
-function noise(dur,o={}){const c=AU.c;if(!c)return;const t=c.currentTime+(o.delay||0);const s=c.createBufferSource();s.buffer=AU.noise;
+function noise(dur,o={}){const c=AU.c;if(!c)return;const t=c.currentTime+(o.delay||0);const s=c.createBufferSource();s.buffer=AU.noise;s.loop=true;
  const f=c.createBiquadFilter();f.type=o.type||'bandpass';f.frequency.value=o.f||1000;f.Q.value=o.q||1;const g=c.createGain();
  g.gain.setValueAtTime(0.0001,t);g.gain.linearRampToValueAtTime(o.vol||0.2,t+(o.attack||0.005));g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
  s.connect(f);f.connect(g);g.connect(AU.master);s.start(t,Math.random()*1.5);s.stop(t+dur+0.05);}
@@ -238,6 +239,7 @@ const sfx={
  gust(){noise(1.4,{f:650,q:0.5,vol:0.28,attack:0.35});},
  fall(){tone(700,1.2,{vol:0.14,to:120});noise(1.0,{f:900,q:0.4,vol:0.18,attack:0.1});},
  bounce(){tone(180,0.3,{vol:0.22,to:70});noise(0.2,{f:400,vol:0.14});},
+ rush(){noise(2.2,{f:500,q:0.3,vol:0.22,attack:0.4});tone(320,2.0,{vol:0.07,to:60});},
  cheer(){for(let i=0;i<10;i++)noise(0.8+Math.random()*0.7,{f:1000+Math.random()*1500,q:2,vol:0.05,delay:Math.random()*0.5,attack:0.1});
   [523,659,784,1047].forEach((f,i)=>tone(f,0.55,{type:'triangle',vol:0.08,delay:i*0.09}));},
  thunder(){noise(2.6,{f:170,q:0.3,type:'lowpass',vol:0.55,attack:0.04});},
@@ -373,10 +375,12 @@ function startFall(){
  clearInput();sfx.fall();vib(110);
 }
 function fallAnim(dt){
- P.omega+=G*1.3*Math.sin(P.theta)*dt;P.omega*=0.995;P.theta=clamp(P.theta+P.omega*dt,-1.75,1.75);
+ if(P.fy>-2){P.omega+=G*1.3*Math.sin(P.theta)*dt;P.omega*=0.995;P.theta=clamp(P.theta+P.omega*dt,-1.75,1.75);}
  if(Math.abs(P.theta)>=1.75)P.omega*=0.5;
- const floor=-5.3;P.fvy-=9.8*dt;P.fy+=P.fvy*dt;if(!P.hit)P.fx+=P.fallDir*1.4*dt;
- if(P.fy<=floor){P.fy=floor;if(!P.hit){P.hit=true;sfx.bounce();vib(40);S.shake=0.6;}P.fvy=Math.abs(P.fvy)*0.4;if(P.fvy<0.5)P.fvy=0;}
+ // no safety net: a free fall toward the street 300 m below, tumbling and shrinking out of sight
+ if(P.fy>-300){P.fvy=Math.max(-48,P.fvy-9.8*dt);P.fy+=P.fvy*dt;P.fx+=P.fallDir*1.4*dt;}
+ if(P.fy<-2)P.theta+=P.fallDir*(2.2+Math.min(3,-P.fy*0.05))*dt;
+ if(!P.hit&&P.fy<-4){P.hit=true;sfx.rush();S.shake=0.4;}
  P.phi*=Math.exp(-dt*2);
 }
 function startGoal(){
@@ -427,7 +431,7 @@ function updateCam(dt){
  cam.x+=(o.x-cam.x)*k;cam.y+=(o.y-cam.y)*k;cam.z+=(o.z-cam.z)*(1-Math.exp(-dt*10));
  cam.pitch+=(o.p-cam.pitch)*(1-Math.exp(-dt*3));cam.roll+=(o.roll-cam.roll)*k;
  cam.cp=Math.cos(cam.pitch);cam.sp=Math.sin(cam.pitch);S.shake*=Math.exp(-dt*4);
- // 結果シート表示中は視点の中心を上げて、ネットやゴール演出をシートの上に見せる
+ // 結果シート表示中は視点の中心を上げて、落ちていく姿やゴール演出をシートの上に見せる
  const shT=S.state==='result'?-H*(H>W?0.24:0.3):0;S.cys+=(shT-S.cys)*(1-Math.exp(-dt*4));CY=H*0.56+S.cys;
 }
 
@@ -738,7 +742,7 @@ function render(){
  ctx.drawImage(BG.cv,-BG.mx,-BG.my,W+2*BG.mx,H+2*BG.my);
  drawBolt();drawBuildings(false);drawMist();
  drawWire(0);if(S.md&&S.md.ai)drawWire(6);
- drawNet();drawChars();
+ drawChars();
  ctx.restore();
  drawFx();drawHUD();
 }
@@ -796,7 +800,7 @@ function showResult(clear){
   if(S.md.ai){if(!AI.done||S.finish<=AI.time){title='🏆 WIN!';sub='AIに勝利！ 空の王者だ！';}else{title='🏁 LOSE…';sub=`AIに ${(S.finish-AI.time).toFixed(2)}秒差で敗北`;}}
   h+=`<div class="rt">${title}</div><div class="rs">${sub}</div><div class="stars">${'★'.repeat(stars)}<span>${'★'.repeat(3-stars)}</span></div>
   <div class="stat"><div><small>TIME</small><b>${fmt(t)}</b></div><div><small>BEST</small><b>${fmt(save.best[k])}</b></div></div>${S.newRec?'<div class="rec">✨ NEW RECORD ✨</div>':''}`;}
- else{h+=`<div class="rt fail">😵 落下…</div><div class="rs">安全ネットでセーフ！</div>
+ else{h+=`<div class="rt fail">😱 転落…</div><div class="rs">地上300mの谷底へ真っ逆さま…</div>
   <div class="stat"><div><small>到達</small><b>${Math.round(S.maxProg*100)}%</b></div><div><small>残り</small><b>${Math.max(0,S.L-P.zFall).toFixed(1)}m</b></div><div><small>最高到達</small><b>${Math.round((save.prog[k]||0)*100)}%</b></div></div>
   <div class="tip">💡 ${TIPS[S.cause]}</div>`;}
  const a=save.att[k]||0,c=save.clr[k]||0;
