@@ -13,7 +13,7 @@
  *
  * サイト上の「管理」画面からも追加・削除できます（その場合はこのブラウザだけに保存されます）。
  */
-window.GAMES_VERSION = "39";
+window.GAMES_VERSION = "40";
 
 /* 管理画面のパスワード（SHA-256 ハッシュ。パスワードそのものは書かない）
  * 変更するには: "mini-game-arcade:" + 新しいパスワード を SHA-256 にかけた値に置き換える */
@@ -433,5 +433,14 @@ window.GAMES = [
     emoji: "⚔️",
     color: "#141a33",
     accent: "#e0263f"
+  },
+  {
+    id: "sky-wire-king",
+    title: "SKY WIRE KING",
+    description: "地上300mの超高層ビル綱渡り！バランス棒を傾けて突風に耐え、一本のワイヤーを渡りきれ。",
+    path: "games/sky-wire-king/index.html",
+    emoji: "🏙️",
+    color: "#0b1230",
+    accent: "#ffd23f"
   }
 ];
