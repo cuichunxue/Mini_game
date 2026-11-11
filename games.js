@@ -13,7 +13,7 @@
  *
  * サイト上の「管理」画面からも追加・削除できます（その場合はこのブラウザだけに保存されます）。
  */
-window.GAMES_VERSION = "42";
+window.GAMES_VERSION = "43";
 
 /* 管理画面のパスワード（SHA-256 ハッシュ。パスワードそのものは書かない）
  * 変更するには: "mini-game-arcade:" + 新しいパスワード を SHA-256 にかけた値に置き換える */
@@ -442,5 +442,14 @@ window.GAMES = [
     emoji: "🏙️",
     color: "#0b1230",
     accent: "#ffd23f"
+  },
+  {
+    id: "pasta-snap-king",
+    title: "PASTA SNAP KING",
+    description: "スパゲッティ1本を、ど真ん中でパキッと割れ！ツイストモードでは予想外のバラバラ大惨事も。",
+    path: "games/pasta-snap-king/index.html",
+    emoji: "🍝",
+    color: "#FFF1D2",
+    accent: "#E5452B"
   }
 ];
