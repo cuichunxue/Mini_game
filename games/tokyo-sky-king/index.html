@@ -50,6 +50,11 @@ body{font-family:var(--body);font-size:15px}
 #rollBtn small{font:600 16px var(--mono);margin-top:2px}
 #rollBtn.held{transform:scale(.92);background:rgba(40,160,220,1)}
 #rollBtn[disabled]{opacity:.3}
+#decoyBtn{width:60px;height:60px;border-radius:50%;border:2px solid var(--paper);background:rgba(255,200,61,.88);color:#1a1200;
+  font:400 11px var(--display);letter-spacing:.02em;touch-action:none;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.1}
+#decoyBtn small{font:600 9px var(--mono);margin-top:2px}
+#decoyBtn[disabled]{opacity:.35}
+#decoyBtn:active{transform:scale(.92)}
 .planes{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin:4px 0 12px}
 .plane{display:grid;grid-template-columns:44px 1fr;grid-template-rows:auto auto;gap:2px 10px;align-items:center;text-align:left;
   padding:10px 12px;border-radius:14px;border:2px solid rgba(238,243,241,.2);background:rgba(12,23,32,.6);color:var(--paper);cursor:pointer;font:inherit}
@@ -69,6 +74,7 @@ body{font-family:var(--body);font-size:15px}
 @media (max-height:520px){
   #touchUI .tcol{flex-direction:row;align-items:flex-end;gap:10px}
   #rollBtn{width:56px;height:56px}
+  #decoyBtn{width:52px;height:52px}
   #actBtn{width:76px;height:76px}
   #thrTrack{height:min(150px,46vh)}
 }
@@ -151,7 +157,7 @@ h1,h2,h3{margin:0;text-wrap:balance}
 <canvas id="cv"></canvas>
 <div id="stickZone" hidden></div>
 <div id="touchUI" hidden>
-  <div class="tcol"><button id="rollBtn" type="button">ROLL<small>↻</small></button><button id="actBtn" type="button">FLARE</button></div>
+  <div class="tcol"><button id="decoyBtn" type="button" hidden>DECOY<small>おとり</small></button><button id="rollBtn" type="button">ROLL<small>↻</small></button><button id="actBtn" type="button">FLARE</button></div>
   <div id="thrTrack"><div id="thrFill"></div><div id="thrKnob"></div><span>THR</span></div>
 </div>
 <button id="pauseBtn" type="button" aria-label="一時停止" hidden>II</button>
@@ -176,6 +182,7 @@ h1,h2,h3{margin:0;text-wrap:balance}
         <div>ブースト・アフターバーナー（リング区間）<b>Space / B 長押し</b></div>
         <div>バレルロール<b>Z / X（← →2回押し）</b></div>
         <div>背面飛行（戦闘機）<b>Z / X 押し続ける</b></div>
+        <div>おとり弾 DECOY（戦闘機）<b>F</b></div>
         <div>フレア補助（着陸前）<b>Space 長押し</b></div>
         <div>ブレーキ（接地後）<b>Space 長押し</b></div>
         <div>接地後の操向<b>← →</b></div>
@@ -248,6 +255,8 @@ h1,h2,h3{margin:0;text-wrap:balance}
       <label><input type="checkbox" id="optInvert"> 機首操作を反転（下で機首上げ）</label>
       <label><input type="checkbox" id="optSound" checked> 効果音</label>
       <label><input type="checkbox" id="optAssist" checked> リングアシスト・スロー（戦闘機）</label>
+      <label><input type="checkbox" id="optMissile" checked> ミサイル襲来とおとり弾（戦闘機）</label>
+      <label><input type="checkbox" id="optMusic" checked> BGM（戦闘機）</label>
     </div>
     <div class="row">
       <button class="btn primary" id="btnResume" type="button">再開 <span class="k">Esc</span></button>
@@ -1881,6 +1890,7 @@ function frame(now) {
       const R = sim.W.rings[sim.ring], dn = (R.x - sim.x) * R.nx + (R.z - sim.z) * R.nz, vn = sim.vx * R.nx + sim.vz * R.nz;
       if (vn > 1 && dn > 0 && dn / vn < 0.8) tsc = 0.5;
     }
+    if (window.AB && !attract) tsc = Math.min(tsc, AB.ts()); // CLOSE CALL slow motion
     slowFx += (tsc - slowFx) * 0.2;
     acc += dt * slowFx;
     while (acc >= SIM.DT) {
@@ -1944,6 +1954,7 @@ function showResult() {
     addBar(`★スター ${s.stars.filter(Boolean).length}/${s.stars.length}`, sk.star, Math.max(120, s.stars.length * 120), sc);
     addBar('スピードボーナス', sk.speed, 1500, sc);
     if (SIM.AC.FIGHTER) addBar('エース技（ハイG・ローパス・音速）', sk.ace, 3000, '#ffc83d');
+    if (SIM.AC.FIGHTER && window.AB && Save.d.opt.missile !== false) { const ab = AB.stats(); addBar(`ミサイル回避（CLOSE CALL ${ab.near}・SPLASH ${ab.splash}・最大コンボ ×${Math.min(5, ab.maxCombo)}）`, sk.combat || 0, 5000, '#ff7048'); }
   }
   const data = $('resData'); data.innerHTML = '';
   const td = s.td;
@@ -1956,7 +1967,7 @@ function showResult() {
     ['機首角', td.pitch.toFixed(1) + '°', td.pitch >= 1 && td.pitch <= 7],
     ['バウンド', s.bounces + ' 回', s.bounces === 0]
   ] : [['飛行時間', s.t.toFixed(1) + ' s', false], ['最終高度', Math.max(0, s.h).toFixed(0) + ' m', false],
-        ['スカイ（参考）', (s.sky.trick + s.sky.near + s.sky.star + s.sky.speed + (s.sky.ace || 0)).toLocaleString(), false]]);
+        ['スカイ（参考）', (s.sky.trick + s.sky.near + s.sky.star + s.sky.speed + (s.sky.ace || 0) + (s.sky.combat || 0)).toLocaleString(), false]]);
   for (const [k, v, good] of items) { const el = document.createElement('div'); el.innerHTML = `<span>${k}</span><b class="${good ? 'ok' : 'ng'}">${v}</b>`; data.appendChild(el); }
   $('btnNext').hidden = stageIdx >= SIM.STAGES.length - 1;
   show('result');
@@ -2131,3 +2142,4 @@ if ((Save.d.plane === 'x100' || Save.d.plane === 'rocket') && !window.EarthLap) 
 resize(); startAttract(); show('title');
 (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(() => requestAnimationFrame(frame));
 </script>
+<script src="afterburn.js?v=1"></script>
