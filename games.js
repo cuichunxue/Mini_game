@@ -13,7 +13,7 @@
  *
  * サイト上の「管理」画面からも追加・削除できます（その場合はこのブラウザだけに保存されます）。
  */
-window.GAMES_VERSION = "44";
+window.GAMES_VERSION = "45";
 
 /* 管理画面のパスワード（SHA-256 ハッシュ。パスワードそのものは書かない）
  * 変更するには: "mini-game-arcade:" + 新しいパスワード を SHA-256 にかけた値に置き換える */
@@ -460,5 +460,14 @@ window.GAMES = [
     emoji: "✂️",
     color: "#1d6f66",
     accent: "#ff3d6e"
+  },
+  {
+    id: "happiness-gun-king",
+    title: "HAPPINESS GUN KING",
+    description: "落ち込んだ人を撃って笑顔にしろ！60秒で街を幸せに。撃ちすぎるとカオス、マークの人には専用の銃を。",
+    path: "games/happiness-gun-king/index.html",
+    emoji: "😄",
+    color: "#3a96fa",
+    accent: "#ffe14d"
   }
 ];
