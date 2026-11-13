@@ -13,7 +13,7 @@
  *
  * サイト上の「管理」画面からも追加・削除できます（その場合はこのブラウザだけに保存されます）。
  */
-window.GAMES_VERSION = "43";
+window.GAMES_VERSION = "44";
 
 /* 管理画面のパスワード（SHA-256 ハッシュ。パスワードそのものは書かない）
  * 変更するには: "mini-game-arcade:" + 新しいパスワード を SHA-256 にかけた値に置き換える */
@@ -451,5 +451,14 @@ window.GAMES = [
     emoji: "🍝",
     color: "#FFF1D2",
     accent: "#E5452B"
+  },
+  {
+    id: "hair-cut-king",
+    title: "HAIR CUT KING",
+    description: "前髪をまっすぐ切りそろえろ！切りすぎると大泣き、完璧ならドヤ顔。鏡チェックで結果は一目瞭然。",
+    path: "games/hair-cut-king/index.html",
+    emoji: "✂️",
+    color: "#1d6f66",
+    accent: "#ff3d6e"
   }
 ];
