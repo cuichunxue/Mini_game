@@ -13,7 +13,7 @@
  *
  * サイト上の「管理」画面からも追加・削除できます（その場合はこのブラウザだけに保存されます）。
  */
-window.GAMES_VERSION = "45";
+window.GAMES_VERSION = "46";
 
 /* 管理画面のパスワード（SHA-256 ハッシュ。パスワードそのものは書かない）
  * 変更するには: "mini-game-arcade:" + 新しいパスワード を SHA-256 にかけた値に置き換える */
@@ -469,5 +469,14 @@ window.GAMES = [
     emoji: "😄",
     color: "#3a96fa",
     accent: "#ffe14d"
+  },
+  {
+    id: "buttobi-king-queue",
+    title: "ぶっとびKING 大行列編",
+    description: "連打で助走、リングが重なる瞬間にタップして全力シュート！800人の大行列を何人ぶっとばせるか。",
+    path: "games/buttobi-king-queue/index.html",
+    emoji: "⚽",
+    color: "#16602f",
+    accent: "#ffd23f"
   }
 ];
