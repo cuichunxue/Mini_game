@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>DATA LEAK KING</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap">
+<style>
+/* VOICE: 社内メールソフトの警告ダイアログが、選択のたびに壊れていくバカゲー
+   IDEA: 90年代風オフィスOSのアラート窓。カオスが上がるほど色相と傾きが狂う
+   PICTURE: 中央の事件ウィンドウに巨大キャラ＋背景Canvasの疑似3D星空と飛び交うメール
+   COLOUR/TYPE: 深い藍の机上・紙色の窓・警告赤・カオス紫・信頼緑・蛍光黄 / DotGothic16＋システムゴシック
+   LAYOUT: 縦1カラム、HUD上・事件窓中央・選択肢下。最大560px */
+:root{--bg:#0d1230;--paper:#f3efe3;--ink:#16182a;--red:#ff3b3b;--chaos:#b44dff;--trust:#22c77a;--yel:#ffd60a;--blue:#2c5bff;--hue:0deg;color-scheme:dark}
+*{box-sizing:border-box;min-width:0;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:#fff;font:16px/1.5 "Hiragino Kaku Gothic ProN","Hiragino Sans","Noto Sans JP","Yu Gothic",Meiryo,sans-serif;overflow:hidden;touch-action:manipulation;user-select:none;-webkit-user-select:none}
+.px{font-family:"DotGothic16","Hiragino Kaku Gothic ProN",monospace}
+#bg{position:fixed;inset:0;width:100%;height:100%;filter:hue-rotate(var(--hue));z-index:0}
+.screen{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;z-index:1;padding:max(10px,env(safe-area-inset-top)) 12px max(10px,env(safe-area-inset-bottom))}
+.screen.on{display:flex}
+.wrap{width:100%;max-width:560px;display:flex;flex-direction:column;flex:1;min-height:0}
+button{font:inherit;cursor:pointer;border:0;color:inherit}
+.btn{display:block;width:100%;min-height:52px;padding:10px 14px;background:var(--paper);color:var(--ink);border:3px solid var(--ink);border-radius:10px;box-shadow:0 5px 0 var(--ink);font-weight:800;font-size:17px;transition:transform .06s,box-shadow .06s;text-align:center}
+.btn:active{transform:translateY(4px);box-shadow:0 1px 0 var(--ink)}
+.btn:focus-visible{outline:3px solid var(--yel);outline-offset:3px}
+.btn.red{background:var(--red);color:#fff}.btn.yel{background:var(--yel)}.btn.ghost{background:transparent;color:#fff;border-color:#fff;box-shadow:0 5px 0 #fff4}
+.row{display:flex;gap:10px}.row>*{flex:1}
+.icon-btn{width:44px;height:44px;border-radius:10px;background:#ffffff1a;border:2px solid #fff6;font-size:20px;flex:none}
+/* title */
+#title .wrap{justify-content:center;gap:14px;text-align:center}
+.logo{font-size:clamp(40px,12vw,68px);line-height:1;margin:0;letter-spacing:.02em;color:var(--yel);text-shadow:4px 4px 0 var(--red),8px 8px 0 #0008;animation:glitch 2.4s infinite steps(1)}
+@keyframes glitch{0%,92%{transform:none}93%{transform:translate(3px,-2px) skewX(8deg);color:#fff}95%{transform:translate(-4px,2px);color:var(--chaos)}97%{transform:none}}
+.tag{font-size:17px;margin:0;text-wrap:balance}
+.mailicon{font-size:72px;animation:bob 1.6s ease-in-out infinite}
+@keyframes bob{50%{transform:translateY(-10px) rotate(-6deg)}}
+.how{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;font-size:13px;opacity:.9}
+.how div{background:#ffffff14;border-radius:8px;padding:8px 4px}.how b{display:block;font-size:22px}
+.note{font-size:13px;opacity:.7;margin:0}
+.rec{font-size:14px;opacity:.85}
+/* HUD */
+.hud{display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
+.hudtop{display:flex;align-items:center;gap:8px}
+.timer{flex:1;height:14px;background:#ffffff22;border-radius:7px;overflow:hidden;border:2px solid #fff5}
+.timer i{display:block;height:100%;width:100%;background:linear-gradient(90deg,var(--red),var(--yel));transform-origin:left}
+.ttxt{font-size:15px;width:52px;text-align:right;font-variant-numeric:tabular-nums}
+.meters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.m{background:#0007;border-radius:8px;padding:4px 8px;font-size:12px}
+.m .v{float:right;font-weight:800;font-size:14px;font-variant-numeric:tabular-nums}
+.m .bar{height:6px;background:#ffffff22;border-radius:3px;margin-top:3px;overflow:hidden}
+.m .bar i{display:block;height:100%;transition:width .5s}
+.m.d i{background:var(--red)}.m.c i{background:var(--chaos)}.m.t i{background:var(--trust)}
+.m.flash{animation:fl .5s}@keyframes fl{30%{background:#fff4}}
+/* stage */
+.stage{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding-bottom:6px}
+.win{flex:none;background:var(--paper);color:var(--ink);border:3px solid var(--ink);border-radius:12px;box-shadow:0 8px 0 #0008;overflow:hidden;transition:transform .4s,filter .4s}
+.win .bar{background:var(--blue);color:#fff;font-size:14px;padding:5px 10px;display:flex;justify-content:space-between;gap:8px}
+.win .bar span:last-child{opacity:.85;white-space:nowrap}
+.win.alert .bar{background:var(--red)}
+.card-body{padding:10px 14px 14px;text-align:center}
+.actor{font-size:clamp(64px,20vw,104px);line-height:1.1;display:inline-block}
+.actor.in{animation:popin .6s cubic-bezier(.2,1.6,.4,1)}
+@keyframes popin{0%{transform:scale(0) rotate(-30deg)}100%{transform:none}}
+.actor.wob{animation:wob 1.2s ease-in-out infinite}
+@keyframes wob{25%{transform:rotate(-8deg) scale(1.05)}75%{transform:rotate(8deg) scale(.97)}}
+.phase{display:inline-block;background:var(--ink);color:var(--yel);font-size:12px;padding:2px 10px;border-radius:20px}
+.ctitle{font-size:clamp(21px,6vw,27px);line-height:1.2;margin:6px 0 6px;text-wrap:balance}
+.ctext{margin:0;font-size:15px;text-align:left}
+.skip{font-size:12px;opacity:.6;text-align:center;margin:0;min-height:18px}
+body.c2 .win{transform:rotate(-1deg)}body.c3 .win{transform:rotate(1.4deg) skewX(-1deg)}
+body.c3 .ctitle{text-shadow:2px 0 var(--chaos),-2px 0 #0cf}
+.shake{animation:shk .45s}@keyframes shk{20%{transform:translate(-8px,3px)}40%{transform:translate(7px,-4px)}60%{transform:translate(-5px,2px)}80%{transform:translate(4px,0)}}
+/* choices */
+.choices{display:flex;flex-direction:column;gap:10px}
+.dtimer{height:6px;background:#ffffff22;border-radius:3px;overflow:hidden}.dtimer i{display:block;height:100%;background:var(--yel);transform-origin:left}
+.choice{text-align:left;display:flex;flex-direction:column;gap:2px}
+.choice small{font-size:13px;font-weight:600;opacity:.75}
+.choice.chaos{background:#f1dcff}.choice.safe{background:#d8f7e6}
+.result{text-align:center;font-weight:800;font-size:18px;padding:6px;border-radius:8px}
+.result.ok{background:var(--trust);color:#03210f}.result.ng{background:var(--red)}
+/* action */
+.action{background:#0009;border:2px dashed #fff8;border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px;text-align:center}
+.action h3{margin:0;font-size:16px}
+.tbar{height:10px;background:#ffffff22;border-radius:5px;overflow:hidden}.tbar i{display:block;height:100%;background:var(--red);transform-origin:left}
+.mash{width:150px;height:150px;border-radius:50%;margin:4px auto;background:radial-gradient(circle at 35% 30%,#ff8a8a,var(--red) 55%,#a01010);border:5px solid #fff;box-shadow:0 8px 0 #600;font-size:22px;font-weight:900;color:#fff;touch-action:none}
+.mash:active{transform:translateY(5px) scale(.97);box-shadow:0 3px 0 #600}
+.cnt{font-size:22px;font-variant-numeric:tabular-nums}
+.arena{position:relative;height:230px;background:linear-gradient(#ffffff10,#ffffff05);border-radius:10px;overflow:hidden;touch-action:none}
+.holder{position:absolute;font-size:80px;line-height:1;transform:translate(-50%,-50%);pointer-events:none}
+.item{position:absolute;font-size:44px;line-height:1;transform:translate(-50%,-50%);cursor:grab;touch-action:none;filter:drop-shadow(0 0 8px var(--yel));z-index:2;padding:6px}
+.item.grab{cursor:grabbing;transform:translate(-50%,-50%) scale(1.25)}
+.goal{position:absolute;right:10px;top:50%;width:84px;height:84px;margin-top:-42px;border:3px dashed var(--yel);border-radius:14px;display:grid;place-items:center;font-size:44px;background:#ffd60a22}
+.goal.hot{background:#ffd60a66}
+.pw{display:flex;justify-content:center;gap:12px}
+.dial{display:flex;flex-direction:column;align-items:center;gap:4px}
+.dial button{width:56px;height:44px;border-radius:8px;background:var(--paper);color:var(--ink);font-size:18px;border:2px solid var(--ink)}
+.dial .dg{width:56px;height:60px;display:grid;place-items:center;background:#000;color:#3f6;font-size:40px;border-radius:8px;border:2px solid #3f6}
+.hints{text-align:left;font-size:14px;margin:0;padding-left:20px}
+.pwmsg{min-height:22px;font-weight:800;color:var(--yel)}
+/* merge pop */
+#merge{position:fixed;inset:0;z-index:5;display:none;place-items:center;background:#000a;padding:20px}
+#merge.on{display:grid}
+.mbox{max-width:420px;width:100%;text-align:center;background:var(--chaos);border:4px solid #fff;border-radius:16px;padding:16px;animation:popin .5s cubic-bezier(.2,1.6,.4,1);box-shadow:0 0 0 8px #b44dff55,0 0 60px var(--chaos)}
+.mbox h2{margin:0;font-size:28px;color:var(--yel)}
+.mbox .eq{font-size:46px;margin:6px 0}
+.mbox p{margin:0;font-size:17px;font-weight:800;text-wrap:balance}
+/* end */
+#end .wrap{overflow-y:auto;gap:10px;padding-bottom:10px}
+.endcard{text-align:center;flex:none}
+.endcard .actor{font-size:96px;animation:popin .8s cubic-bezier(.2,1.6,.4,1),wob 2s 1s infinite}
+.kingtag{font-size:14px;color:var(--red);font-weight:800}
+.ktitle{font-size:clamp(28px,8vw,40px);margin:2px 0;line-height:1.1}
+.ksub{font-weight:800;margin:0 0 6px}
+.kdesc{text-align:left;font-size:15px;margin:0 0 8px}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:6px 0}
+.stats div{background:#16182a10;border-radius:8px;padding:4px;font-size:12px}.stats b{display:block;font-size:20px}
+.chain{text-align:left;font-size:13px;background:#16182a0d;border-radius:8px;padding:8px 10px;margin:0;line-height:1.7}
+.chain .ev{font-weight:800}.chain .ch{color:#6b3fa0}
+.tip{font-size:13px;background:#d8f7e6;border-radius:8px;padding:6px 10px;margin:8px 0 0;text-align:left}
+.newb{display:inline-block;background:var(--yel);color:var(--ink);font-size:12px;font-weight:800;padding:1px 8px;border-radius:10px;margin-left:6px}
+/* zukan */
+#zukan{position:fixed;inset:0;z-index:6;display:none;place-items:center;background:#000c;padding:16px}
+#zukan.on{display:grid}
+#zukan .win{width:100%;max-width:520px;max-height:90dvh;display:flex;flex-direction:column}
+.zgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:12px;overflow-y:auto}
+.zc{border:2px solid var(--ink);border-radius:10px;padding:8px;text-align:center;background:#fff}
+.zc b{display:block;font-size:15px}.zc span{font-size:12px}.zc .e{font-size:38px;display:block}
+.zc.lock{background:#ddd;color:#777}.zc.lock .e{filter:grayscale(1) brightness(.3)}
+.zfoot{padding:0 12px 12px}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(120px);background:var(--yel);color:var(--ink);font-weight:800;padding:10px 16px;border-radius:10px;z-index:9;transition:transform .3s;max-width:90vw;text-align:center}
+#toast.on{transform:translateX(-50%)}
+#sharebox{display:none;width:100%;height:110px;font-size:13px;user-select:text;-webkit-user-select:text}
+@media (max-height:680px){.actor{font-size:60px}.ctitle{font-size:20px}.ctext{font-size:14px}.btn{min-height:46px;font-size:15px}.arena{height:190px}.mash{width:120px;height:120px}.mailicon{font-size:52px}}
+/* portal: short phones (iPhone SE etc.) keep choices/timed actions on screen */
+@media (max-height:600px){.stage{gap:6px}.card-body{padding:6px 10px 8px}.actor{font-size:44px}.ctitle{font-size:18px;margin:3px 0}.ctext{font-size:13px;line-height:1.45}
+ .btn{min-height:40px;font-size:14px}.choices{gap:7px}.arena{height:150px}.mash{width:96px;height:96px;font-size:18px}.endcard .actor{font-size:64px}}
+@media (max-height:420px){.hud{gap:4px;margin-bottom:4px}.action{padding:6px 8px;gap:4px}.action h3{font-size:14px}.hints{font-size:12px;line-height:1.35}
+ .pw{gap:8px}.dial{flex-direction:row-reverse;gap:3px}.dial button{width:34px;height:36px;font-size:14px}.dial .dg{width:40px;height:40px;font-size:26px}.pwmsg{min-height:18px;font-size:13px}}
+#end #bRetry{position:sticky;bottom:6px;z-index:2;box-shadow:0 6px 18px #000a}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+
+<section id="title" class="screen on"><div class="wrap">
+  <div class="mailicon">📧</div>
+  <h1 class="logo px">DATA LEAK<br>KING</h1>
+  <p class="tag">たった1通の誤送信から、<br>地球がログイン画面になるまで。</p>
+  <div class="how"><div><b>👆</b>瞬間判断</div><div><b>✋</b>ドラッグ救出</div><div><b>💥</b>連打阻止</div><div><b>🔐</b>パスワード</div></div>
+  <button class="btn red" id="bStart">誤送信する（スタート）</button>
+  <div class="row"><button class="btn" id="bZukan">エンディング図鑑</button><button class="icon-btn" id="bMute1" aria-label="ミュート切替">🔊</button></div>
+  <p class="rec" id="rec"></p>
+  <p class="note">※登場する会社・メール・パスワードはすべて架空です</p>
+</div></section>
+
+<section id="game" class="screen"><div class="wrap">
+  <div class="hud">
+    <div class="hudtop"><span class="px" id="evno">事件 1</span><div class="timer"><i id="tbar"></i></div><span class="ttxt px" id="ttxt">3:00</span><button class="icon-btn" id="bMute2" aria-label="ミュート切替">🔊</button></div>
+    <div class="meters">
+      <div class="m d" id="mD">漏洩被害<span class="v" id="vD">35</span><div class="bar"><i id="iD"></i></div></div>
+      <div class="m c" id="mC">カオス<span class="v" id="vC">0</span><div class="bar"><i id="iC"></i></div></div>
+      <div class="m t" id="mT">信頼<span class="v" id="vT">60</span><div class="bar"><i id="iT"></i></div></div>
+    </div>
+  </div>
+  <main class="stage" id="stage">
+    <div class="win" id="card">
+      <div class="bar px"><span id="wtitle">⚠ 受信トレイ</span><span id="wsub">MailNinja 98</span></div>
+      <div class="card-body">
+        <span class="phase" id="phase">事故発生</span><br>
+        <span class="actor" id="actor">📧</span>
+        <h2 class="ctitle" id="ctitle"></h2>
+        <p class="ctext" id="ctext"></p>
+      </div>
+    </div>
+    <p class="skip" id="skip"></p>
+    <div id="actionArea"></div>
+    <div class="choices" id="choices"></div>
+  </main>
+</div></section>
+
+<section id="end" class="screen"><div class="wrap">
+  <div class="win endcard" id="endcard">
+    <div class="bar px"><span>🏅 称号獲得</span><span id="endno"></span></div>
+    <div class="card-body">
+      <span class="actor" id="eEmoji">🏆</span>
+      <div class="kingtag">YOU ARE THE</div>
+      <h2 class="ktitle px" id="eTitle"></h2>
+      <p class="ksub" id="eSub"></p>
+      <p class="kdesc" id="eDesc"></p>
+      <div class="stats"><div>漏洩被害<b id="sD"></b></div><div>カオス<b id="sC"></b></div><div>信頼<b id="sT"></b></div></div>
+      <p class="chain" id="eChain"></p>
+      <p class="tip" id="eTip"></p>
+    </div>
+  </div>
+  <button class="btn red" id="bRetry">もう1回 誤送信する</button>
+  <div class="row"><button class="btn yel" id="bShare">結果を共有</button><button class="btn" id="bZukan2">図鑑</button></div>
+  <textarea id="sharebox" readonly></textarea>
+  <button class="btn ghost" id="bTitle">タイトルへ</button>
+</div></section>
+
+<div id="merge"><div class="mbox"><h2 class="px">⚡ 事件合体！</h2><div class="eq" id="mEq"></div><p id="mText"></p></div></div>
+
+<div id="zukan"><div class="win">
+  <div class="bar px"><span>📖 エンディング図鑑</span><span id="zcount"></span></div>
+  <div class="zgrid" id="zgrid"></div>
+  <div class="zfoot"><button class="btn" id="bZclose">閉じる</button></div>
+</div></div>
+<div id="toast"></div>
+
+<script type="application/json" id="scenario">
+{
+"start":{"name":"誤送信","emoji":"📧","phase":"事故発生 0〜15秒","title":"社外秘メールを誤送信！","text":"「来期_極秘計画_最終版.xlsx」を、取引先の全員に一斉送信してしまった…！（※架空のデータです）",
+ "options":[
+  {"label":"上司にすぐ報告する","hint":"被害↓ 信頼↑","type":"safe","eff":{"damage":-10,"trust":15},"next":["report"]},
+  {"label":"こっそり送信取消","hint":"カオス↑ 何かが目覚める…","type":"chaos","eff":{"chaos":20,"damage":5,"trust":-5},"next":["monster"]}]},
+"report":{"name":"全社CC拡散","emoji":"📢","phase":"初動対応","title":"取消通知が全社CCで拡散中！","text":"上司「報告ありがとう！まず拡散を止めろ！」——ところが「送信取消のお知らせ」が自己増殖を始めた。",
+ "action":{"type":"mash","label":"拡散停止ボタンを5秒以内に連打！","target":22,"time":5,"success":{"damage":-10,"trust":5},"fail":{"damage":10,"chaos":10},"okText":"拡散を食い止めた！","ngText":"通知が宇宙へ飛んでいった…"},
+ "options":[
+  {"label":"情シスに連絡してパスワード変更","hint":"被害↓ 信頼↑","type":"safe","eff":{"damage":-10,"trust":10},"next":["dog"]},
+  {"label":"謝罪文をAIに丸投げする","hint":"カオス↑ 楽はできそう","type":"chaos","eff":{"chaos":15,"trust":-5},"next":["ai"]}]},
+"monster":{"name":"メール怪獣","emoji":"👾","event":true,"phase":"連鎖の始まり","title":"添付ファイルがメール怪獣に！","text":"取り消されたメールが怒って実体化。社外秘ファイルをくわえたまま、社内を暴れ回っている！",
+ "action":{"type":"drag","holder":"👾","item":"📄","goal":"📁","moving":false,"label":"機密ファイルを怪獣の口から引き抜き、フォルダへ！","time":7,"success":{"damage":-10},"fail":{"damage":10,"chaos":10},"okText":"ファイル奪還成功！","ngText":"怪獣がファイルを飲み込んだ…"},
+ "options":[
+  {"label":"正直に上司へ報告する","hint":"被害↓ 信頼↑","type":"safe","eff":{"damage":-5,"trust":10},"next":["dog"]},
+  {"label":"怪獣をコピーして囮にする","hint":"カオス↑↑","type":"chaos","eff":{"chaos":20,"trust":-5},"next":["copy"]}]},
+"ai":{"name":"AI社長","emoji":"🤖","event":true,"phase":"連鎖の始まり","title":"AIが社長に就任！","text":"AIは謝罪文を全人類に一斉送信。その勢いで社長選に立候補し、3秒で当選した。",
+ "options":[
+  {"label":"AIの電源プラグを抜く","hint":"信頼↑ 物理は最強","type":"safe","eff":{"trust":10,"damage":-5},"next":["qr"]},
+  {"label":"AIに証拠隠滅を頼む","hint":"カオス↑↑","type":"chaos","eff":{"chaos":20,"damage":5},"next":["usb"]}]},
+"dog":{"name":"USB犬","emoji":"🐶","event":true,"phase":"カオス急拡大","title":"機密USBを犬がくわえて逃走！","text":"情シスが慌てて作ったバックアップUSB。社長の愛犬ポチが「新しいおもちゃ」と判断した。",
+ "action":{"type":"drag","holder":"🐶","item":"💾","goal":"🔒","moving":true,"label":"走り回る犬からUSBを奪って、金庫へ！","time":8,"success":{"damage":-10,"trust":5},"fail":{"chaos":10,"damage":5},"okText":"USB確保！ポチは不満そう","ngText":"ポチがUSBを庭に埋めた…"},
+ "options":[
+  {"label":"USBを暗号化して金庫へ","hint":"被害↓ 信頼↑","type":"safe","eff":{"damage":-10,"trust":10},"next":["qr"]},
+  {"label":"証拠ごと窓から投げ捨てる","hint":"カオス↑↑ 物理法則があやしい","type":"chaos","eff":{"chaos":25,"trust":-10},"next":["usb"]}]},
+"copy":{"name":"コピー社員","emoji":"👥","event":true,"phase":"カオス急拡大","title":"コピー機が社員をコピーし始めた！","text":"怪獣をコピーするはずが、コピー機が暴走。同じ顔の新人社員がフロアを埋め尽くしていく。",
+ "options":[
+  {"label":"名札で本物の社員を確認する","hint":"信頼↑ 被害↓","type":"safe","eff":{"trust":10,"damage":-5},"next":["qr"]},
+  {"label":"コピー倍率を∞にする","hint":"カオス↑↑ 何が出てくる？","type":"chaos","eff":{"chaos":25},"next":["dino"]}]},
+"qr":{"name":"QR社長","emoji":"🔳","event":true,"phase":"カオス急拡大","title":"社長がQRコードになった！","text":"社長が「二段階認証を最強にしろ」と命じた結果、本人そのものが認証コードになってしまった。",
+ "options":[
+  {"label":"社長を正しくスキャンして本人確認","hint":"被害↓ 信頼↑","type":"safe","eff":{"damage":-5,"trust":10},"next":["earth"]},
+  {"label":"社長QRを100回連続スキャン","hint":"カオス↑↑ 読み込みエラーの予感","type":"chaos","eff":{"chaos":20},"next":["dino","earth"]}]},
+"usb":{"name":"USB宇宙船","emoji":"🚀","event":true,"phase":"カオス急拡大","title":"USBが宇宙船になって発射！","text":"隠されたUSBが機密データを燃料に大気圏を突破。現在、月の裏側へ向けて航行中。",
+ "action":{"type":"mash","label":"回収ビームを5秒以内に連打！","target":22,"time":5,"success":{"damage":-10},"fail":{"chaos":15,"damage":10},"okText":"データの半分を回収！","ngText":"宇宙船はワープした…"},
+ "options":[
+  {"label":"宇宙機関に正直に通報する","hint":"信頼↑","type":"safe","eff":{"trust":10,"damage":-5},"next":["qr","earth"]},
+  {"label":"宇宙船にさらに機密を積む","hint":"カオス↑↑↑","type":"chaos","eff":{"chaos":25,"damage":10},"next":["pwleak"]}]},
+"dino":{"name":"恐竜社長","emoji":"🦖","event":true,"phase":"世界崩壊","title":"恐竜が社長に就任！","text":"地層から現れたティラノサウルスが、臨時株主総会で満場一致（恐怖による）で社長に選ばれた。",
+ "options":[
+  {"label":"恐竜にセキュリティ研修を受けさせる","hint":"信頼↑ 被害↓","type":"safe","eff":{"trust":10,"damage":-5},"next":["earth"]},
+  {"label":"恐竜社長に全権委任する","hint":"カオス↑↑","type":"chaos","eff":{"chaos":20},"next":["pwleak","earth"]}]},
+"pwleak":{"name":"パスワード流出","emoji":"🔑","event":true,"phase":"世界崩壊","title":"全社共通パスワードが流出！","text":"「password123」が衛星経由で全世界に配信された。それを見た月が、自分のパスワードを忘れた。",
+ "options":[
+  {"label":"全員のパスワードを今すぐ変更","hint":"被害↓ 信頼↑","type":"safe","eff":{"damage":-10,"trust":10},"next":["earth"]},
+  {"label":"新パスワードを恐竜に覚えさせる","hint":"カオス↑↑","type":"chaos","eff":{"chaos":20,"damage":10},"next":["dino","earth"]}]},
+"earth":{"name":"地球ログイン化","emoji":"🌍","event":true,"phase":"最後の選択","title":"地球がログイン画面になった！","text":"空に巨大なログインボックスが浮かんでいる。「パスワードを入力してください」——人類、ただいまログアウト中。"}
+}
+</script>
+<script type="application/json" id="meta">
+{
+"merges":[
+ {"a":"monster","b":"copy","text":"メール怪獣がコピーされ、1万匹に分裂！"},
+ {"a":"usb","b":"qr","text":"QR社長が宇宙の入場券になった！スキャンすると月行き。"},
+ {"a":"ai","b":"dino","text":"AI社長と恐竜社長による社長選挙が勃発！"},
+ {"a":"earth","b":"pwleak","text":"流出パスワードで太陽系全体がロックされた！"},
+ {"a":"copy","b":"dino","text":"恐竜1万人が同時に出勤！エレベーターが絶滅。"},
+ {"a":"monster","b":"earth","text":"地球が巨大な添付ファイルになった！容量オーバー。"},
+ {"a":"monster","b":"usb","text":"宇宙船に乗ったメール怪獣が、銀河中に迷惑メールを送信！"},
+ {"a":"qr","b":"copy","text":"コピー社員が全員QRコード化。読み取るたびに増殖する！"},
+ {"a":"dog","b":"qr","text":"犬がQR社長をくわえて、全社員を勝手に認証中！"},
+ {"a":"usb","b":"dog","text":"犬がUSB宇宙船の船長に就任！「ワン（発進）」"},
+ {"a":"qr","b":"dino","text":"恐竜がQR社長を丸呑み。恐竜がスキャン可能になった！"},
+ {"a":"ai","b":"earth","text":"AIが地球のパスワードを勝手に変更した！"}],
+"endings":{
+ "god":{"emoji":"🏆","title":"神対応 KING","sub":"会社と地球を救う","desc":"早期報告と被害抑制を貫き、地球の再起動にも成功。あなたは今日から伝説の新人だ。","lock":"正しい対応を積み重ねて地球を再起動"},
+ "monster":{"emoji":"📧","title":"メール怪獣 KING","sub":"メールが世界を支配","desc":"メール怪獣が地球の新しいメールサーバーに就任。全人類の受信トレイは怪獣の胃袋につながった。","lock":"あの怪獣に未来を託すと…"},
+ "dino":{"emoji":"🦖","title":"恐竜社長 KING","sub":"人類が恐竜の部下に","desc":"朝礼は咆哮から始まる。有給申請は化石に刻んで提出すること。","lock":"太古の存在に全権を…"},
+ "galaxy":{"emoji":"🛸","title":"銀河漏洩 KING","sub":"宇宙人から苦情殺到","desc":"USB宇宙船が銀河中に機密を配布。アンドロメダから「迷惑メールやめて」と苦情が1億件届いた。","lock":"機密を宇宙に飛ばしたまま…"},
+ "ai":{"emoji":"🤖","title":"AI社長 KING","sub":"社長がAIに面接される","desc":"AI社長が全役員を再面接。元社長は「あなたの強みは？」に答えられず不採用になった。","lock":"AIにすべてを任せると…"},
+ "earthlock":{"emoji":"🌍","title":"地球ロック KING","sub":"地球のパスワード紛失","desc":"流出したパスワードのせいで地球は永久ロック。太陽系全体が「アカウントが凍結されました」画面に。","lock":"パスワードが漏れたまま再起動に失敗"},
+ "dog":{"emoji":"🐶","title":"USB犬 KING","sub":"犬が世界一の機密管理者","desc":"ポチはすべてのUSBを庭に埋めた。誰も掘り出せない、世界一安全な保管庫の誕生だ。","lock":"もふもふに機密を任せると…"},
+ "loop":{"emoji":"🌀","title":"無限ループ KING","sub":"誤送信前の5秒に戻る","desc":"地球の再起動ボタンを押した瞬間、時間ごと巻き戻った。目の前には送信ボタン。さあ、もう一度。","lock":"地球の再起動がうまくいかないと…"}},
+"order":["god","monster","dino","galaxy","ai","earthlock","dog","loop"],
+"delegate":[["dino","恐竜社長に任せる","dino"],["ai","AI社長に任せる","ai"],["usb","宇宙人に任せる","galaxy"],["dog","犬のポチに任せる","dog"],["monster","メール怪獣に任せる","monster"]],
+"riddles":[["地球の衛星（月）の数",1],["1週間の日数",7],["信号機の色の数",3],["三角形の角の数",3],["犬の足の数",4],["片手の指の数",5],["昆虫の脚の数",6],["タコの足の数",8],["サイコロで一番大きい目",6],["自転車の車輪の数",2],["何もないこと",0],["1ダース（12）の半分の半分",3]]
+}
+</script>
+<script>
+{
+const S=JSON.parse(document.getElementById('scenario').textContent);
+const M=JSON.parse(document.getElementById('meta').textContent);
+const $=id=>document.getElementById(id);
+const KEY='dlk_save_v1';
+const defSave=()=>({endings:{},merges:[],plays:0,bestChaos:0,muted:false});
+let save=defSave();
+try{const v=JSON.parse(localStorage.getItem(KEY));if(v)save=Object.assign(defSave(),v);}catch(e){}
+const persist=()=>{try{localStorage.setItem(KEY,JSON.stringify(save));}catch(e){}};
+
+/* ---------- audio ---------- */
+let actx=null,muted=!!save.muted;
+function ac(){if(!actx){try{actx=new(window.AudioContext||window.webkitAudioContext)();}catch(e){return null;}}if(actx.state==='suspended')actx.resume().catch(()=>{});return actx;}
+function tone(f,d=.12,type='square',v=.07,f2=null,delay=0){if(muted)return;const a=ac();if(!a)return;try{const t=a.currentTime+delay,o=a.createOscillator(),g=a.createGain();o.type=type;o.frequency.setValueAtTime(f,t);if(f2)o.frequency.exponentialRampToValueAtTime(f2,t+d);g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g).connect(a.destination);o.start(t);o.stop(t+d+.03);}catch(e){}}
+const SFX={
+ click:()=>tone(660,.06,'square',.05),
+ tap:()=>tone(700+Math.random()*400,.04,'square',.04),
+ alarm:()=>{tone(880,.14,'sawtooth',.05);tone(660,.14,'sawtooth',.05,null,.16);tone(880,.14,'sawtooth',.05,null,.32);},
+ good:()=>[523,659,784].forEach((f,i)=>tone(f,.13,'triangle',.08,null,i*.08)),
+ bad:()=>tone(420,.45,'sawtooth',.06,70),
+ merge:()=>{tone(180,.5,'sawtooth',.05,1600);tone(1600,.5,'square',.03,200,.12);},
+ fanfare:()=>[523,659,784,1046,784,1046].forEach((f,i)=>tone(f,.2,'triangle',.09,null,i*.12)),
+ tick:()=>tone(1300,.03,'square',.025),
+ pop:()=>tone(260,.14,'square',.06,900)};
+function setMute(m){muted=m;save.muted=m;persist();['bMute1','bMute2'].forEach(id=>$(id).textContent=m?'🔇':'🔊');}
+setMute(muted);
+['bMute1','bMute2'].forEach(id=>$(id).addEventListener('click',()=>{setMute(!muted);if(!muted)SFX.click();}));
+
+/* ---------- background canvas: pseudo-3D starfield + flying mail ---------- */
+const cv=$('bg'),cx=cv.getContext('2d');let W=0,H=0,DPR=1;
+function rs(){DPR=Math.min(2,window.devicePixelRatio||1);W=innerWidth;H=innerHeight;cv.width=W*DPR;cv.height=H*DPR;cx.setTransform(DPR,0,0,DPR,0,0);}
+rs();addEventListener('resize',rs);
+const stars=Array.from({length:160},()=>({x:Math.random()*2-1,y:Math.random()*2-1,z:Math.random()}));
+const mails=Array.from({length:24},()=>({x:Math.random(),y:Math.random(),s:.2+Math.random()*.8,r:Math.random()*6,e:'✉'}));
+let parts=[];let chaosVis=0;
+function confetti(n=80,cols=['#ffd60a','#ff3b3b','#b44dff','#22c77a','#2c5bff']){for(let i=0;i<n;i++)parts.push({x:W/2,y:H*.35,vx:(Math.random()-.5)*12,vy:-Math.random()*12-3,c:cols[i%cols.length],l:90+Math.random()*40,r:Math.random()*6});}
+function frame(){
+ const ch=G?G.chaos:0;chaosVis+=(ch-chaosVis)*.05;
+ cx.fillStyle='rgba(13,18,48,.35)';cx.fillRect(0,0,W,H);
+ const sp=.004+chaosVis/9000,cxm=W/2,cym=H/2;
+ for(const s of stars){s.z-=sp;if(s.z<=.01){s.x=Math.random()*2-1;s.y=Math.random()*2-1;s.z=1;}
+  const k=.5/s.z,px=cxm+s.x*W*k*.5,py=cym+s.y*H*k*.5,sz=(1-s.z)*2.6;
+  cx.fillStyle=`hsla(${200+chaosVis*1.4},90%,${70+chaosVis/5}%,${1-s.z})`;cx.fillRect(px,py,sz,sz);}
+ const nm=6+Math.floor(chaosVis/6);cx.textAlign='center';
+ for(let i=0;i<Math.min(nm,mails.length);i++){const m=mails[i];m.x+=.0006*m.s*(1+chaosVis/30);m.y+=Math.sin(Date.now()/900+i)*.0005;m.r+=.01*(1+chaosVis/40);if(m.x>1.1){m.x=-.1;m.y=Math.random();}
+  cx.save();cx.translate(m.x*W,m.y*H);cx.rotate(Math.sin(m.r)*.5);cx.globalAlpha=.25+m.s*.35;cx.font=`${14+m.s*26}px sans-serif`;cx.fillStyle='#fff';cx.fillText(chaosVis>55&&i%3==0?['🦖','👾','🔑','🚀'][i%4]:'✉',0,0);cx.restore();}
+ cx.globalAlpha=1;
+ parts=parts.filter(p=>p.l>0);for(const p of parts){p.x+=p.vx;p.y+=p.vy;p.vy+=.35;p.vx*=.99;p.l--;p.r+=.2;cx.save();cx.translate(p.x,p.y);cx.rotate(p.r);cx.fillStyle=p.c;cx.fillRect(-4,-2,8,4);cx.restore();}
+ document.documentElement.style.setProperty('--hue',(chaosVis>40?(chaosVis-40)*1.5:0)+'deg');
+ requestAnimationFrame(frame);}
+requestAnimationFrame(frame);
+
+/* ---------- helpers ---------- */
+const clamp=v=>Math.max(0,Math.min(100,v));
+function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('on',s.id===id));}
+let toastT;function toast(t){const e=$('toast');e.textContent=t;e.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>e.classList.remove('on'),2200);}
+function shake(el){el.classList.remove('shake');void el.offsetWidth;el.classList.add('shake');}
+const stage=$('stage');
+function wait(ms,skippable=true){return new Promise(res=>{const t0=performance.now();let done=false;const fin=()=>{if(done)return;done=true;clearTimeout(t);stage.removeEventListener('pointerdown',sk);$('skip').textContent='';res();};const sk=()=>{if(performance.now()-t0>250)fin();};const t=setTimeout(fin,ms);if(skippable){stage.addEventListener('pointerdown',sk);$('skip').textContent='タップでスキップ ▶';}});}
+
+/* ---------- game state ---------- */
+let G=null,token=0,raf=0;
+function newGame(){
+ token++;G={damage:35,chaos:0,trust:60,seen:new Set(),order:[],merges:[],path:[],start:performance.now(),limit:180000,ended:false,steps:0};
+ save.plays++;persist();hud();show('game');
+ cancelAnimationFrame(raf);raf=requestAnimationFrame(clock);
+ enterNode('start');}
+function clock(){
+ if(!G||G.ended)return;
+ const rem=Math.max(0,G.limit-(performance.now()-G.start));
+ $('tbar').style.transform=`scaleX(${rem/G.limit})`;
+ const s=Math.ceil(rem/1000);$('ttxt').textContent=`${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
+ if(rem<=0){timeUp();return;}
+ raf=requestAnimationFrame(clock);}
+function timeUp(){if(G.ended)return;token++;G.path.push({t:'ch',s:'⏰ タイムアップ'});finish({type:'timeout'});}
+function hud(){
+ [['D','damage'],['C','chaos'],['T','trust']].forEach(([k,f])=>{$('v'+k).textContent=G[f];$('i'+k).style.width=G[f]+'%';});
+ document.body.classList.toggle('c2',G.chaos>=40&&G.chaos<70);document.body.classList.toggle('c3',G.chaos>=70);}
+function apply(eff){if(!eff)return;
+ for(const [k,v] of Object.entries(eff)){G[k]=clamp(G[k]+v);const el=$({damage:'mD',chaos:'mC',trust:'mT'}[k]);if(el&&v){el.classList.remove('flash');void el.offsetWidth;el.classList.add('flash');}}
+ if(eff.chaos>0)shake($('card'));hud();}
+
+async function enterNode(id){
+ const tk=token,n=S[id];G.steps++;
+ if(!G.seen.has(id)){G.seen.add(id);G.order.push(id);}
+ G.path.push({t:'ev',s:`${n.emoji}${n.name}`});
+ $('evno').textContent=`事件 ${G.steps}`;
+ $('choices').innerHTML='';$('actionArea').innerHTML='';
+ const card=$('card');card.classList.toggle('alert',!!n.event);
+ $('wtitle').textContent=n.event?'⚠ 緊急事件発生':'⚠ セキュリティ警告';$('wsub').textContent=`事件 ${G.steps}`;
+ $('phase').textContent=n.phase;$('ctitle').textContent=n.title;$('ctext').textContent=n.text;
+ const a=$('actor');a.textContent=n.emoji;a.className='actor';void a.offsetWidth;a.className='actor in';
+ setTimeout(()=>{if(tk===token)a.classList.add('wob');},650);
+ stage.scrollTop=0;
+ n.event?SFX.alarm():SFX.pop();if(n.event)shake(card);
+ await wait(1600);if(tk!==token)return;
+ // merges
+ for(let i=0;i<M.merges.length;i++){const m=M.merges[i];if(G.merges.includes(i))continue;
+  if((m.a===id&&G.seen.has(m.b))||(m.b===id&&G.seen.has(m.a))){G.merges.push(i);apply({chaos:10});
+   G.path.push({t:'mg',s:`⚡合体：${S[m.a].emoji}×${S[m.b].emoji}`});
+   if(!save.merges.includes(i)){save.merges.push(i);persist();}
+   await showMerge(m);if(tk!==token)return;}}
+ if(n.action){
+  const ok=await (n.action.type==='mash'?runMash(n.action,tk):runDrag(n.action,tk));if(tk!==token)return;
+  apply(ok?n.action.success:n.action.fail);ok?SFX.good():SFX.bad();
+  $('actionArea').innerHTML=`<div class="result ${ok?'ok':'ng'}">${ok?'✔ '+n.action.okText:'✖ '+n.action.ngText}</div>`;
+  G.path.push({t:'ch',s:ok?'✔ アクション成功':'✖ アクション失敗'});
+  await wait(1000);if(tk!==token)return;$('actionArea').innerHTML='';}
+ if(id==='earth')return finalChoice(tk);
+ showChoices(n.options,tk,9000,1,(o)=>{
+  apply(o.eff);G.path.push({t:'ch',s:o.label});
+  const nx=o.next.find(x=>!G.seen.has(x))||'earth';enterNode(nx);});}
+
+function showChoices(opts,tk,ms,autoIdx,onPick){
+ const box=$('choices');
+ box.innerHTML=`<div class="dtimer"><i id="dt"></i></div>`+opts.map((o,i)=>`<button class="btn choice ${o.type||''}" data-i="${i}">${o.label}<small>予感：${o.hint}</small></button>`).join('');
+ const t0=performance.now();let picked=false,lastTick=0;
+ const loop=()=>{if(picked||tk!==token)return;const r=1-(performance.now()-t0)/ms;const dt=$('dt');if(dt)dt.style.transform=`scaleX(${Math.max(0,r)})`;
+  const sec=Math.ceil(r*ms/1000);if(sec<=3&&sec!==lastTick){lastTick=sec;SFX.tick();}
+  if(r<=0){pick(autoIdx,true);return;}requestAnimationFrame(loop);};
+ const pick=(i,auto)=>{if(picked||tk!==token)return;picked=true;SFX.click();if(auto)toast('迷っている間に事態が悪化！');box.innerHTML='';onPick(opts[i]);};
+ box.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>pick(+b.dataset.i,false)));
+ requestAnimationFrame(loop);}
+
+function showMerge(m){return new Promise(res=>{SFX.merge();confetti(40,['#b44dff','#ffd60a','#fff']);
+ $('mEq').textContent=`${S[m.a].emoji} × ${S[m.b].emoji}`;$('mText').textContent=m.text;const el=$('merge');el.classList.add('on');
+ const t0=performance.now();const fin=()=>{if(performance.now()-t0<300)return;el.classList.remove('on');el.removeEventListener('pointerdown',fin);clearTimeout(t);res();};
+ const t=setTimeout(()=>{el.classList.remove('on');el.removeEventListener('pointerdown',fin);res();},2300);el.addEventListener('pointerdown',fin);});}
+
+/* ---------- action: mash ---------- */
+function runMash(a,tk){return new Promise(res=>{
+ const box=$('actionArea');box.innerHTML=`<div class="action"><h3>💥 ${a.label}</h3><div class="tbar"><i id="mt"></i></div><button class="mash" id="mb">STOP!</button><div class="cnt px" id="mc">0 / ${a.target}</div></div>`;
+ let n=0,t0=null,done=false;const mb=$('mb');
+ const end=ok=>{if(done)return;done=true;mb.disabled=true;res(ok);};
+ mb.addEventListener('pointerdown',e=>{e.preventDefault();if(done)return;if(t0===null){t0=performance.now();requestAnimationFrame(loop);}n++;SFX.tap();$('mc').textContent=`${n} / ${a.target}`;mb.style.transform=`scale(${1+n/a.target*.15})`;if(n>=a.target)end(true);});
+ const loop=()=>{if(done||tk!==token)return;const r=1-(performance.now()-t0)/(a.time*1000);$('mt').style.transform=`scaleX(${Math.max(0,r)})`;if(r<=0){end(false);return;}requestAnimationFrame(loop);};
+ // if never tapped, start the clock anyway after 2s
+ setTimeout(()=>{if(t0===null&&!done&&tk===token){t0=performance.now();requestAnimationFrame(loop);}},2000);});}
+
+/* ---------- action: drag ---------- */
+function runDrag(a,tk){return new Promise(res=>{
+ const box=$('actionArea');box.innerHTML=`<div class="action"><h3>✋ ${a.label}</h3><div class="tbar"><i id="dgt"></i></div><div class="arena" id="ar"><div class="goal" id="gl">${a.goal}</div><div class="holder" id="hd">${a.holder}</div><div class="item" id="it">${a.item}</div></div></div>`;
+ const ar=$('ar'),hd=$('hd'),it=$('it'),gl=$('gl');
+ let R=ar.getBoundingClientRect();let hx=R.width*.28,hy=R.height*.5,vx=(R.width/260)*1.6,vy=1.3,grab=false,ix=0,iy=0,done=false,t0=performance.now();
+ const place=()=>{hd.style.left=hx+'px';hd.style.top=hy+'px';if(!grab){ix=hx+(a.moving?18:6);iy=hy+(a.moving?14:22);}it.style.left=ix+'px';it.style.top=iy+'px';};
+ const overGoal=()=>{const g=gl.getBoundingClientRect(),i=it.getBoundingClientRect(),cxp=i.left+i.width/2,cyp=i.top+i.height/2;return cxp>g.left-10&&cxp<g.right+10&&cyp>g.top-10&&cyp<g.bottom+10;};
+ const end=ok=>{if(done)return;done=true;res(ok);};
+ it.addEventListener('pointerdown',e=>{if(done)return;e.preventDefault();grab=true;it.classList.add('grab');try{it.setPointerCapture(e.pointerId);}catch(_){}SFX.pop();});
+ it.addEventListener('pointermove',e=>{if(!grab||done)return;R=ar.getBoundingClientRect();ix=Math.max(10,Math.min(R.width-10,e.clientX-R.left));iy=Math.max(10,Math.min(R.height-10,e.clientY-R.top));gl.classList.toggle('hot',overGoal());place();});
+ const up=()=>{if(!grab||done)return;grab=false;it.classList.remove('grab');if(overGoal()){gl.classList.add('hot');end(true);}else{gl.classList.remove('hot');SFX.tick();place();}};
+ it.addEventListener('pointerup',up);it.addEventListener('pointercancel',up);
+ const loop=()=>{if(done||tk!==token)return;R=ar.getBoundingClientRect();
+  if(a.moving){hx+=vx;hy+=vy;const maxX=R.width-120;if(hx<40||hx>maxX){vx=-vx;hx=Math.max(40,Math.min(maxX,hx));}if(hy<40||hy>R.height-40){vy=-vy;}if(Math.random()<.02)vy=(Math.random()-.5)*4;hd.style.transform=`translate(-50%,-50%) scaleX(${vx>0?-1:1})`;}
+  else{hx=R.width*.28+Math.sin(performance.now()/300)*8;hy=R.height*.5+Math.cos(performance.now()/420)*6;}
+  place();const r=1-(performance.now()-t0)/(a.time*1000);$('dgt').style.transform=`scaleX(${Math.max(0,r)})`;if(r<=0){end(false);return;}requestAnimationFrame(loop);};
+ place();requestAnimationFrame(loop);});}
+
+/* ---------- final ---------- */
+function finalChoice(tk){
+ const dg=M.delegate.find(d=>G.seen.has(d[0]))||M.delegate[4];
+ const opts=[{label:'地球を再起動する（パスワード入力）',hint:'成功すれば…？',type:'safe',k:'reboot'},{label:dg[1],hint:'世界の行方をゆだねる',type:'chaos',k:'del',who:dg[2]}];
+ showChoices(opts,tk,12000,1,async o=>{
+  G.path.push({t:'ch',s:o.label});
+  if(o.k==='del'){finish({type:'delegate',who:o.who});return;}
+  const ok=await runPassword(tk);if(tk!==token)return;
+  G.path.push({t:'ch',s:ok?'🔓 パスワード解除成功':'🔒 パスワード解除失敗'});
+  ok?SFX.good():SFX.bad();
+  $('actionArea').innerHTML=`<div class="result ${ok?'ok':'ng'}">${ok?'✔ 地球、再起動中…':'✖ アカウントがロックされました'}</div>`;
+  await wait(1100);if(tk!==token)return;finish({type:'reboot',ok});});}
+
+function runPassword(tk){return new Promise(res=>{
+ const pool=[...M.riddles].sort(()=>Math.random()-.5).slice(0,3);const code=pool.map(p=>p[1]);
+ const leaked=G.seen.has('pwleak');const blackIdx=leaked?Math.floor(Math.random()*3):-1;
+ const aiNote=G.merges.includes(11)?'<li>🤖 AI「ヒントは親切に並べ替えておきました（並べ替えていません）」</li>':'';
+ const box=$('actionArea');const dig=[0,0,0];let tries=3,done=false;const T=20000,t0=performance.now();
+ box.innerHTML=`<div class="action"><h3>🔐 地球のパスワード（3桁）を解除せよ！</h3><div class="tbar"><i id="pt"></i></div>
+ <ol class="hints">${pool.map((p,i)=>`<li>${i===blackIdx?'■■■■■■（流出により黒塗り）':p[0]}</li>`).join('')}${aiNote}</ol>
+ <div class="pw">${[0,1,2].map(i=>`<div class="dial"><button data-i="${i}" data-d="1" aria-label="${i+1}桁目を増やす">▲</button><div class="dg px" id="dg${i}">0</div><button data-i="${i}" data-d="-1" aria-label="${i+1}桁目を減らす">▼</button></div>`).join('')}</div>
+ <div class="pwmsg" id="pm">残り ${tries} 回</div><button class="btn yel" id="pok">ログイン</button></div>`;
+ box.querySelectorAll('.dial button').forEach(b=>b.addEventListener('click',()=>{if(done)return;const i=+b.dataset.i;dig[i]=(dig[i]+(+b.dataset.d)+10)%10;$('dg'+i).textContent=dig[i];SFX.tap();}));
+ const end=ok=>{if(done)return;done=true;res(ok);};
+ $('pok').addEventListener('click',()=>{if(done)return;const hit=dig.filter((d,i)=>d===code[i]).length;
+  if(hit===3){end(true);return;}tries--;SFX.bad();shake(box.firstChild);
+  if(tries<=0){$('pm').textContent=`正解は ${code.join('')} でした…`;done=true;setTimeout(()=>res(false),900);return;}
+  $('pm').textContent=`${hit}桁 正解！ 残り ${tries} 回`;});
+ const loop=()=>{if(done||tk!==token)return;const r=1-(performance.now()-t0)/T;$('pt').style.transform=`scaleX(${Math.max(0,r)})`;if(r<=0){$('pm').textContent=`時間切れ！正解は ${code.join('')}`;end(false);return;}requestAnimationFrame(loop);};
+ requestAnimationFrame(loop);});}
+
+function decide(f){
+ const s=G.seen;
+ if(f.type==='delegate')return f.who;
+ if(f.type==='timeout'||!f.ok)return s.has('pwleak')?'earthlock':'loop';
+ if(G.damage<=30&&G.trust>=70)return 'god';
+ if(s.has('usb')&&G.chaos>=50)return 'galaxy';
+ if(s.has('monster')&&G.chaos>=50)return 'monster';
+ return 'loop';}
+
+let lastShare='';
+function finish(f){
+ if(G.ended)return;G.ended=true;token++;cancelAnimationFrame(raf);
+ const id=decide(f),e=M.endings[id];const isNew=!save.endings[id];
+ save.endings[id]=(save.endings[id]||0)+1;save.bestChaos=Math.max(save.bestChaos,G.chaos);persist();
+ $('eEmoji').textContent=e.emoji;$('eTitle').innerHTML=e.title+(isNew?'<span class="newb">NEW</span>':'');$('eSub').textContent=e.sub;$('eDesc').textContent=e.desc;
+ $('sD').textContent=G.damage;$('sC').textContent=G.chaos;$('sT').textContent=G.trust;
+ $('endno').textContent=`図鑑 ${Object.keys(save.endings).length}/8`;
+ $('eChain').innerHTML='<b>あなたが起こした連鎖</b><br>'+G.path.map(p=>`<span class="${p.t==='ch'?'ch':'ev'}">${p.t==='ch'?'→ '+p.s:p.s}</span>`).join('<br>');
+ $('eTip').textContent=id==='god'?'💡 現実でも、誤送信は「隠さず・すぐ報告」が被害を最小にする最善手です。':'💡 現実の誤送信は、隠さず上司・情報システム部門にすぐ報告するのが正解。ゲームでは存分にカオスを。';
+ const evs=G.order.map(k=>S[k].emoji).join('→');
+ lastShare=`DATA LEAK KING で「${e.title}」を獲得！\n${evs}\n漏洩被害${G.damage}／カオス${G.chaos}／信頼${G.trust}\n#DATALEAKKING`;
+ $('sharebox').style.display='none';
+ show('end');$('end').querySelector('.wrap').scrollTop=0;SFX.fanfare();confetti(id==='god'?160:100);}
+
+/* ---------- zukan / title ---------- */
+function renderTitle(){const n=Object.keys(save.endings).length;$('rec').textContent=save.plays?`プレイ ${save.plays}回 ／ 図鑑 ${n}/8 ／ 合体 ${save.merges.length}/12 ／ 最高カオス ${save.bestChaos}`:'まずは1通、送ってみよう。';}
+function openZukan(){
+ $('zcount').textContent=`${Object.keys(save.endings).length}/8　合体 ${save.merges.length}/12`;
+ $('zgrid').innerHTML=M.order.map(k=>{const e=M.endings[k],c=save.endings[k];return c?`<div class="zc"><span class="e">${e.emoji}</span><b>${e.title}</b><span>${e.sub}（${c}回）</span></div>`:`<div class="zc lock"><span class="e">${e.emoji}</span><b>？？？</b><span>ヒント：${e.lock}</span></div>`;}).join('');
+ $('zukan').classList.add('on');}
+$('bZukan').addEventListener('click',()=>{SFX.click();openZukan();});
+$('bZukan2').addEventListener('click',()=>{SFX.click();openZukan();});
+$('bZclose').addEventListener('click',()=>{SFX.click();$('zukan').classList.remove('on');});
+$('bStart').addEventListener('click',()=>{ac();SFX.click();newGame();});
+$('bRetry').addEventListener('click',()=>{SFX.click();newGame();});
+$('bTitle').addEventListener('click',()=>{SFX.click();renderTitle();show('title');G=null;});
+$('bShare').addEventListener('click',async()=>{SFX.click();
+ try{if(navigator.share){await navigator.share({title:'DATA LEAK KING',text:lastShare});return;}}catch(e){if(e&&e.name==='AbortError')return;}
+ try{await navigator.clipboard.writeText(lastShare);toast('結果をコピーしました！SNSに貼り付けてね');return;}catch(e){}
+ const sb=$('sharebox');sb.value=lastShare;sb.style.display='block';sb.focus();sb.select();toast('テキストを選択してコピーしてね');});
+renderTitle();
+}
+</script>
+<script>
+/* portal: when choices or an action appear, scroll them into view inside the stage */
+(()=>{const vis=el=>{const t=el.lastElementChild||el;requestAnimationFrame(()=>{try{t.scrollIntoView({block:'nearest'});}catch(e){}});};
+ ['choices','actionArea'].forEach(id=>{const el=document.getElementById(id);if(el)new MutationObserver(()=>{if(el.children.length)vis(el);}).observe(el,{childList:true});});})();
+</script>
+</body>
+</html>

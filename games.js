@@ -13,7 +13,7 @@
  *
  * サイト上の「管理」画面からも追加・削除できます（その場合はこのブラウザだけに保存されます）。
  */
-window.GAMES_VERSION = "55";
+window.GAMES_VERSION = "56";
 
 /* 管理画面のパスワード（SHA-256 ハッシュ。パスワードそのものは書かない）
  * 変更するには: "mini-game-arcade:" + 新しいパスワード を SHA-256 にかけた値に置き換える */
@@ -514,5 +514,14 @@ window.GAMES = [
     emoji: "🫘",
     color: "#2b1b5a",
     accent: "#ffd23f"
+  },
+  {
+    id: "data-leak-king",
+    title: "DATA LEAK KING",
+    description: "たった1通の誤送信から、地球がログイン画面になるまで。瞬間判断・ドラッグ救出・連打阻止で情報漏えいの大惨事を食い止めろ！",
+    path: "games/data-leak-king/index.html",
+    emoji: "📧",
+    color: "#0d1230",
+    accent: "#ffd60a"
   }
 ];
