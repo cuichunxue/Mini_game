@@ -13,7 +13,7 @@
  *
  * サイト上の「管理」画面からも追加・削除できます（その場合はこのブラウザだけに保存されます）。
  */
-window.GAMES_VERSION = "54";
+window.GAMES_VERSION = "55";
 
 /* 管理画面のパスワード（SHA-256 ハッシュ。パスワードそのものは書かない）
  * 変更するには: "mini-game-arcade:" + 新しいパスワード を SHA-256 にかけた値に置き換える */
@@ -505,5 +505,14 @@ window.GAMES = [
     emoji: "💇",
     color: "#2a2358",
     accent: "#ffb21f"
+  },
+  {
+    id: "natto-chaos-king",
+    title: "NATTO CHAOS KING",
+    description: "納豆を混ぜて粘りを出し、糸をどこまでも伸ばせ！街も空も宇宙も巻き込む大混乱。限界を超えたら…どんな結末が待っている？",
+    path: "games/natto-chaos-king/index.html",
+    emoji: "🫘",
+    color: "#2b1b5a",
+    accent: "#ffd23f"
   }
 ];
