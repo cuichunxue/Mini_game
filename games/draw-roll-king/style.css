@@ -71,6 +71,11 @@ body {
   padding: 7px 8px; border-radius: 999px; cursor: pointer; white-space: nowrap;
 }
 .chip.active { background: #ffd84a; color: #3b2a00; }
+.chip.mode { font-size: 12px; padding: 7px 10px; }
+.chip.mode.active { background: #5cd6ff; color: #06324a; }
+.chip.mode.locked { opacity: .55; }
+.prog { flex: 0 0 auto; align-self: center; font-size: 12px; font-weight: 900; color: #ffd84a; padding: 0 6px; white-space: nowrap; }
+.btn.unlock { background: #19a15f; animation: pulse 1.2s infinite; margin-bottom: 4px; }
 .btn {
   border: 0; font: inherit; font-weight: 900; color: #fff; cursor: pointer; border-radius: 14px;
   box-shadow: 0 4px 0 rgba(0,0,0,.35); transition: transform .05s; touch-action: none;
@@ -118,7 +123,7 @@ body {
   .result-card { padding: 8px 12px; }
   .res-head { font-size: 22px; }
   .res-titles { margin: 3px 0; }
-  .res-map canvas, .res-map-canvas { height: 46px; }
+  .res-map canvas { height: 46px; }
   .res-grid { margin: 4px 0; }
   .res-grid div { padding: 3px 2px; }
   .res-hint { display: none; }

@@ -41,6 +41,7 @@
         </div>
         <div id="resBest" class="res-best"></div>
         <div id="resHint" class="res-hint hidden"></div>
+        <button id="btnUnlock" class="btn big unlock hidden">あそぶ ▶</button>
         <button id="btnRetry" class="btn big primary">RETRY ↻</button>
         <div class="res-sub">
           <button id="btnEdit" class="btn small">EDIT</button>
@@ -64,6 +65,12 @@
 
   <footer id="controls">
     <div id="editBar">
+      <div class="row chips" id="modeRow">
+        <button class="chip mode active" data-mode="car">🚗 CAR</button>
+        <button class="chip mode" data-mode="plane">✈️ PLANE</button>
+        <button class="chip mode" data-mode="rocket">🚀 ROCKET</button>
+        <span id="progBadge" class="prog">★ 0/9</span>
+      </div>
       <div class="row chips" id="courseRow">
         <button class="chip active" data-course="0">1 GREEN HILLS</button>
         <button class="chip" data-course="1">2 BUMPY VALLEY</button>
