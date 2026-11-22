@@ -42,7 +42,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
   <div class="ov" id="title">
     <div class="logo">WIG PANIC<small>KING</small></div>
     <div class="tag">カツラを守れ！<br>でも、守っていることを絶対にバレるな！</div>
-    <div class="how">👆 長押し：カツラを押さえる（押さえすぎ注意）<br>↔ 左右スワイプ：ずれを直す<br>🐦 鳥をタップで撃退<br>PC：Space押さえる・← →直す・Escポーズ</div>
+    <div class="how">👆 長押し＝押さえる（やりすぎるとバレる）<br>↔ スワイプ＝ずれを直す　🐦 タップ＝追い払う<br><span style="opacity:.7">PC：Space / ← → / Esc</span></div>
     <div class="best" id="bestT">BEST 0</div>
     <button class="btn" id="startBtn">START</button>
   </div>
@@ -93,8 +93,9 @@ window.addEventListener('orientationchange',()=>setTimeout(resize,150));
 resize();
 
 /* ---------- 保存 ---------- */
-let best=0,muted=false;
-try{best=+localStorage.getItem('wigPanicKingBest')||0;muted=localStorage.getItem('wigPanicKingMute')==='1';}catch(e){}
+let best=0,muted=false,plays=0,longest=0;
+try{best=+localStorage.getItem('wigPanicKingBest')||0;muted=localStorage.getItem('wigPanicKingMute')==='1';plays=+localStorage.getItem('wigPanicKingPlays')||0;longest=+localStorage.getItem('wigPanicKingLong')||0;}catch(e){}
+function saveMeta(){try{localStorage.setItem('wigPanicKingPlays',plays);localStorage.setItem('wigPanicKingLong',longest)}catch(e){}}
 function saveBest(){try{localStorage.setItem('wigPanicKingBest',best)}catch(e){}}
 function saveMute(){try{localStorage.setItem('wigPanicKingMute',muted?'1':'0')}catch(e){}}
 
@@ -150,6 +151,10 @@ const SFX={
   fail(){[392,330,262,196].forEach((f,i)=>tone(f,.3,'sawtooth',.2,-30,i*.2))},
   gasp(){noise(.5,.25,900,1.2,0,true);tone(300,.5,'sine',.15,500)},
   boing(){tone(300,.3,'sine',.25,500)},
+  beat(){tone(70,.12,'sine',.35,-20);tone(62,.12,'sine',.3,-20,.16)},
+  safe(){[660,880,1320].forEach((f,i)=>tone(f,.12,'triangle',.18,0,i*.06))},
+  count(){tone(1000,.09,'square',.12)},
+  murmur(){noise(.5,.08,700,4,0,true);noise(.4,.06,1100,5,.15,true)},
   win(){[523,659,784,1046,1318].forEach((f,i)=>tone(f,.25,'triangle',.18,0,i*.1));SFX.cheer()}
 };
 function setWindSound(mag,on){
@@ -168,10 +173,10 @@ const isHold=()=>holdIds.size>0||keyHold;
 
 function newGame(){
   S={t:0,stab:85,sus:0,wx:0,wv:0,lift:0,holdAmt:0,holdTime:0,fixCd:0,
-     gusts:[],gT:2,warn:null,wind:0,windMag:0,fanDir:-1,fanT:6,fanX:300,
+     gusts:[],gT:3.6,warn:null,wind:0,windMag:0,fanDir:-1,fanT:6,fanX:300,
      birds:[],bT:3.5,birdsOff:0,score:0,cleared:0,susSum:0,maxSus:0,
      pops:[],parts:[],streaks:[],banner:null,stageIdx:0,shake:0,flash:0,
-     lose:null,winT:0,slow:1,ph:0,scroll:0,fixes:0,hurt:0,look:0};
+     lose:null,winT:0,slow:1,ph:0,scroll:0,fixes:0,hurt:0,look:0,bonus:0,saves:0,lowStab:false,highSus:false,beatT:0,murT:0,cdLast:0,hint:null,seen:{},tut:plays<2,everHeld:false};
   for(let i=0;i<26;i++)S.streaks.push({x:Math.random()*W,y:rnd(110,520),l:rnd(18,50),v:rnd(.6,1.4)});
 }
 function show(id,on){$(id).classList.toggle('hide',!on)}
@@ -184,7 +189,9 @@ function toTitle(){
 function startGame(){
   ac();newGame();state='play';holdIds.clear();keyHold=false;
   show('title',false);show('pause',false);show('result',false);
+  plays++;saveMeta();
   banner(STAGES[0].n,STAGES[0].t);SFX.tap();
+  if(S.tut)hint('hold','長押しでカツラを押さえる！','H');
 }
 function pauseGame(){
   if(state!=='play')return;
@@ -195,6 +202,7 @@ function resumeGame(){
   state='play';holdIds.clear();keyHold=false;show('pause',false);last=performance.now();
 }
 function banner(a,b){S.banner={a,b,t:0}}
+function hint(key,txt,target,force){if(!force&&(!S.tut||S.seen[key]))return;S.seen[key]=1;S.hint={txt,target,t:0,key}}
 function pop(x,y,txt,col){S.pops.push({x,y,txt,col:col||'#fff',t:0})}
 
 /* ---------- 風 ---------- */
@@ -205,6 +213,7 @@ function spawnGust(){
   else if(st===2){mag=rnd(.8,1.3);dur=rnd(1.1,1.7);iv=rnd(1.4,2.4);dir=S.lastDir?-S.lastDir:dir}
   else if(st===3){mag=rnd(.6,1.1);dur=rnd(1.5,2.2);iv=rnd(2.2,3.2)}
   else{mag=rnd(1,1.5);dur=rnd(1.8,2.8);iv=rnd(1.6,2.6)}
+  if(S.t<12)mag=Math.min(mag,.6);
   S.lastDir=dir;
   S.gusts.push({dir,mag,dur,age:-.75});
   S.gT=iv+.75;
@@ -278,7 +287,7 @@ function updatePlay(dt){
   const idx=Math.min(4,Math.floor(S.t/30));
   if(idx!==S.stageIdx){
     S.stageIdx=idx;S.cleared++;S.stab=Math.min(100,S.stab+10);
-    banner(STAGES[idx].n,STAGES[idx].t);SFX.clear();S.gusts.length=0;S.gT=2.2;
+    banner(STAGES[idx].n,STAGES[idx].t);SFX.clear();S.gusts.length=0;S.gT=2.2;pop(180,150,'STAGE CLEAR +500','#ffd84a');
     if(idx>=1)S.bT=Math.min(S.bT,2.5);
   }
   updateWind(sd);
@@ -328,7 +337,23 @@ function updatePlay(dt){
     }
   }
   S.hurt=Math.max(0,S.hurt-dt);
-  S.score=Math.floor(S.t*100)+S.birdsOff*200+S.cleared*500;
+  // ヒント（初回プレイのみ）
+  if(hold&&!S.everHeld){S.everHeld=true;if(S.hint&&S.hint.key==='hold')S.hint=null}
+  if(Math.abs(S.wx)>.45&&!hold)hint('fix',S.wx>0?'ずれた！ ← 逆方向にスワイプ':'ずれた！ 逆方向にスワイプ →',S.wx>0?'L':'R');
+  if(S.birds.some(b=>b.state==='in'))hint('bird','鳥をタップで追い払え！','bird');
+  if(S.sus>55&&hold)hint('sus','押さえすぎ！怪しまれてる…離して！','sus');
+  if(S.hint){S.hint.t+=dt;if(S.hint.t>(S.hint.key==='hold'&&!S.everHeld?6:3))S.hint=null}
+  // ギリギリセーフ（最優先方針：ギリギリの瞬間を面白く）
+  if(S.stab<15)S.lowStab=true;
+  if(S.lowStab&&S.stab>45){S.lowStab=false;S.bonus+=300;S.saves++;pop(180,240,'ギリギリセーフ！+300','#7dffb2');SFX.safe();S.flash=.25}
+  if(S.sus>88)S.highSus=true;
+  if(S.highSus&&S.sus<55){S.highSus=false;S.bonus+=300;S.saves++;pop(180,240,'ごまかし成功！+300','#7dffb2');SFX.safe()}
+  // 心音・ひそひそ
+  S.beatT-=dt;if((S.stab<25||S.sus>80)&&S.beatT<=0){SFX.beat();S.beatT=S.stab<12||S.sus>90?.45:.7}
+  S.murT-=dt;if(S.sus>60&&S.murT<=0){SFX.murmur();S.murT=1.6}
+  // ラスト10秒カウント
+  const left=Math.ceil(GOAL-S.t);if(left<=10&&left>=1&&left!==S.cdLast){S.cdLast=left;SFX.count()}
+  S.score=Math.floor(S.t*100)+S.birdsOff*200+S.cleared*500+S.bonus;
   // 風のスジ
   for(const s of S.streaks){
     s.x+=Math.sign(S.wind||1)*S.windMag*320*s.v*sd+(S.stageIdx===2?-120*sd:0);
@@ -364,7 +389,7 @@ function updateLose(dt){
     L.vy+=900*d;L.sx+=L.vx*d;L.sy+=L.vy*d;
     if(L.sy>L.gy){L.sy=L.gy;L.vy*=-.35;L.vx*=.6;L.bounced++;if(L.bounced<4)SFX.boing()}
   }
-  if(L.t>2.8&&!L.done){L.done=true;showResult(false)}
+  if(L.t>2.1&&!L.done){L.done=true;showResult(false)}
 }
 function endWin(){
   state='win';S.banner=null;holdIds.clear();keyHold=false;S.winT=0;S.flash=.8;
@@ -374,14 +399,14 @@ function endWin(){
 }
 function updateWin(dt){
   S.winT+=dt;S.wx*=.9;S.wv*=.9;S.holdAmt+=(0-S.holdAmt)*dt*6;S.look*=.9;
-  if(S.winT>2.8&&!S.done){S.done=true;showResult(true)}
+  if(S.winT>2.6&&!S.done){S.done=true;showResult(true)}
   if(S.winT<2&&Math.random()<dt*20)S.parts.push({x:rnd(0,W),y:-5,vx:rnd(-30,30),vy:rnd(60,150),t:0,l:3,c:['#ff5d73','#ffd84a','#5df0a1','#6cc7ff'][Math.floor(Math.random()*4)],r:3,g:30});
 }
 function fmt(sec){sec=Math.max(0,Math.ceil(sec));return String(Math.floor(sec/60)).padStart(2,'0')+':'+String(sec%60).padStart(2,'0')}
 function showResult(won){
   const t=Math.min(S.t,GOAL),pct=Math.floor(t/GOAL*100);
   const avg=S.t>0?S.susSum/S.t:0;
-  let total=Math.floor(t*100)+S.birdsOff*200+S.cleared*500;
+  let total=Math.floor(t*100)+S.birdsOff*200+S.cleared*500+S.bonus;
   let bonus=0;
   if(won){total+=3000;bonus=Math.round((100-avg)*30);total+=bonus}
   S.finalScore=total;
@@ -395,11 +420,14 @@ function showResult(won){
     title=S.lose.reason==='sus'?'😱 正体がバレた！':'💨 カツラが飛んだ！';
     if(left<=6)msg='あと'+Math.max(1,Math.ceil(left))+'秒だったのに！';
     else msg='カツラ防衛率'+pct+'％';
-    sub=S.lose.reason==='sus'?'押さえすぎは逆に怪しい…':'風には勝てなかった…';
+    sub=S.lose.reason==='sus'?'💡 コツ：風が弱い時は手を離してごまかそう':
+      (S.fixes<2?'💡 コツ：ずれたら光るボタン（逆方向）で直そう':'💡 コツ：⚠が出たら先に押さえて備えよう');
   }
   $('rTitle').textContent=title;$('rMsg').textContent=msg;$('rSub').textContent=sub;
-  $('rStats').innerHTML='生存 '+fmt(t)+'（'+STAGES[Math.min(4,Math.floor(t/30))].n+'）<br>鳥の撃退 '+S.birdsOff+'羽 ／ 最大バレそう度 '+Math.round(S.maxSus)+'%';
+  $('rStats').innerHTML='生存 '+fmt(t)+'（'+STAGES[Math.min(4,Math.floor(t/30))].n+'）<br>鳥の撃退 '+S.birdsOff+'羽 ／ ギリギリセーフ '+S.saves+'回<br>最大バレそう度 '+Math.round(S.maxSus)+'%';
   $('rScore').textContent=total.toLocaleString();
+  const prevLong=longest;if(t>longest){longest=t;saveMeta()}
+  if(!won&&t>prevLong&&prevLong>0)$('rSub').textContent='📈 最長記録更新！ '+fmt(prevLong)+' → '+fmt(t)+'　'+$('rSub').textContent;
   const nb=total>best;
   if(nb){best=total;saveBest()}
   $('rNew').textContent=nb?'🏆 NEW BEST！':'BEST '+best.toLocaleString();
@@ -504,10 +532,20 @@ function drawWigShape(){
   cx.beginPath();cx.moveTo(-54,16);
   cx.bezierCurveTo(-66,-36,66,-36,54,16);
   const n=7;for(let i=0;i<n;i++){const x0=54-(108/n)*i,x1=54-(108/n)*(i+1);cx.quadraticCurveTo((x0+x1)/2,i%2?28:34,x1,16+(i%2?0:3))}
-  cx.closePath();cx.fill();
+  cx.closePath();cx.fill();cx.strokeStyle='#2e1c0c';cx.lineWidth=2;cx.stroke();
   cx.strokeStyle='#8b6034';cx.lineWidth=2.4;cx.lineCap='round';
   for(let i=-3;i<=3;i++){cx.beginPath();cx.moveTo(i*8,-26+Math.abs(i)*2);cx.quadraticCurveTo(i*12+6,-6,i*14,14);cx.stroke()}
   cx.fillStyle='rgba(255,255,255,.18)';cx.beginPath();cx.ellipse(-16,-18,16,5,-.3,0,7);cx.fill();
+}
+function drawGap(){ // 浮いた隙間からのぞく頭皮
+  const hp=headPos(),g=S.lift+Math.abs(S.wx)*10;
+  if(g<5||state!=='play')return;
+  cx.save();cx.globalAlpha=clamp((g-5)/12,0,1);
+  cx.fillStyle='#ffe6cc';cx.beginPath();cx.ellipse(180,288,34,10,0,Math.PI,0);cx.fill();
+  cx.fillStyle='#fff';cx.beginPath();cx.ellipse(170,284,10,3,-.2,0,7);cx.fill();
+  const tw=Math.floor(S.ph*10)%2;text('✦',196,280-tw*2,12,'#fff','center');
+  cx.restore();
+  if(S.stab<30&&Math.floor(S.ph*3)%2)text('ペラッ',hp.x+(S.wx>=0?62:-62),hp.y-18,14,'#fff','center',3);
 }
 function drawWig(x,y,rot,sc){cx.save();cx.translate(x,y);cx.rotate(rot);cx.scale(sc||1,sc||1);drawWigShape();cx.restore()}
 function drawArm(sx,sy,ex,ey,hx,hy){
@@ -651,8 +689,11 @@ function drawButtons(){
   for(const [k,ic,lb] of defs){
     const [x,y,w,h]=BTN[k];
     const on=k==='H'&&isHold();
+    const need=Math.abs(S.wx)>.3&&((k==='L'&&S.wx>0)||(k==='R'&&S.wx<0));
+    const tgt=S.hint&&S.hint.target===k;
+    if(need||tgt){cx.save();cx.shadowColor='#7dffb2';cx.shadowBlur=18+8*Math.sin(S.ph*12);rr(x,y,w,h,18);cx.fillStyle='#7dffb2';cx.fill();cx.restore()}
     rr(x,y,w,h,18);
-    cx.fillStyle=on?'#ffb21f':(k==='H'?'rgba(255,214,90,.9)':'rgba(255,255,255,.88)');cx.fill();
+    cx.fillStyle=on?'#ffb21f':need?'#c9ffdf':(k==='H'?'rgba(255,214,90,.9)':'rgba(255,255,255,.88)');cx.fill();
     cx.lineWidth=3;cx.strokeStyle='rgba(0,0,0,.35)';cx.stroke();
     text(ic,x+w/2,y+38,k==='H'?34:28,'#3b1d06','center');
     text(lb,x+w/2,y+76,k==='H'?17:14,'#3b1d06','center');
@@ -731,7 +772,10 @@ function render(){
   if(state==='play'||state==='win'){
     const hp=headPos();
     const jx=(Math.random()-.5)*S.windMag*3*(isHold()?.2:1),jy=(Math.random()-.5)*S.windMag*3;
-    drawWig(hp.x+jx,hp.y+jy,S.wx*.55+S.wv*.04,1);
+    drawGap();
+    // 端がめくれる
+    const flap=state==='play'?clamp(S.lift/24,0,1)*Math.sin(S.ph*22)*.12:0;
+    drawWig(hp.x+jx,hp.y+jy,S.wx*.55+S.wv*.04+flap,1.06);
   }else if(state==='lose'){drawLoseWig()}
   // 鳥
   for(const b of S.birds)drawBird(b);
@@ -758,17 +802,33 @@ function render(){
     const g=cx.createRadialGradient(180,320,200,180,320,420);g.addColorStop(0,'rgba(255,0,40,0)');g.addColorStop(1,'rgba(255,0,40,'+a+')');
     cx.fillStyle=g;cx.fillRect(0,0,W,H);
   }
+  if(state==='play'&&S.hint)drawHint();
+  if(state==='play'&&GOAL-S.t<=10){const n=Math.ceil(GOAL-S.t),f=(GOAL-S.t)%1;cx.save();cx.globalAlpha=.35+.5*f;cx.translate(180,190);cx.scale(1+(1-f)*.4,1+(1-f)*.4);text(String(n),0,0,64,'#ffd84a','center',5);cx.restore()}
   // バナー & ポップ
   if(S.banner){
     const b=S.banner,p=b.t<.3?b.t/.3:b.t>1.8?(2.2-b.t)/.4:1;
     cx.save();cx.globalAlpha=clamp(p,0,1);
-    cx.fillStyle='rgba(10,8,30,.6)';cx.fillRect(0,190,W,76);
-    text(b.a,180,214,24,'#ffd84a','center',3);text(b.b,180,246,20,'#fff','center',3);
+    cx.fillStyle='rgba(10,8,30,.6)';cx.fillRect(0,410,W,70);
+    text(b.a,180,432,22,'#ffd84a','center',3);text(b.b,180,462,19,'#fff','center',3);
     cx.restore();
   }
   for(const p of S.pops){cx.globalAlpha=clamp(1.2-p.t,0,1);text(p.txt,p.x,p.y-p.t*50,16,p.col,'center',3)}
   cx.globalAlpha=1;
   if(S.flash>0){cx.fillStyle='rgba(255,255,255,'+(S.flash*.6)+')';cx.fillRect(0,0,W,H)}
+}
+function drawHint(){
+  const h=S.hint,a=clamp(Math.min(h.t*4,1),0,1);
+  cx.save();cx.globalAlpha=a;
+  cx.font='900 15px "Hiragino Maru Gothic ProN","Yu Gothic",system-ui,sans-serif';
+  const w=Math.min(340,cx.measureText(h.txt).width+30);
+  rr(180-w/2,168,w,34,17);cx.fillStyle='rgba(255,255,255,.95)';cx.fill();
+  text(h.txt,180,186,15,'#2a2358','center');
+  // 指アイコン
+  let px=null,py=null;
+  if(h.target&&BTN[h.target]){const b=BTN[h.target];px=b[0]+b[2]/2;py=b[1]-6}
+  if(h.target==='bird'){const b=S.birds.find(b=>b.state==='in');if(b){px=b.x;py=b.y+34}}
+  if(px!==null){const bob=Math.sin(S.ph*9)*6;text('👆',px+10,py+bob+(h.target==='bird'?14:-8),30,'#fff','center')}
+  cx.restore();
 }
 function drawLoseWig(){
   const L=S.lose;
@@ -801,6 +861,7 @@ function toLogical(e){const r=cv.getBoundingClientRect();return{x:(e.clientX-r.l
 const inR=(p,r)=>p.x>=r[0]&&p.x<=r[0]+r[2]&&p.y>=r[1]&&p.y<=r[1]+r[3];
 cv.addEventListener('pointerdown',e=>{
   e.preventDefault();ac();
+  if(state==='lose'&&S.lose&&S.lose.t>1&&!S.lose.done){S.lose.done=true;showResult(false);return}
   if(state!=='play')return;
   const p=toLogical(e);
   if(p.y<46&&p.x>312){pauseGame();return}
