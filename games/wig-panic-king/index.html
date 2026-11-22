@@ -42,9 +42,10 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
   <div class="ov" id="title">
     <div class="logo">WIG PANIC<small>KING</small></div>
     <div class="tag">カツラを守れ！<br>でも、守っていることを絶対にバレるな！</div>
-    <div class="how">👆 長押し＝押さえる（やりすぎるとバレる）<br>↔ スワイプ＝ずれを直す　🐦 タップ＝追い払う<br><span style="opacity:.7">PC：Space / ← → / Esc</span></div>
+    <div class="how">👆 長押しでカツラを押さえる<br>（押さえすぎるとバレる）<br><span style="opacity:.7">ほかの操作はゲーム中に教えます</span></div>
     <div class="best" id="bestT">BEST 0</div>
-    <button class="btn" id="startBtn">START</button>
+    <button class="btn" id="startBtn">QUICK 30秒<small style="display:block;font-size:.55em;opacity:.8">はじめての人はこちら</small></button>
+    <button class="btn sub" id="survBtn">SURVIVAL 150秒（全5ステージ）</button>
   </div>
 
   <div class="ov hide" id="pause">
@@ -93,10 +94,10 @@ window.addEventListener('orientationchange',()=>setTimeout(resize,150));
 resize();
 
 /* ---------- 保存 ---------- */
-let best=0,muted=false,plays=0,longest=0;
-try{best=+localStorage.getItem('wigPanicKingBest')||0;muted=localStorage.getItem('wigPanicKingMute')==='1';plays=+localStorage.getItem('wigPanicKingPlays')||0;longest=+localStorage.getItem('wigPanicKingLong')||0;}catch(e){}
+let best=0,bestQ=0,muted=false,plays=0,longest=0,mode='quick';
+try{best=+localStorage.getItem('wigPanicKingBest')||0;bestQ=+localStorage.getItem('wigPanicKingBestQ')||0;muted=localStorage.getItem('wigPanicKingMute')==='1';plays=+localStorage.getItem('wigPanicKingPlays')||0;longest=+localStorage.getItem('wigPanicKingLong')||0;}catch(e){}
 function saveMeta(){try{localStorage.setItem('wigPanicKingPlays',plays);localStorage.setItem('wigPanicKingLong',longest)}catch(e){}}
-function saveBest(){try{localStorage.setItem('wigPanicKingBest',best)}catch(e){}}
+function saveBest(){try{localStorage.setItem('wigPanicKingBest',best);localStorage.setItem('wigPanicKingBestQ',bestQ)}catch(e){}}
 function saveMute(){try{localStorage.setItem('wigPanicKingMute',muted?'1':'0')}catch(e){}}
 
 /* ---------- 音 ---------- */
@@ -169,13 +170,14 @@ let state='title';            // title / play / pause / win / lose
 let S=null;
 const holdIds=new Map();      // pointerId -> {x0,btn}
 let keyHold=false;
-const isHold=()=>holdIds.size>0||keyHold;
+const isHold=()=>{if(keyHold)return true;for(const h of holdIds.values())if(h.mode==='hold')return true;return false};
 
 function newGame(){
   S={t:0,stab:85,sus:0,wx:0,wv:0,lift:0,holdAmt:0,holdTime:0,fixCd:0,
      gusts:[],gT:3.6,warn:null,wind:0,windMag:0,fanDir:-1,fanT:6,fanX:300,
      birds:[],bT:3.5,birdsOff:0,score:0,cleared:0,susSum:0,maxSus:0,
      pops:[],parts:[],streaks:[],banner:null,stageIdx:0,shake:0,flash:0,
+     goal:mode==='quick'?30:150,stLen:mode==='quick'?6:30,rescueUsed:false,wigFlip:false,
      lose:null,winT:0,slow:1,ph:0,scroll:0,fixes:0,hurt:0,look:0,bonus:0,saves:0,lowStab:false,highSus:false,beatT:0,murT:0,cdLast:0,hint:null,seen:{},tut:plays<2,everHeld:false};
   for(let i=0;i<26;i++)S.streaks.push({x:Math.random()*W,y:rnd(110,520),l:rnd(18,50),v:rnd(.6,1.4)});
 }
@@ -183,10 +185,11 @@ function show(id,on){$(id).classList.toggle('hide',!on)}
 function toTitle(){
   state='title';holdIds.clear();keyHold=false;
   show('title',true);show('pause',false);show('result',false);
-  $('bestT').textContent='BEST '+best.toLocaleString();
+  $('bestT').textContent='BEST  QUICK '+bestQ.toLocaleString()+' ／ SURVIVAL '+best.toLocaleString();
   newGame();setWindSound(0,false);
 }
-function startGame(){
+function startGame(m){
+  if(m==='quick'||m==='survival')mode=m;
   ac();newGame();state='play';holdIds.clear();keyHold=false;
   show('title',false);show('pause',false);show('result',false);
   plays++;saveMeta();
@@ -213,7 +216,7 @@ function spawnGust(){
   else if(st===2){mag=rnd(.8,1.3);dur=rnd(1.1,1.7);iv=rnd(1.4,2.4);dir=S.lastDir?-S.lastDir:dir}
   else if(st===3){mag=rnd(.6,1.1);dur=rnd(1.5,2.2);iv=rnd(2.2,3.2)}
   else{mag=rnd(1,1.5);dur=rnd(1.8,2.8);iv=rnd(1.6,2.6)}
-  if(S.t<12)mag=Math.min(mag,.6);
+  if(S.t<S.stLen*.4)mag=Math.min(mag,.6);
   S.lastDir=dir;
   S.gusts.push({dir,mag,dur,age:-.75});
   S.gT=iv+.75;
@@ -259,7 +262,7 @@ function fix(dir){
   if(Math.abs(S.wx)>.25&&dir===need){
     S.stab=clamp(S.stab+15,0,100);S.sus=clamp(S.sus+3,0,100);
     S.wx*=.12;S.wv=dir*1.2;S.fixes++;
-    pop(180+dir*50,270,'ナイス直し！','#8dffb5');SFX.fix();
+    S.bonus+=50;pop(180+dir*50,270,'ナイス直し！+50','#8dffb5');SFX.fix();
   }else{
     S.stab=clamp(S.stab-3,0,100);S.sus=clamp(S.sus+3,0,100);
     S.wv+=dir*2.2;
@@ -284,13 +287,14 @@ function updatePlay(dt){
   S.slow+=(target-S.slow)*Math.min(1,dt*6);
   const sd=dt*S.slow;
   S.t+=dt;S.fixCd=Math.max(0,S.fixCd-dt);
-  const idx=Math.min(4,Math.floor(S.t/30));
+  const idx=Math.min(4,Math.floor(S.t/S.stLen));
   if(idx!==S.stageIdx){
     S.stageIdx=idx;S.cleared++;S.stab=Math.min(100,S.stab+10);
     banner(STAGES[idx].n,STAGES[idx].t);SFX.clear();S.gusts.length=0;S.gT=2.2;pop(180,150,'STAGE CLEAR +500','#ffd84a');
     if(idx>=1)S.bT=Math.min(S.bT,2.5);
   }
   updateWind(sd);
+  {const now=performance.now();for(const h of holdIds.values())if(h.mode==='pending'&&now-h.t0>120){h.mode='hold';SFX.hold()}}
   const hold=isHold();
   S.holdAmt+=((hold?1:0)-S.holdAmt)*Math.min(1,dt*14);
   S.look+=(((S.warn?S.warn.dir:Math.sign(S.wind))||0)-S.look)*Math.min(1,dt*5);
@@ -352,7 +356,7 @@ function updatePlay(dt){
   S.beatT-=dt;if((S.stab<25||S.sus>80)&&S.beatT<=0){SFX.beat();S.beatT=S.stab<12||S.sus>90?.45:.7}
   S.murT-=dt;if(S.sus>60&&S.murT<=0){SFX.murmur();S.murT=1.6}
   // ラスト10秒カウント
-  const left=Math.ceil(GOAL-S.t);if(left<=10&&left>=1&&left!==S.cdLast){S.cdLast=left;SFX.count()}
+  const left=Math.ceil(S.goal-S.t);if(left<=(mode==='quick'?5:10)&&left>=1&&left!==S.cdLast){S.cdLast=left;SFX.count()}
   S.score=Math.floor(S.t*100)+S.birdsOff*200+S.cleared*500+S.bonus;
   // 風のスジ
   for(const s of S.streaks){
@@ -364,7 +368,7 @@ function updatePlay(dt){
   // 判定
   if(S.sus>=100)endLose('sus');
   else if(S.stab<=0)endLose('wind');
-  else if(S.t>=GOAL)endWin();
+  else if(S.t>=S.goal)endWin();
 }
 
 /* ---------- 終了演出 ---------- */
@@ -377,6 +381,7 @@ function endLose(reason){
   const L={reason,type,t:0,sx:hp.x,sy:hp.y,rot0:S.wx*.5,vx:0,vy:0,gy:470,bounced:0,done:false,sfx:false};
   S.lose=L;S.banner=null;S.shake=14;S.flash=.8;
   if(type===-1){L.vx=dir*30;L.vy=-60}
+  if(reason==='wind'&&!S.rescueUsed&&type!==1)L.rescue={need:10,taps:0,start:1.3,dur:3,state:'wait'};
   setWindSound(0,false);
   if(type===-1)SFX.gasp();else SFX.fail();
 }
@@ -389,7 +394,26 @@ function updateLose(dt){
     L.vy+=900*d;L.sx+=L.vx*d;L.sy+=L.vy*d;
     if(L.sy>L.gy){L.sy=L.gy;L.vy*=-.35;L.vx*=.6;L.bounced++;if(L.bounced<4)SFX.boing()}
   }
-  if(L.t>2.1&&!L.done){L.done=true;showResult(false)}
+  const RC=L.rescue;
+  if(RC){
+    if(RC.state==='wait'&&L.t>=RC.start){RC.state='on';SFX.warn()}
+    if(RC.state==='on'){if(RC.taps>=RC.need){rescueOK();return}if(L.t>RC.start+RC.dur){RC.state='fail';SFX.fail();pop(180,250,'取り返せなかった…','#ff9a9a')}}
+  }
+  const endAt=RC?RC.start+RC.dur+.8:2.1;
+  if(L.t>endAt&&!L.done){L.done=true;showResult(false)}
+}
+function rescueOK(){
+  S.lose=null;state='play';S.rescueUsed=true;S.wigFlip=true;holdIds.clear();keyHold=false;
+  S.stab=50;S.sus=clamp(S.sus+20,0,95);S.wx=0;S.wv=0;S.bonus+=500;S.flash=.6;S.shake=6;
+  banner('奪還成功！ +500','…でもカツラが裏返し');SFX.cheer();
+}
+function drawRescue(L){
+  const RC=L.rescue,left=Math.max(0,RC.start+RC.dur-L.t),k=RC.taps/RC.need,pul=1+.06*Math.sin(S.ph*16);
+  cx.save();cx.translate(180,196);cx.scale(pul,pul);text('取り返せ！',0,0,40,'#ffd84a','center',5);cx.restore();
+  text('画面をタップ連打！ あと'+left.toFixed(1)+'秒',180,236,16,'#fff','center',3);
+  rr(70,254,220,18,9);cx.fillStyle='rgba(0,0,0,.55)';cx.fill();
+  if(k>0){rr(70,254,Math.max(18,220*k),18,9);cx.fillStyle='#5df0a1';cx.fill()}
+  text(RC.taps+' / '+RC.need,180,264,12,'#fff','center',2.5);
 }
 function endWin(){
   state='win';S.banner=null;holdIds.clear();keyHold=false;S.winT=0;S.flash=.8;
@@ -404,33 +428,34 @@ function updateWin(dt){
 }
 function fmt(sec){sec=Math.max(0,Math.ceil(sec));return String(Math.floor(sec/60)).padStart(2,'0')+':'+String(sec%60).padStart(2,'0')}
 function showResult(won){
-  const t=Math.min(S.t,GOAL),pct=Math.floor(t/GOAL*100);
+  const G_=S.goal,t=Math.min(S.t,G_),pct=Math.floor(t/G_*100);
   const avg=S.t>0?S.susSum/S.t:0;
   let total=Math.floor(t*100)+S.birdsOff*200+S.cleared*500+S.bonus;
   let bonus=0;
-  if(won){total+=3000;bonus=Math.round((100-avg)*30);total+=bonus}
+  if(won){total+=mode==='quick'?1000:3000;bonus=Math.round((100-avg)*(mode==='quick'?10:30));total+=bonus}
   S.finalScore=total;
   let title,msg,sub;
   if(won){
-    title='🎉 完走！ ヅラ防衛成功！';
-    msg=avg<25?'周囲は誰も気づいていない…完璧！':'カツラ防衛率100％！';
+    title=S.wigFlip?'🙃 裏返しのまま完走！':'🎉 完走！ ヅラ防衛成功！';
+    msg=S.wigFlip?'…誰も、何も言わなかった。':avg<25?'周囲は誰も気づいていない…完璧！':'カツラ防衛率100％！';
+    if(mode==='quick')msg+='　次は SURVIVAL 150秒へ！';
     sub='ボーナス：バレなさ +'+bonus.toLocaleString();
   }else{
-    const left=GOAL-t;
-    title=S.lose.reason==='sus'?'😱 正体がバレた！':'💨 カツラが飛んだ！';
+    const left=G_-t;
+    title=S.lose.reason==='sus'?'😱 正体がバレた！':S.lose.rescue&&S.lose.rescue.state==='fail'?'💨 取り返せなかった…':'💨 カツラが飛んだ！';
     if(left<=6)msg='あと'+Math.max(1,Math.ceil(left))+'秒だったのに！';
     else msg='カツラ防衛率'+pct+'％';
     sub=S.lose.reason==='sus'?'💡 コツ：風が弱い時は手を離してごまかそう':
       (S.fixes<2?'💡 コツ：ずれたら光るボタン（逆方向）で直そう':'💡 コツ：⚠が出たら先に押さえて備えよう');
   }
   $('rTitle').textContent=title;$('rMsg').textContent=msg;$('rSub').textContent=sub;
-  $('rStats').innerHTML='生存 '+fmt(t)+'（'+STAGES[Math.min(4,Math.floor(t/30))].n+'）<br>鳥の撃退 '+S.birdsOff+'羽 ／ ギリギリセーフ '+S.saves+'回<br>最大バレそう度 '+Math.round(S.maxSus)+'%';
+  $('rStats').innerHTML='生存 '+fmt(t)+'（'+STAGES[Math.min(4,Math.floor(t/S.stLen))].n+'・'+(mode==='quick'?'QUICK':'SURVIVAL')+'）<br>鳥の撃退 '+S.birdsOff+'羽 ／ ギリギリセーフ '+S.saves+'回<br>最大バレそう度 '+Math.round(S.maxSus)+'%';
   $('rScore').textContent=total.toLocaleString();
   const prevLong=longest;if(t>longest){longest=t;saveMeta()}
   if(!won&&t>prevLong&&prevLong>0)$('rSub').textContent='📈 最長記録更新！ '+fmt(prevLong)+' → '+fmt(t)+'　'+$('rSub').textContent;
-  const nb=total>best;
-  if(nb){best=total;saveBest()}
-  $('rNew').textContent=nb?'🏆 NEW BEST！':'BEST '+best.toLocaleString();
+  const cur=mode==='quick'?bestQ:best,nb=total>cur;
+  if(nb){if(mode==='quick')bestQ=total;else best=total;saveBest()}
+  $('rNew').textContent=nb?'🏆 NEW BEST！':'BEST '+(mode==='quick'?bestQ:best).toLocaleString();
   show('result',true);
 }
 
@@ -662,7 +687,7 @@ function drawStatue(x,y){
 function drawHUD(){
   const g=cx.createLinearGradient(0,0,0,100);g.addColorStop(0,'rgba(10,8,30,.78)');g.addColorStop(1,'rgba(10,8,30,.2)');
   cx.fillStyle=g;cx.fillRect(0,0,W,100);
-  const left=Math.max(0,GOAL-S.t);
+  const left=Math.max(0,S.goal-S.t);
   text('残り '+fmt(left),12,22,22,'#fff','left',3);
   text('SCORE '+S.score.toLocaleString(),150,22,15,'#ffd84a','left',3);
   // ボタン
@@ -775,7 +800,7 @@ function render(){
     drawGap();
     // 端がめくれる
     const flap=state==='play'?clamp(S.lift/24,0,1)*Math.sin(S.ph*22)*.12:0;
-    drawWig(hp.x+jx,hp.y+jy,S.wx*.55+S.wv*.04+flap,1.06);
+    drawWig(hp.x+jx,hp.y+jy+(S.wigFlip?10:0),S.wx*.55+S.wv*.04+flap+(S.wigFlip?Math.PI:0),1.06);
   }else if(state==='lose'){drawLoseWig()}
   // 鳥
   for(const b of S.birds)drawBird(b);
@@ -793,6 +818,7 @@ function render(){
       const s=1+.12*Math.sin(S.ph*14);
       cx.save();cx.translate(180,210);cx.scale(s,s);text('バレた！！',0,0,46,'#ff3b4e','center',5);cx.restore();
     }
+    if(state==='lose'&&L.rescue&&L.rescue.state==='on')drawRescue(L);
     if(state==='lose'&&L.type!==-1&&L.t>.3)text(['ワン！','','ふふっ…','…ｷﾞﾘｼｱ像'][L.type]||'',L.type===0?92:L.type===2?296:70,330,20,'#fff','center',3);
     if(state==='win'){const s=1+.06*Math.sin(S.ph*8);cx.save();cx.translate(180,200);cx.scale(s,s);text('完走！！',0,0,52,'#ffd84a','center',5);cx.restore()}
   }
@@ -803,7 +829,7 @@ function render(){
     cx.fillStyle=g;cx.fillRect(0,0,W,H);
   }
   if(state==='play'&&S.hint)drawHint();
-  if(state==='play'&&GOAL-S.t<=10){const n=Math.ceil(GOAL-S.t),f=(GOAL-S.t)%1;cx.save();cx.globalAlpha=.35+.5*f;cx.translate(180,190);cx.scale(1+(1-f)*.4,1+(1-f)*.4);text(String(n),0,0,64,'#ffd84a','center',5);cx.restore()}
+  if(state==='play'&&S.goal-S.t<=(mode==='quick'?5:10)){const n=Math.ceil(S.goal-S.t),f=(S.goal-S.t)%1;cx.save();cx.globalAlpha=.35+.5*f;cx.translate(180,190);cx.scale(1+(1-f)*.4,1+(1-f)*.4);text(String(n),0,0,64,'#ffd84a','center',5);cx.restore()}
   // バナー & ポップ
   if(S.banner){
     const b=S.banner,p=b.t<.3?b.t/.3:b.t>1.8?(2.2-b.t)/.4:1;
@@ -838,8 +864,8 @@ function drawLoseWig(){
   let tx,ty;
   if(L.type===0){const dx=lerp(-60,92,clamp(L.t/1.1,0,1));tx=dx+22;ty=442}
   else{tx=T[L.type].x;ty=T[L.type].y}
-  const u=clamp((L.t-.2)/1.2,0,1);
-  const x=lerp(L.sx,tx,u),y=lerp(L.sy,ty,u)-130*Math.sin(Math.PI*u);
+  const u=clamp((L.t-.2)/1.2,0,1),jit=L.rescue&&L.rescue.state==='on'?(L.rescue.taps*.9+2):0;
+  const x=lerp(L.sx,tx,u)+(Math.random()-.5)*jit,y=lerp(L.sy,ty,u)-130*Math.sin(Math.PI*u)+(Math.random()-.5)*jit;
   if(u>=1&&!L.sfx){L.sfx=true;SFX.boing()}
   drawWig(x,y,L.rot0+u*12.5,lerp(1,.62,u));
 }
@@ -861,7 +887,8 @@ function toLogical(e){const r=cv.getBoundingClientRect();return{x:(e.clientX-r.l
 const inR=(p,r)=>p.x>=r[0]&&p.x<=r[0]+r[2]&&p.y>=r[1]&&p.y<=r[1]+r[3];
 cv.addEventListener('pointerdown',e=>{
   e.preventDefault();ac();
-  if(state==='lose'&&S.lose&&S.lose.t>1&&!S.lose.done){S.lose.done=true;showResult(false);return}
+  if(state==='lose'&&S.lose&&S.lose.rescue&&S.lose.rescue.state==='on'){S.lose.rescue.taps++;SFX.tap();S.shake=Math.max(S.shake,3);return}
+  if(state==='lose'&&S.lose&&S.lose.t>1&&!S.lose.done&&!(S.lose.rescue&&S.lose.rescue.state==='wait')){S.lose.done=true;showResult(false);return}
   if(state!=='play')return;
   const p=toLogical(e);
   if(p.y<46&&p.x>312){pauseGame();return}
@@ -871,14 +898,16 @@ cv.addEventListener('pointerdown',e=>{
   if(inR(p,BTN.L)){fix(-1);return}
   if(inR(p,BTN.R)){fix(1);return}
   try{cv.setPointerCapture(e.pointerId)}catch(_){}
-  holdIds.set(e.pointerId,{x0:p.x,done:false});
-  SFX.hold();
+  const onBtn=inR(p,BTN.H);
+  holdIds.set(e.pointerId,{x0:p.x,t0:performance.now(),mode:onBtn?'hold':'pending',btn:onBtn});
+  if(onBtn)SFX.hold();
 });
 cv.addEventListener('pointermove',e=>{
   const h=holdIds.get(e.pointerId);if(!h||state!=='play')return;
   e.preventDefault();
   const p=toLogical(e),dx=p.x-h.x0;
-  if(Math.abs(dx)>34){fix(dx>0?1:-1);h.x0=p.x}
+  if(!h.btn&&h.mode!=='swipe'&&Math.abs(dx)>14)h.mode='swipe';   // a sideways move is a fix, never a hold
+  if(h.mode==='swipe'&&Math.abs(dx)>34){fix(dx>0?1:-1);h.x0=p.x}
 });
 function up(e){holdIds.delete(e.pointerId)}
 cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);cv.addEventListener('lostpointercapture',up);
@@ -887,7 +916,7 @@ cv.addEventListener('contextmenu',e=>e.preventDefault());
 document.addEventListener('gesturestart',e=>e.preventDefault());
 window.addEventListener('keydown',e=>{
   const k=e.key;
-  if(k===' '||k==='Spacebar'){e.preventDefault();if(state==='play'&&!keyHold){keyHold=true;SFX.hold()}else if(state==='title'&&!e.repeat)startGame();}
+  if(k===' '||k==='Spacebar'){e.preventDefault();if(state==='play'&&!keyHold){keyHold=true;SFX.hold()}else if(state==='title'&&!e.repeat)startGame('quick');}
   else if(k==='ArrowLeft'){e.preventDefault();fix(-1)}
   else if(k==='ArrowRight'){e.preventDefault();fix(1)}
   else if(k==='Escape'){if(state==='play')pauseGame();else if(state==='pause')resumeGame()}
@@ -899,8 +928,9 @@ window.addEventListener('keyup',e=>{if(e.key===' '||e.key==='Spacebar')keyHold=f
 window.addEventListener('blur',()=>{holdIds.clear();keyHold=false;if(state==='play')pauseGame()});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&state==='play')pauseGame()});
 
-$('startBtn').addEventListener('click',startGame);
-$('retryBtn').addEventListener('click',startGame);
+$('startBtn').addEventListener('click',()=>startGame('quick'));
+$('survBtn').addEventListener('click',()=>startGame('survival'));
+$('retryBtn').addEventListener('click',()=>startGame());
 $('resumeBtn').addEventListener('click',resumeGame);
 $('quitBtn').addEventListener('click',toTitle);
 $('toTitleBtn').addEventListener('click',toTitle);
