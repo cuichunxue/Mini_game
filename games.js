@@ -13,7 +13,7 @@
  *
  * サイト上の「管理」画面からも追加・削除できます（その場合はこのブラウザだけに保存されます）。
  */
-window.GAMES_VERSION = "56";
+window.GAMES_VERSION = "57";
 
 /* 管理画面のパスワード（SHA-256 ハッシュ。パスワードそのものは書かない）
  * 変更するには: "mini-game-arcade:" + 新しいパスワード を SHA-256 にかけた値に置き換える */
@@ -523,5 +523,14 @@ window.GAMES = [
     emoji: "📧",
     color: "#0d1230",
     accent: "#ffd60a"
+  },
+  {
+    id: "pig-slice-king",
+    title: "PIG SLICE KING",
+    description: "どんな刀でも描け。自分で振れ。常識を斬れ。自分で描いた刀でブタを斬る、カオスな試し斬りゲーム。",
+    path: "games/pig-slice-king/index.html",
+    emoji: "🐷",
+    color: "#3a1020",
+    accent: "#f39aac"
   }
 ];
