@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#2b2560">
+<title>DRAW &amp; ROLL KING</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <header id="hud">
+    <div class="hud-title">DRAW<span>&amp;</span>ROLL KING</div>
+    <div class="hud-stats">
+      <div class="stat"><small>COURSE</small><b id="hudCourse">GREEN HILLS</b></div>
+      <div class="stat"><small>DIST</small><b id="hudDist">0m</b></div>
+      <div class="stat"><small>TIME</small><b id="hudTime">0.0</b></div>
+      <div class="stat"><small>BEST</small><b id="hudBest">--</b></div>
+    </div>
+    <button id="muteBtn" class="icon-btn" aria-label="音量ON/OFF">🔊</button>
+  </header>
+
+  <main id="stage">
+    <canvas id="cv"></canvas>
+    <div id="toast" aria-live="polite"></div>
+    <div id="result" class="hidden">
+      <div class="result-card">
+        <div id="resHead" class="res-head">GOAL!</div>
+        <div id="resTitles" class="res-titles"></div>
+        <div id="resWhy" class="res-why hidden">
+          <div class="why-label">WHY?</div>
+          <div class="why-body"><span id="whyIcon" class="why-icon">⚖️</span><span id="whyText">重心が高すぎる</span></div>
+          <div id="whyFix" class="why-fix"></div>
+        </div>
+        <div class="res-map"><canvas id="resMap"></canvas><div id="resMapNote" class="res-map-note"></div></div>
+        <div class="res-grid">
+          <div><small>じかん</small><b id="resTime">-</b></div>
+          <div><small>きょり</small><b id="resDist">-</b></div>
+          <div><small>あんてい</small><b id="resStab">-</b></div>
+          <div><small>かいてん</small><b id="resRot">-</b></div>
+        </div>
+        <div id="resBest" class="res-best"></div>
+        <div id="resHint" class="res-hint hidden"></div>
+        <button id="btnRetry" class="btn big primary">RETRY ↻</button>
+        <div class="res-sub">
+          <button id="btnEdit" class="btn small">EDIT</button>
+          <button id="btnNew" class="btn small">NEW</button>
+          <button id="btnShare" class="btn small">SHARE</button>
+          <button id="btnNext" class="btn small hidden">NEXT ▶</button>
+        </div>
+      </div>
+    </div>
+    <div id="sharePanel" class="hidden">
+      <div class="share-card">
+        <img id="shareImg" alt="共有画像">
+        <p class="share-note">長押し(右クリック)で画像を保存できます</p>
+        <div class="res-sub">
+          <button id="btnShareGo" class="btn small">共有 / 保存</button>
+          <button id="btnShareClose" class="btn small ghost-dark">閉じる</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer id="controls">
+    <div id="editBar">
+      <div class="row chips" id="courseRow">
+        <button class="chip active" data-course="0">1 GREEN HILLS</button>
+        <button class="chip" data-course="1">2 BUMPY VALLEY</button>
+        <button class="chip" data-course="2">3 RAINBOW RIDGE</button>
+      </div>
+      <div class="row chips" id="tplRow">
+        <button class="chip tpl" data-tpl="basic">🚗 BASIC</button>
+        <button class="chip tpl" data-tpl="banana">🍌 BANANA</button>
+        <button class="chip tpl" data-tpl="star">⭐ STAR</button>
+      </div>
+      <div class="row main">
+        <button id="btnDraw" class="btn tool active">DRAW</button>
+        <button id="btnShape" class="btn tool">SHAPE</button>
+        <button id="btnErase" class="btn tool">ERASE</button>
+        <button id="btnUndo" class="btn tool">UNDO</button>
+        <button id="btnWheel" class="btn tool">WHEEL</button>
+        <button id="btnStart" class="btn start">START</button>
+      </div>
+    </div>
+    <div id="raceBar" class="hidden">
+      <div class="bal">
+        <button id="btnLeft" class="btn pad" aria-label="BALANCE 左">◀</button>
+        <button id="btnRight" class="btn pad" aria-label="BALANCE 右">▶</button>
+      </div>
+      <button id="btnAbort" class="btn small ghost">RETRY</button>
+      <button id="btnBoost" class="btn boost">BOOST</button>
+    </div>
+  </footer>
+</div>
+<script src="game.js"></script>
+</body>
+</html>

@@ -13,7 +13,7 @@
  *
  * サイト上の「管理」画面からも追加・削除できます（その場合はこのブラウザだけに保存されます）。
  */
-window.GAMES_VERSION = "47";
+window.GAMES_VERSION = "48";
 
 /* 管理画面のパスワード（SHA-256 ハッシュ。パスワードそのものは書かない）
  * 変更するには: "mini-game-arcade:" + 新しいパスワード を SHA-256 にかけた値に置き換える */
@@ -478,5 +478,14 @@ window.GAMES = [
     emoji: "⚽",
     color: "#16602f",
     accent: "#ffd23f"
+  },
+  {
+    id: "draw-roll-king",
+    title: "DRAW & ROLL KING",
+    description: "自分で描いた乗り物でコースを走れ！形と車輪の位置が走りを決める。バランスとブーストで3つのコースを攻略。",
+    path: "games/draw-roll-king/index.html",
+    emoji: "🛞",
+    color: "#2b2560",
+    accent: "#ffd84a"
   }
 ];
