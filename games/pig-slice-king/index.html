@@ -166,17 +166,24 @@ const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v)),ease=u=>1-Math.pow(1-u,3);
 S.sTarget=rndTarget();
 const target=()=>S.mode==='daily'?DAILY:S.sTarget;
 /* weight of the smaller piece cut off by the swing line (shoulder block = PIG_G grams) */
-function measure(tr,pg,noise){
+function measure(tr,pg,shift){
   const inR=p=>Math.abs(p.x-pg.x)<pg.w/2+4&&Math.abs(p.y-pg.y)<pg.h/2+4;
   const ins=tr.filter(inR);let a=tr[0],b=tr[tr.length-1];
   if(ins.length>=2&&Math.hypot(ins[ins.length-1].x-ins[0].x,ins[ins.length-1].y-ins[0].y)>=6){a=ins[0];b=ins[ins.length-1]}
-  const ang=Math.atan2(b.y-a.y,b.x-a.x),nx=-Math.sin(ang),ny=Math.cos(ang),off=noise*(Math.random()+Math.random()-1),px=a.x+nx*off,py=a.y+ny*off;
+  const ang=Math.atan2(b.y-a.y,b.x-a.x),nx=-Math.sin(ang),ny=Math.cos(ang),off=shift||0,px=a.x+nx*off,py=a.y+ny*off;
   const Rc=[{x:pg.x-pg.w/2,y:pg.y-pg.h/2},{x:pg.x+pg.w/2,y:pg.y-pg.h/2},{x:pg.x+pg.w/2,y:pg.y+pg.h/2},{x:pg.x-pg.w/2,y:pg.y+pg.h/2}];
   const clip=sd=>{const out=[],f=q=>sd*((q.x-px)*nx+(q.y-py)*ny);for(let i=0;i<4;i++){const P=Rc[i],Q=Rc[(i+1)%4],fp=f(P),fq=f(Q);if(fp>=0)out.push(P);if((fp>=0)!==(fq>=0)){const t=fp/(fp-fq);out.push({x:P.x+(Q.x-P.x)*t,y:P.y+(Q.y-P.y)*t})}}return out};
   const area=P=>{let t=0;for(let i=0;i<P.length;i++){const p=P[i],q=P[(i+1)%P.length];t+=p.x*q.y-q.x*p.y}return Math.abs(t)/2};
   const A1=clip(1),A2=clip(-1),a1=area(A1),a2=area(A2),side=a1<=a2?1:-1,P=side===1?A1:A2;
   let cx=0,cy=0;for(const q of P){cx+=q.x;cy+=q.y}const cen=P.length?{x:cx/P.length,y:cy/P.length}:{x:pg.x,y:pg.y};
   return{g:Math.round(Math.min(a1,a2)/(pg.w*pg.h)*PIG_G*10)/10,ang,cx:px,cy:py,side,cen}}
+/* the sword's habit: a fixed, learnable drift of the cut line (no luck) — drawn bow, dullness, slow swing, giant weight */
+function swordBias(tr,sp){if(S.sharp>=9)return{px:0,why:[]};const why=[];let px=0,sd=0;const sh=S.shape;
+  if(sh){const L=sh.pts[sh.pts.length-1],c=Math.hypot(L.x,L.y)||1;let m=0;for(const q of sh.pts){const d=(q.x*L.y-q.y*L.x)/c;if(Math.abs(d)>Math.abs(m))m=d}sd=Math.sign(m)}
+  const dir=(tr[tr.length-1].y-tr[0].y)>=0?1:-1,bow=S.bend*22*sd*dir;if(Math.abs(bow)>=.3){px+=bow;why.push('反り')}
+  const dull=(7-Math.min(7,S.sharp))*.45;if(dull>0){px+=dull;why.push('鈍さ')}
+  if(sp<.5){px+=1.2;why.push('遅い振り')}if(S.len>=3.2){px+=S.len*.8;why.push('刀の重さ')}
+  return{px,why}}
 function wLabel(x,y,t){ctx.font='24px "Dela Gothic One",sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineWidth=6;ctx.strokeStyle='#1b0a0e';ctx.strokeText(t,x,y);ctx.fillStyle='#ffd60a';ctx.fillText(t,x,y)}
 function pieceLabel(A,sep){if(A.g==null||!A.cen)return;const nx=-Math.sin(A.ang),ny=Math.cos(A.ang),s=A.side;wLabel(A.cen.x+nx*sep*s,A.cen.y+ny*sep*s+(s>0?sep*.4:0),A.g.toFixed(1)+'g')}
 
@@ -276,8 +283,10 @@ function bubble(text){const k=clamp(W/380,.75,1.2),jx=W*.2,jy=H*.3-30*k;ctx.font
   const bw=Math.min(mw,Math.max(...L.map(l=>ctx.measureText(l).width))+28),bh=L.length*24+20,bx=clamp(jx-36,12,W-bw-12),by=Math.max(10,jy-24*k-bh);
   ctx.fillStyle='#fff';ctx.strokeStyle='#1b0a0e';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(jx-4,by+bh-4);ctx.lineTo(jx+16,by+bh-4);ctx.lineTo(jx+6,jy+2);ctx.closePath();ctx.fill();ctx.stroke();
   rr(bx,by,bw,bh,14);ctx.fill();ctx.stroke();ctx.fillStyle='#1b0a0e';ctx.textAlign='left';ctx.textBaseline='top';L.forEach((l,i)=>ctx.fillText(l,bx+14,by+10+i*24))}
-function rJudge(now){rAnim(now);const jt=(now-S.jt0)/1000;bubble(jt<.8?'うーむ……':S.res.quote);once(S.anim,'q',jt>=.8,()=>{sfx('thud');S.shake=4});
-  if(jt>2.3&&!S.jdone){S.jdone=1;showResult()}}
+function rJudge(now){rAnim(now);const jt=(now-S.jt0)/1000,rest=(S.res&&S.res.rest)||[];
+  rest.forEach((k,i)=>once(S.anim,'ch'+i,jt>=.15+i*.7,()=>{say(EV[k].chain,1200);S.shake=k==='giant'?18:9;sfx(k==='banana'?'boing':k==='giant'?'boom':'slice');buzz(40);const pg=pigG();sparks(pg.x,pg.y,26,k==='banana'?'#ffe14d':'#fff')}));
+  const q0=.45+rest.length*.7;bubble(jt<q0?'うーむ……':S.res.quote);once(S.anim,'q',jt>=q0,()=>{sfx('thud');S.shake=4});
+  if(jt>q0+1.1&&!S.jdone){S.jdone=1;showResult()}}
 function rAnim(now){const A=S.anim;if(S.phase==='anim')A.lastNow=now;else now=A.lastNow;
   const raw=(now-A.t0)/1000*(A.speed||1),t=['cut','banana','thin'].includes(A.type)?Math.max(0,raw-.12):raw,pg=pigG();let wig={dx:0,dy:0,r:0};
   if(A.type==='cut'){const u=ease(clamp((t-.12)/.6));if(A.wig&&t>.9){const k=t-.9;wig={dx:k*120,dy:-k*k*700-k*160,r:k*8}}
@@ -291,9 +300,9 @@ function rAnim(now){const A=S.anim;if(S.phase==='anim')A.lastNow=now;else now=A.
     once(A,'s',t>.9,()=>{say('豚肉が滑って宇宙へ！',2000);S.shake=6;sfx('boing');buzz(60)});end(A,t,3.2)}
   else if(A.type==='giant'){const pv={x:W*.04,y:H*1.02},sc=H*.3*S.len/Math.max(S.shape.chord,.15);
     if(t<.6){drawScene();drawSword(pv.x,pv.y,sc,-2.7+ease(t/.6)*2.9-S.shape.ang)}
-    else{const u=ease(clamp((t-.6)/.9)),sep=u*H*.09,k=t-.6,a=-.2,nx=-Math.sin(a),ny=Math.cos(a);wig={dx:k*140,dy:-k*k*900-k*200,r:k*9};
+    else{const u=ease(clamp((t-.6)/.9)),sep=u*H*.09,k=t-.6,a=A.cx!=null?A.ang:-.2,nx=-Math.sin(a),ny=Math.cos(a);wig={dx:k*140,dy:-k*k*900-k*200,r:k*9};
       ctx.fillStyle='#000';ctx.fillRect(-60,-60,W+120,H+120);
-      for(const s of[-1,1]){ctx.save();ctx.translate(nx*sep*s,ny*sep*s);halfClip(W/2,H*.55,a,s);drawScene({wig});ctx.restore()}
+      for(const s of[-1,1]){ctx.save();ctx.translate(nx*sep*s,ny*sep*s);halfClip(A.cx??W/2,A.cy??H*.55,a,s);drawScene({wig});ctx.restore()}if(A.g!=null&&t>1.1){const s2=A.side,c2=A.cen;wLabel(c2.x+nx*sep*s2,c2.y+ny*sep*s2,A.g.toFixed(1)+'g')}
       if(t<.8){ctx.fillStyle=`rgba(255,255,255,${1-(t-.6)/.2})`;ctx.fillRect(-60,-60,W+120,H+120)}}
     once(A,'s',t>.6,()=>{say('ステージごと真っ二つ！',2200);S.shake=24;sfx('boom');buzz([80,40,160])});end(A,t,3.2)}
   else if(A.type==='thin'){const split=t>3.3;const tsep=ease(clamp((t-3.3)/.5))*34;drawScene({pig:split?{mode:'split',ang:A.ang,sep:tsep,cx:A.cx,cy:A.cy}:{mode:'whole'}});if(split&&t>3.5)pieceLabel(A,tsep);
@@ -308,12 +317,15 @@ function frame(now){ctx.setTransform(DPR,0,0,DPR,0,0);ctx.clearRect(0,0,W,H);
   if(S.phase==='draw')rDraw();else if(S.phase==='forge')rForge();else if(S.phase==='test')rTest();else if(S.phase==='judge')rJudge(now);else rAnim(now);
   rParts();
   if(S.flash>0){if(!RM){ctx.fillStyle=`rgba(255,255,255,${S.flash})`;ctx.fillRect(-60,-60,W+120,H+120)}S.flash=Math.max(0,S.flash-.07)}
+  if((S.phase==='anim'||S.phase==='judge')&&S.anim&&!S.anim.speed&&resEl.hidden){ctx.font='13px "M PLUS 1p",sans-serif';ctx.textAlign='center';ctx.textBaseline='bottom';ctx.fillStyle='rgba(255,255,255,.7)';ctx.fillText('タップでスキップ',W/2,H-8)}
   if(S.phase==='anim'&&S.anim.speed){ctx.font='16px "Dela Gothic One",sans-serif';ctx.textAlign='left';ctx.textBaseline='top';ctx.lineWidth=5;ctx.strokeStyle='#1b0a0e';ctx.strokeText('REPLAY ×0.4',12,12);ctx.fillStyle='#ffd60a';ctx.fillText('REPLAY ×0.4',12,12)}
   requestAnimationFrame(frame)}
 
 /* ---------- input ---------- */
 function pt(e){const r=cv.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top}}
-cv.addEventListener('pointerdown',e=>{const p=pt(e);try{cv.setPointerCapture(e.pointerId)}catch(_){}
+cv.addEventListener('pointerdown',e=>{const p=pt(e);
+  if((S.phase==='anim'||S.phase==='judge')&&S.anim&&!S.anim.speed&&resEl.hidden&&performance.now()-S.anim.t0>350){S.anim.done=1;S.phase='judge';S.jdone=1;showResult();return}
+  try{cv.setPointerCapture(e.pointerId)}catch(_){}
   if(S.phase==='draw'){drawing=true;S.raw=[p];S.shape=null;setPanel()}else if(S.phase==='test'){drawing=true;S.trail=[{...p,t:performance.now()}]}});
 cv.addEventListener('pointermove',e=>{if(!drawing)return;const p=pt(e);
   if(S.phase==='draw'){const l=S.raw[S.raw.length-1];if(Math.hypot(p.x-l.x,p.y-l.y)>3)S.raw.push(p)}else if(S.phase==='test')S.trail.push({...p,t:performance.now()})});
@@ -325,29 +337,29 @@ function sample(){const x0=W*.38,y0=H*.84,x1=W*.6,y1=H*.14,dl=Math.hypot(x1-x0,y
   for(let i=0;i<=30;i++){const t=i/30,off=Math.sin(Math.PI*t)*H*.025;pts.push({x:x0+(x1-x0)*t-(y1-y0)/dl*off,y:y0+(y1-y0)*t+(x1-x0)/dl*off})}
   S.raw=pts;makeShape(pts.map(p=>({x:p.x/H,y:p.y/H})))}
 function hitPig(tr,pg){const inR=p=>Math.abs(p.x-pg.x)<pg.w/2+6&&Math.abs(p.y-pg.y)<pg.h/2+6;if(tr.some(inR))return true;
-  const a=tr[0],b=tr[tr.length-1];for(let i=0;i<=40;i++){const u=i/40;if(inR({x:a.x+(b.x-a.x)*u,y:a.y+(b.y-a.y)*u}))return true}return false}
-function finishSwing(){const tr=S.trail;if(tr.length<2)return;const a=tr[0],b=tr[tr.length-1];if(Math.hypot(b.x-a.x,b.y-a.y)<30)return;
+  for(let j=1;j<tr.length;j++){const a=tr[j-1],b=tr[j];for(let i=1;i<10;i++){const u=i/10;if(inR({x:a.x+(b.x-a.x)*u,y:a.y+(b.y-a.y)*u}))return true}}return false}
+function finishSwing(){const tr=S.trail;if(tr.length<2)return;const a=tr[0],b=tr[tr.length-1];if(Math.hypot(b.x-a.x,b.y-a.y)<30){say('もっと大きく振ろう！',1100);return}
   S.swung=true;sfx('swoosh');
   let i=tr.length-1;while(i>0&&b.t-tr[i].t<150)i--;const s0=tr[i],v=Math.hypot(b.x-s0.x,b.y-s0.y)/Math.max(16,b.t-s0.t);
   const hit=hitPig(tr,pigG()),ang=Math.atan2(b.y-a.y,b.x-a.x);
   const sp0=Math.min(1,v/1.8),tgt=target();
-  const noise=S.sharp>=9?0:S.bend*20+(1-Math.min(1,S.sharp/7))*1.5+(sp0<.5?1.5:0);
-  const M=hit?measure(tr,pigG(),noise):null;
+  const bias=swordBias(tr,sp0),M=hit?measure(tr,pigG(),bias.px):null,g0=hit?measure(tr,pigG(),0).g:0,drift=M?Math.round((M.g-g0)*10)/10:0;
+  const habit=M&&Math.abs(drift)>=.1?`刀のクセ（${bias.why.join('・')}）で ${drift>0?'+':''}${drift.toFixed(1)}g ずれた`:'';
   const ev=[];if(S.len>=3.2)ev.push('giant');if(S.bend>=.22)ev.push('banana');if(S.sharp>=9)ev.push('thin');
   if(ev.length&&(hit||ev[0]==='giant')){const P=EV[ev[0]],rest=ev.slice(1);
     for(const k of ev)found[k]=1;saveFound();
     const fly=ev[0]==='giant'?25+(S.len-3.2)*18+sp0*30+Math.random()*8:ev[0]==='banana'?120+S.bend*600+sp0*150+Math.random()*20:0;
-    const g=ev[0]==='thin'&&M?M.g:null;
-    S.res={title:P.title,g,tgt,err:g==null?null:Math.abs(g-tgt),why:ev[0]==='giant'?'ステージごと斬れた':'豚肉が宇宙へ行った',fly,flyWho:ev[0]==='giant'?'審査員のカツラ':ev[0]==='banana'?'豚肉（宇宙へ）':'',chaosNote:rest.length?`連鎖×${ev.length}`:'',quote:P.quote,chain:rest.map(k=>EV[k].chain)};
+    const g=(ev[0]==='thin'||ev[0]==='giant')&&M?M.g:null,err=g==null?null:Math.abs(g-tgt);
+    S.res={title:P.title,rank:g==null?null:rankOf(err)[1],g,tgt,err,why:ev[0]==='giant'?'ブタに当たらず、ステージだけ斬れた':'豚肉が宇宙へ行った',fly,flyWho:ev[0]==='giant'?'審査員のカツラ':ev[0]==='banana'?'豚肉（宇宙へ）':'',chaosNote:rest.length?`連鎖×${ev.length}`:'',quote:P.quote,rest,chain:rest.map(k=>EV[k].chain).concat(g!=null&&habit?[habit]:[])};
     startAnim(ev[0],M?{ang:M.ang,cx:M.cx,cy:M.cy,side:M.side,cen:M.cen,g:M.g}:{ang});return}
   if(!hit){S.res={title:'空振り',g:null,tgt,err:null,why:'空振り',fly:0,flyWho:'',chaosNote:'',quote:'空気は見事に斬れていた。',chain:[]};startAnim('miss',{});return}
   const sp=Math.min(1,v/1.8),shp=Math.min(1,S.sharp/7),st=1-Math.min(1,S.bend/.22),lf=S.len<1.25?.85:S.len>2.6?.9:1,q=Math.min(1,(.4*sp+.35*shp+.25*st)*lf),cut=Math.round(q*100);
   const g=M.g,err=Math.abs(g-tgt),rk=rankOf(err);
   const quote=g<=0.05?'……かすっただけだ。豚は無傷だ。':err<=0.1?'……誤差ゼロ。私は今、奇跡を見た。':err<=1?'見事だ。秤が泣いている。':err<=3?'職人の手つきだ。':err<=8?'惜しい。豚はもう少し欲しかった。':err<=20?'目分量にもほどがある。':'それはお題を聞いていなかった斬り方だ。';
-  const why=[];if(S.bend>=.1)why.push('刃が曲がっていると切り口がぶれる');if(S.sharp<7)why.push('研ぐほど切り口が正確になる');if(sp<.5)why.push('ゆっくりだと肉がつぶれる');
+  const why=[];if(habit)why.push('次はクセの分だけ狙いをずらそう');if(S.sharp<7)why.push('研ぐほどクセは小さくなる');
   const wig=err<=1&&Math.random()<.5;if(wig){found.wig=1;saveFound()}
   S.res={title:wig?'完璧すぎて事件発生':rk[2],rank:rk[1],g,tgt,err,why:'',fly:wig?6+sp*8+Math.random()*4:0,flyWho:wig?'審査員のカツラ':'',chaosNote:'',
-    quote:wig?'見事だ……私のカツラまで斬るとは。':quote,chain:wig?['完璧すぎて審査員のカツラが飛んだ']:why.length?['アドバイス：'+why.join('・')]:[]};
+    quote:wig?'見事だ……私のカツラまで斬るとは。':quote,rest:[],chain:(wig?['完璧すぎて審査員のカツラが飛んだ']:[]).concat(habit?[habit]:[],why.length?['アドバイス：'+why.join('・')]:[])};
   startAnim('cut',{ang:M.ang,cx:M.cx,cy:M.cy,side:M.side,cen:M.cen,g,q,cut,wig,err})}
 function startAnim(type,d){S.phase='anim';S.anim={type,t0:performance.now(),...d};if(type==='cut'||type==='banana'){S.flash=.6;sfx('slice');buzz(35)}setPanel()}
 
@@ -386,7 +398,7 @@ function showResult(){const R=S.res,nb=[],live=!S.anim.speed,measured=R.g!=null;
       S.sTarget=rndTarget();sk.hidden=false}
     saveRec();setTimeout(()=>sfx(measured&&R.err<=3||R.fly>0?'tada':'sad'),720)}
   $('rBest').textContent=`今日のお題 ${DAILY}g ベスト誤差 ${rec.dBest==null?'-':rec.dBest+'g'}（${rec.tries}回）／ 連続最高 ${rec.bestStreak}回 ／ 飛距離 ${rec.fly.toFixed(1)}m`+(nb.length?`　NEW ${nb.join('・')}!`:'');
-  $('rQuote').textContent='審査員「'+R.quote+'」';$('rChain').innerHTML=R.chain.map(c=>`<li>${c.startsWith('アドバイス')?c:'連鎖：'+c}</li>`).join('');
+  $('rQuote').textContent='審査員「'+R.quote+'」';$('rChain').innerHTML=R.chain.map(c=>`<li>${c.startsWith('アドバイス')||c.startsWith('刀のクセ')?c:'連鎖：'+c}</li>`).join('');
   const keys=Object.keys(EV),miss=keys.filter(k=>!found[k]);$('zkN').textContent=`${keys.length-miss.length}/${keys.length}`;
   $('zkList').innerHTML=keys.map(k=>`<span class="${found[k]?'got':''}">${found[k]?EV[k].name:'？？？'}</span>`).join('');
   $('zkHint').textContent=miss.length?EV[miss[0]].hint:'全部見つけた！ 黄金豚が、こちらを見ている…';resEl.hidden=false}
@@ -396,7 +408,7 @@ function act(a){
   else if(a==='toForge'&&S.shape){resEl.hidden=true;S.phase='forge';setPanel()}
   else if(a==='quick'){$('title').hidden=true;sample();S.phase='test';S.trail=[];setPanel()}
   else if(a==='start'){$('title').hidden=true}
-  else if(a==='replay'&&S.anim){resEl.hidden=true;const A=S.anim;for(const k in A)if(k==='s'||k==='w'||k==='q'||k[0]==='k'&&k!=='type')delete A[k];A.t0=performance.now();A.speed=.4;A.done=0;S.phase='anim';if(A.type==='cut'||A.type==='banana')S.flash=.6;setPanel()}
+  else if(a==='replay'&&S.anim){resEl.hidden=true;const A=S.anim;for(const k in A)if(k==='s'||k==='w'||k==='q'||k.startsWith('ch')||k[0]==='k'&&k!=='type')delete A[k];A.t0=performance.now();A.speed=.4;A.done=0;S.phase='anim';if(A.type==='cut'||A.type==='banana')S.flash=.6;setPanel()}
   else if(a==='hammer'){S.len=+(S.len+.35).toFixed(2);sfx('hammer');buzz(15);const p=S.lastPts[Math.floor(Math.random()*S.lastPts.length)]||{x:W/2,y:H/2};sparks(p.x,p.y,18,'#ffb02e');S.shake=S.len>=3.2?14:6;if(S.len>=3.2&&S.len<3.55)say('重い…！',900);setPanel()}
   else if(a==='sharpen'){S.sharp=Math.min(10,S.sharp+1);sfx('sharpen');const p=S.lastPts[Math.floor(Math.random()*S.lastPts.length)]||{x:W/2,y:H/2};sparks(p.x,p.y,12,'#e8f4ff');setPanel()}
   else if(a==='reset'){S.len=1;S.sharp=3;setPanel()}
