@@ -13,7 +13,7 @@
  *
  * サイト上の「管理」画面からも追加・削除できます（その場合はこのブラウザだけに保存されます）。
  */
-window.GAMES_VERSION = "48";
+window.GAMES_VERSION = "49";
 
 /* 管理画面のパスワード（SHA-256 ハッシュ。パスワードそのものは書かない）
  * 変更するには: "mini-game-arcade:" + 新しいパスワード を SHA-256 にかけた値に置き換える */
@@ -487,5 +487,14 @@ window.GAMES = [
     emoji: "🛞",
     color: "#2b2560",
     accent: "#ffd84a"
+  },
+  {
+    id: "dance-sync-king",
+    title: "DANCE SYNC KING",
+    description: "ビートに合わせてダンスをシンクロさせろ！リズムに乗ってタイミングよく決めるリズムダンスゲーム。",
+    path: "games/dance-sync-king/index.html",
+    emoji: "💃",
+    color: "#1a1440",
+    accent: "#ff4fd8"
   }
 ];
