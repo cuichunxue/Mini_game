@@ -983,7 +983,7 @@
     else if (res.goal && res.course < 2) S.nextAction = { v: curV, course: res.course + 1, label: 'NEXT ▶' };
     else if (res.goal && nextV && isUnlocked(nextV)) S.nextAction = { v: nextV, course: 0, label: 'つぎは ' + MODE_LABEL[nextV] + ' ▶' };
     $('resHead').textContent = res.vehicle === 'rocket'
-      ? (res.goal ? (res.course === 2 ? 'ちゃくりく成功!' : 'ミッション成功!') : { crash: 'ぺちゃんこ!', fall: 'おちてきた!', tipped: 'たおれた!', offpad: 'はずれ!', stuck: 'とばない!', out: 'コースアウト!', timeout: 'タイムアップ!' }[res.reason])
+      ? (res.goal ? (res.course === 2 ? 'ちゃくりく成功!' : res.orbit != null ? '🛰️ えいせいに なった!' : 'ミッション成功!') : { crash: 'ぺちゃんこ!', fall: 'おちてきた!', tipped: 'たおれた!', offpad: 'はずれ!', stuck: 'とばない!', out: 'コースアウト!', timeout: 'タイムアップ!' }[res.reason])
       : res.vehicle === 'plane'
       ? (res.goal ? 'ちゃくりく成功!' : { out: 'おちた!', short: 'とどかず…', crash: 'ついらく!', timeout: 'タイムアップ!' }[res.reason])
       : (res.goal ? 'GOAL!' : { out: 'コースアウト!', stuck: 'ストップ!', timeout: 'タイムアップ!' }[res.reason]);
@@ -1255,6 +1255,7 @@
 
   function drawWorld(t) {
     const sim = S.sim, course = sim.course, ch = sim.ch;
+    if (sim.orbit && sim.orbit.age >= 1.1) { drawOrbitScene(sim, t); return; }
     // カメラ
     const s = (sim.rocket ? Math.min(W / 640, H / 900) : sim.plane ? Math.min(W / 860, H / 560) : Math.min(W / 720, H / 420)) * (S.zoom || 1);
     if (sim.rocket) {
@@ -1366,7 +1367,7 @@
       }
     }
     if (sim.plane) { drawPlaneHud(sim, t, course, ch); return; }
-    if (sim.rocket) { drawRocketHud(sim, t); return; }
+    if (sim.rocket) { drawRocketHud(sim, t); if (sim.orbit) { const fa = clamp((sim.orbit.age - 0.6) / 0.5, 0, 1); if (fa > 0) { ctx.fillStyle = `rgba(255,255,255,${fa})`; ctx.fillRect(0, 0, W, H); } } return; }
     // エネルギーゲージ
     const gw = Math.min(180, W * 0.4);
     ctx.fillStyle = 'rgba(20,16,50,.55)'; roundRect(ctx, 10, 10, gw + 16, 26, 13); ctx.fill();
@@ -2014,8 +2015,8 @@
     }
     sim.prevY = ch.y;
     // 目標
-    if (course.id === 0 && alt >= course.goalAlt) { endRocket(sim, true, 'goal'); return r; }
-    if (course.id === 1) { const top = sim.rings[sim.rings.length - 1]; if (top.passed) { endRocket(sim, true, 'goal'); return r; } }
+    if (course.id === 0 && alt >= course.goalAlt) { startOrbit(sim); return r; }
+    if (course.id === 1) { const top = sim.rings[sim.rings.length - 1]; if (top.passed) { startOrbit(sim); return r; } }
     // 着地・接地
     const sp = Math.hypot(ch.vx, ch.vy);
     if (r.contacts > 0 && sim.lifted && !sim.touched) {
@@ -2063,6 +2064,7 @@
     const m = sim.machine, course = sim.course;
     const res = { vehicle: 'rocket', goal: success, reason, time: sim.t, dist: sim.maxAlt, stability: Math.round(clamp(100 - (sim.wSum / Math.max(1, sim.wN)) * 40, 0, 100)), flips: sim.flips, stunts: 0, course: S.course, titles: [], why: null };
     if (success) {
+      if (sim.orbit) { res.orbit = sim.orbit.lvl; res.titles.push({ t: '🛰️ SATELLITE KING' }); if (sim.orbit.lvl === 2) res.titles.push({ t: 'せいし きどう' }); }
       if (course.id === 0) res.titles.push({ t: 'SPACE KING' });
       if (course.id === 1 && sim.ringsPassed === sim.rings.length) res.titles.push({ t: 'RING MASTER' });
       if (course.id === 2) res.titles.push({ t: 'SOFT LANDING' });
@@ -2085,7 +2087,100 @@
     sim.eyeState = success ? 'happy' : 'dizzy';
     if (success) { Snd.goal(); confetti(); } else { Snd.fail(); sim.wob = 0.2; }
     if (!success) { const msg = { crash: 'ぺちゃんこ…', fall: 'おちてきた〜', tipped: 'ころん…', offpad: 'ここ どこ…', stuck: 'うごかない…', out: 'どこまでも〜', timeout: 'じかんぎれ〜' }[reason]; S.bubbles = [{ text: msg, t0: sim.t, life: 3 }]; }
-    setTimeout(() => showResult(res, sim), success ? 1300 : 1000);
+    setTimeout(() => showResult(res, sim), sim.orbit ? 6500 : success ? 1300 : 1000);
+  }
+
+  // ---------------- 衛星になる (目標を こえたら 地球を まわる) ----------------
+  const ORBIT_NAME = ['ひくい きどう', 'たかい きどう', 'せいし きどう'];
+  function startOrbit(sim) {
+    const lvl = sim.fuel >= 45 ? 2 : sim.fuel >= 15 ? 1 : 0;   // のこりの ねんりょうで 軌道の高さが きまる
+    let x0 = Infinity, x1 = -Infinity; for (const p of sim.machine.local) { x0 = Math.min(x0, p.x); x1 = Math.max(x1, p.x); }
+    sim.orbit = { age: 0, lvl, ang: Math.PI * 0.62, ang0: Math.PI * 0.62, laps: 0, trail: [], len: Math.max(60, x1 - x0) };
+    bubble('えいせい きどうへ!');
+    endRocket(sim, true, 'orbit');
+  }
+  function updateOrbit(sim, dt) {
+    const o = sim.orbit, ch = sim.ch;
+    o.age += dt;
+    if (o.age < 1.1) {   // まだ 地上カメラ: そのまま 上へ かっとぶ
+      sim.firing = true;
+      const sp = Math.hypot(ch.vx, ch.vy) + 900 * dt;
+      ch.w *= 0.9; ch.a += (-Math.PI / 2 - ch.a) * 0.05;
+      ch.vx = Math.cos(ch.a) * sp; ch.vy = Math.sin(ch.a) * sp;
+      ch.x += ch.vx * dt; ch.y += ch.vy * dt;
+      return;
+    }
+    sim.firing = false;
+    o.ang += [1.7, 1.3, 0.95][o.lvl] * dt;
+    const laps = Math.floor((o.ang - o.ang0) / (Math.PI * 2));
+    if (laps > o.laps) { o.laps = laps; Snd.pop(); }
+  }
+  function drawOrbitScene(sim, t) {
+    const o = sim.orbit, big = Math.max(18, Math.min(34, W * 0.075, H * 0.075)), top = Math.max(36, H * 0.1);
+    const cx0 = W / 2, textBottom = top + big * 1.4, cy0 = textBottom + (H - 30 - textBottom) / 2, R = Math.min(W * 0.19, (H - 30 - textBottom) * 0.36);
+    ctx.fillStyle = '#04051a'; ctx.fillRect(0, 0, W, H);
+    for (let i = 0; i < 140; i++) {
+      const x = (i * 137.5 + 13) % W, y = (i * 89.3 + 7) % H, tw = 0.45 + 0.55 * Math.abs(Math.sin(t * 1.7 + i));
+      ctx.fillStyle = `rgba(255,255,255,${0.75 * tw})`; ctx.fillRect(x, y, i % 9 ? 1.6 : 2.6, i % 9 ? 1.6 : 2.6);
+    }
+    // 月 (おまけ)
+    ctx.beginPath(); ctx.arc(W * 0.12, H * 0.8, R * 0.22, 0, Math.PI * 2); ctx.fillStyle = '#d9dbe6'; ctx.fill();
+    const tilt = -0.22, rx = R * (1.55 + o.lvl * 0.3), ry = rx * 0.38;
+    const posAt = (a) => { const x = Math.cos(a) * rx, y = Math.sin(a) * ry; return { x: cx0 + x * Math.cos(tilt) - y * Math.sin(tilt), y: cy0 + x * Math.sin(tilt) + y * Math.cos(tilt) }; };
+    const orbitPath = (from, to) => { ctx.beginPath(); for (let k = 0; k <= 48; k++) { const p = posAt(from + (to - from) * k / 48); k ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y); } ctx.stroke(); };
+    ctx.setLineDash([6, 8]); ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(255,216,74,.45)';
+    orbitPath(Math.PI, Math.PI * 2);   // 奥側の軌道
+    const a = o.ang % (Math.PI * 2), behind = Math.sin(a) < 0;
+    const drawSat = () => {
+      const p = posAt(o.ang), q = posAt(o.ang + 0.01), dir = Math.atan2(q.y - p.y, q.x - p.x);
+      const depth = 0.8 + 0.2 * Math.sin(o.ang);
+      // 光の しっぽ
+      for (let k = 1; k <= 14; k++) { const tp = posAt(o.ang - k * 0.06); ctx.fillStyle = `rgba(255,230,120,${0.5 * (1 - k / 14)})`; ctx.beginPath(); ctx.arc(tp.x, tp.y, 3.2 * (1 - k / 16) * depth, 0, Math.PI * 2); ctx.fill(); }
+      const k = (R * 0.95 / o.len) * depth;
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(dir); ctx.scale(k, k);
+      drawMachineShape(ctx, sim.machine.local, []);
+      // 太陽電池パネル
+      const e = sim.machine.engineLocal;
+      ctx.fillStyle = '#2f6fd6'; ctx.strokeStyle = '#cfe2ff'; ctx.lineWidth = 4;
+      for (const sgn of [-1, 1]) { ctx.fillRect(e.x + 30, sgn * 60 - 22, 70, 44); ctx.strokeRect(e.x + 30, sgn * 60 - 22, 70, 44); }
+      drawEngine(ctx, e, false, t);
+      ctx.restore();
+    };
+    if (behind) drawSat();
+    // 地球
+    const g = ctx.createRadialGradient(cx0 - R * 0.35, cy0 - R * 0.35, R * 0.1, cx0, cy0, R);
+    g.addColorStop(0, '#5fb4ff'); g.addColorStop(1, '#1b4fa8');
+    ctx.save(); ctx.beginPath(); ctx.arc(cx0, cy0, R, 0, Math.PI * 2); ctx.fillStyle = g; ctx.fill(); ctx.clip();
+    ctx.fillStyle = '#4fbf5a';
+    const spin = (t * 18) % (R * 4);
+    const lands = [[-0.6, -0.3, 0.42, 0.3], [0.3, 0.2, 0.36, 0.42], [1.2, -0.45, 0.3, 0.22], [1.6, 0.35, 0.4, 0.26], [-1.3, 0.4, 0.28, 0.3]];
+    for (const [lx, ly, lw, lh] of lands) for (const off of [0, -R * 4]) {
+      const x = cx0 + ((lx * R + spin) % (R * 4) + R * 4) % (R * 4) - R * 2 + off + R * 2 - R * 2;
+      ctx.beginPath(); ctx.ellipse(x, cy0 + ly * R, lw * R, lh * R, 0.3, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.beginPath(); ctx.ellipse(cx0, cy0 - R * 0.92, R * 0.5, R * 0.14, 0, 0, Math.PI * 2); ctx.fill();
+    const sh = ctx.createLinearGradient(cx0 - R, 0, cx0 + R, 0); sh.addColorStop(0.55, 'rgba(0,0,20,0)'); sh.addColorStop(1, 'rgba(0,0,20,.55)');
+    ctx.fillStyle = sh; ctx.fillRect(cx0 - R, cy0 - R, R * 2, R * 2);
+    ctx.restore();
+    ctx.setLineDash([]); ctx.beginPath(); ctx.arc(cx0, cy0, R + 4, 0, Math.PI * 2); ctx.strokeStyle = 'rgba(120,200,255,.45)'; ctx.lineWidth = 6; ctx.stroke();
+    ctx.setLineDash([6, 8]); ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(255,216,74,.7)';
+    orbitPath(0, Math.PI);             // 手前側の軌道
+    ctx.setLineDash([]);
+    if (!behind) drawSat();
+    // 文字
+    ctx.textAlign = 'center'; ctx.lineJoin = 'round';
+    ctx.font = `900 ${big}px system-ui, sans-serif`; ctx.lineWidth = 6; ctx.strokeStyle = '#2b2560'; ctx.fillStyle = '#ffd84a';
+    const pulse = 1 + 0.04 * Math.sin(t * 6);
+    ctx.save(); ctx.translate(W / 2, top); ctx.scale(pulse, pulse);
+    ctx.strokeText('🛰️ えいせいに なった!', 0, 0); ctx.fillText('🛰️ えいせいに なった!', 0, 0); ctx.restore();
+    ctx.font = `800 ${big * 0.55}px system-ui, sans-serif`; ctx.lineWidth = 4; ctx.fillStyle = '#fff';
+    const l2 = ORBIT_NAME[o.lvl] + '  /  ちきゅう ' + (o.laps + 1) + ' しゅうめ';
+    ctx.strokeText(l2, W / 2, top + big * 0.95); ctx.fillText(l2, W / 2, top + big * 0.95);
+    if (o.lvl < 2) { ctx.font = `700 ${big * 0.42}px system-ui, sans-serif`; ctx.fillStyle = '#c9c4ff'; const h = 'ねんりょうを のこすと もっと たかい きどうに!'; ctx.strokeText(h, W / 2, H - 14); ctx.fillText(h, W / 2, H - 14); }
+    if (o.age > 2.5 && !(sim.result)) { ctx.font = `700 ${big * 0.4}px system-ui, sans-serif`; ctx.fillStyle = 'rgba(255,255,255,.6)'; ctx.textAlign = 'right'; ctx.fillText('タップで けっかへ', W - 10, H - 14 - (o.lvl < 2 ? big * 0.5 : 0)); }
+    // 白い フラッシュから フェードイン
+    const fa = clamp(1 - (o.age - 1.1) / 0.5, 0, 1);
+    if (fa > 0) { ctx.fillStyle = `rgba(255,255,255,${fa})`; ctx.fillRect(0, 0, W, H); }
   }
 
   // ---------------- 描画 ----------------
@@ -2197,7 +2292,7 @@
       let n = 0;
       while (S.acc >= DT && n < 10) {
         if (sim.plane) { if (!sim.ended) updateFlight(sim); else stepPlane(sim, { bal: 0 }); }
-        else if (sim.rocket) { if (!sim.ended) updateRocket(sim); else { sim.firing = false; stepPlane(sim, { bal: 0 }); } }
+        else if (sim.rocket) { if (!sim.ended) updateRocket(sim); else if (sim.orbit) updateOrbit(sim, DT); else { sim.firing = false; stepPlane(sim, { bal: 0 }); } }
         else if (!sim.ended) updateRace(sim);
         else step(sim, { boost: false, bal: 0 }); // 終了後も物理で転がる
         S.acc -= DT; n++;
@@ -2227,6 +2322,7 @@
   function canvasPos(e) { const r = cv.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; }
 
   cv.addEventListener('pointerdown', (e) => {
+    if (S.mode === 'race' && S.sim && S.sim.orbit && S.sim.orbit.age > 1.6 && !S.sim.result && S.lastResult) { showResult(S.lastResult, S.sim); return; }
     if (S.mode !== 'edit') return;
     Snd.init();
     cv.setPointerCapture(e.pointerId);
