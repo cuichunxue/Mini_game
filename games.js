@@ -13,7 +13,7 @@
  *
  * サイト上の「管理」画面からも追加・削除できます（その場合はこのブラウザだけに保存されます）。
  */
-window.GAMES_VERSION = "51";
+window.GAMES_VERSION = "52";
 
 /* 管理画面のパスワード（SHA-256 ハッシュ。パスワードそのものは書かない）
  * 変更するには: "mini-game-arcade:" + 新しいパスワード を SHA-256 にかけた値に置き換える */
@@ -496,5 +496,14 @@ window.GAMES = [
     emoji: "💃",
     color: "#1a1440",
     accent: "#ff4fd8"
+  },
+  {
+    id: "wig-panic-king",
+    title: "WIG PANIC KING",
+    description: "カツラを守れ！でも守っていることは絶対にバレるな！突風・鳥・ジェットコースター・巨大扇風機に150秒耐える爆笑サバイバル。",
+    path: "games/wig-panic-king/index.html",
+    emoji: "💇",
+    color: "#2a2358",
+    accent: "#ffb21f"
   }
 ];
