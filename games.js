@@ -13,7 +13,7 @@
  *
  * サイト上の「管理」画面からも追加・削除できます（その場合はこのブラウザだけに保存されます）。
  */
-window.GAMES_VERSION = "60";
+window.GAMES_VERSION = "61";
 
 /* 管理画面のパスワード（SHA-256 ハッシュ。パスワードそのものは書かない）
  * 変更するには: "mini-game-arcade:" + 新しいパスワード を SHA-256 にかけた値に置き換える */
@@ -532,5 +532,14 @@ window.GAMES = [
     emoji: "🐷",
     color: "#3a1020",
     accent: "#f39aac"
+  },
+  {
+    id: "draw-throw-king",
+    title: "DRAW & THROW KING",
+    description: "描いた落書きが、物理で飛ぶ。線1本でもOK。描いて、引っぱって、離すだけ。速さも破壊力も桁違いのカオス投てきゲーム。",
+    path: "games/draw-throw-king/index.html",
+    emoji: "🎯",
+    color: "#1c2a4a",
+    accent: "#ffcf3a"
   }
 ];
