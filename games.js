@@ -13,7 +13,7 @@
  *
  * サイト上の「管理」画面からも追加・削除できます（その場合はこのブラウザだけに保存されます）。
  */
-window.GAMES_VERSION = "61";
+window.GAMES_VERSION = "62";
 
 /* 管理画面のパスワード（SHA-256 ハッシュ。パスワードそのものは書かない）
  * 変更するには: "mini-game-arcade:" + 新しいパスワード を SHA-256 にかけた値に置き換える */
@@ -541,5 +541,14 @@ window.GAMES = [
     emoji: "🎯",
     color: "#1c2a4a",
     accent: "#ffcf3a"
+  },
+  {
+    id: "raijin-x1-dam",
+    title: "RAIJIN X1 ダムアタック",
+    description: "高さ58m・傾斜78°の絶壁ダムを駆け上がれ！連打で加速、頂上ギリギリで蹴って宙を舞い、回転を決めて滑り降りる3Dアクション。",
+    path: "games/raijin-x1-dam/index.html",
+    emoji: "⚡",
+    color: "#0b1a2a",
+    accent: "#38e0ff"
   }
 ];
