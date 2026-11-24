@@ -13,7 +13,7 @@
  *
  * サイト上の「管理」画面からも追加・削除できます（その場合はこのブラウザだけに保存されます）。
  */
-window.GAMES_VERSION = "62";
+window.GAMES_VERSION = "63";
 
 /* 管理画面のパスワード（SHA-256 ハッシュ。パスワードそのものは書かない）
  * 変更するには: "mini-game-arcade:" + 新しいパスワード を SHA-256 にかけた値に置き換える */
@@ -550,5 +550,14 @@ window.GAMES = [
     emoji: "⚡",
     color: "#0b1a2a",
     accent: "#38e0ff"
+  },
+  {
+    id: "suika-band",
+    title: "スイカに輪ゴム、どこまで巻ける？",
+    description: "スイカに輪ゴムを1本ずつ巻いていく。割れる前にやめれば記録、割れたらゼロ。限界は毎回ちがう度胸試しチキンレース。",
+    path: "games/suika-band/index.html",
+    emoji: "🍉",
+    color: "#14532d",
+    accent: "#ff4d5e"
   }
 ];

@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>スイカに輪ゴム、どこまで巻ける？</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+html,body{height:100%;background:#2b1d12;overflow:hidden;font-family:"Hiragino Maru Gothic ProN","Hiragino Sans","Noto Sans JP","Yu Gothic",system-ui,sans-serif;color:#3b2a1a}
+#app{position:relative;max-width:480px;height:100%;margin:0 auto;overflow:hidden;background:#fbefd6}
+canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.outline{color:#ffd23f;-webkit-text-stroke:7px #3b2a1a;paint-order:stroke fill;text-shadow:0 5px 0 #3b2a1a;font-weight:900}
+#hud{position:absolute;top:calc(14px + env(safe-area-inset-top));left:0;right:0;text-align:center;pointer-events:none}
+#countWrap{display:flex;align-items:baseline;justify-content:center;gap:4px}
+#count{font-size:72px;line-height:1;letter-spacing:1px}
+#count.bump{animation:bump .18s ease-out}
+@keyframes bump{0%{transform:scale(1.35)}100%{transform:scale(1)}}
+.unit{font-size:28px}
+#best{margin-top:6px;font-size:14px;font-weight:700;color:#7a5a3a}
+#msg{display:inline-block;margin-top:10px;padding:6px 16px;border-radius:20px;background:rgba(255,255,255,.85);border:3px solid #3b2a1a;font-size:17px;font-weight:800;min-width:150px;transition:color .2s,background .2s}
+#msg.warn{color:#fff;background:#d23b2f}
+#msg.pop{animation:msgpop .25s ease-out}
+@keyframes msgpop{0%{transform:scale(.8)}60%{transform:scale(1.08)}100%{transform:scale(1)}}
+#mute{position:absolute;top:calc(12px + env(safe-area-inset-top));right:12px;width:42px;height:42px;border-radius:50%;border:3px solid #3b2a1a;background:#fffaf0;font-size:19px;cursor:pointer;z-index:5}
+#controls{position:absolute;left:20px;right:20px;bottom:calc(22px + env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;gap:10px;touch-action:manipulation}
+button{font-family:inherit;cursor:pointer;touch-action:manipulation}
+#windBtn{width:100%;height:80px;border:4px solid #3b2a1a;border-radius:42px;background:#e8453c;color:#fff;font-size:34px;font-weight:900;letter-spacing:4px;box-shadow:0 7px 0 #3b2a1a;text-shadow:0 3px 0 rgba(0,0,0,.25);transition:transform .05s,box-shadow .05s}
+#windBtn:active{transform:translateY(5px);box-shadow:0 2px 0 #3b2a1a}
+#stopBtn{width:70%;height:48px;border:3px solid #2f6b2a;border-radius:26px;background:rgba(255,255,255,.93);color:#2f6b2a;font-size:18px;font-weight:900;box-shadow:0 4px 0 #2f6b2a}
+#stopBtn:active{transform:translateY(3px);box-shadow:0 1px 0 #2f6b2a}
+#stopBtn:disabled{opacity:.35}
+#pan{position:absolute;top:30%;left:0;right:0;text-align:center;font-size:88px;pointer-events:none;transform:scale(0);z-index:4}
+#pan.show{animation:pan 1.6s ease-out forwards}
+@keyframes pan{0%{transform:scale(0) rotate(-12deg)}12%{transform:scale(1.35) rotate(4deg)}22%{transform:scale(1) rotate(-3deg)}80%{transform:scale(1) rotate(-3deg);opacity:1}100%{transform:scale(1.1) rotate(-3deg);opacity:0}}
+.overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:6}
+.hide{display:none!important}
+#title{justify-content:space-between;padding:calc(48px + env(safe-area-inset-top)) 20px calc(24px + env(safe-area-inset-bottom));background:linear-gradient(rgba(251,239,214,.0),rgba(251,239,214,0) 60%,rgba(43,29,18,.35))}
+#title h1{text-align:center;line-height:1.15}
+#title h1 .s{display:block;font-size:30px}
+#title h1 .l{display:block;font-size:50px;margin-top:6px}
+.card{width:100%;max-width:400px;background:#fffaf0;border:4px solid #3b2a1a;border-radius:24px;box-shadow:0 8px 0 #3b2a1a;padding:18px 20px;text-align:center}
+.rules{list-style:none;text-align:left;font-size:15px;font-weight:700;line-height:1.75;margin-bottom:14px}
+.rules li::before{content:"🍉 "}
+.rules b{color:#d23b2f}
+.big{width:100%;height:64px;border:4px solid #3b2a1a;border-radius:34px;background:#e8453c;color:#fff;font-size:26px;font-weight:900;box-shadow:0 6px 0 #3b2a1a}
+.big:active{transform:translateY(4px);box-shadow:0 2px 0 #3b2a1a}
+.sub{display:flex;align-items:center;justify-content:center;text-decoration:none;width:100%;height:50px;margin-top:12px;border:3px solid #3b2a1a;border-radius:26px;background:#111;color:#fff;font-size:18px;font-weight:900}
+.ghost{width:100%;height:46px;margin-top:10px;border:3px solid #2f6b2a;border-radius:24px;background:#fff;color:#2f6b2a;font-size:17px;font-weight:900}
+#result{background:rgba(43,29,18,.45)}
+#result .card{width:86%;animation:cardIn .35s ease-out}
+@keyframes cardIn{0%{transform:translateY(40px) scale(.9);opacity:0}100%{transform:none;opacity:1}}
+#rTag{display:inline-block;padding:4px 18px;border-radius:16px;font-size:18px;font-weight:900;color:#fff;background:#2f8a3a}
+#rTag.bad{background:#d23b2f}
+#rNum{font-size:76px;line-height:1.1;margin-top:6px}
+#rNum span{font-size:30px}
+#rRank{font-size:22px;font-weight:900;margin-top:2px}
+#rNote{font-size:15px;font-weight:700;color:#6b4c2e;margin-top:10px;line-height:1.6}
+#rNote b{color:#d23b2f;font-size:18px}
+#rBest{font-size:16px;font-weight:900;color:#e8453c;margin-top:6px;min-height:1px}
+#rBtns{margin-top:14px}
+/* portal: phone landscape — watermelon on the left, controls and cards on the right */
+@media (orientation:landscape) and (max-height:560px){
+  #app{max-width:none}
+  #hud{right:auto;width:56%;top:calc(6px + env(safe-area-inset-top))}
+  #count{font-size:44px}.unit{font-size:20px}#best{margin-top:2px;font-size:12px}#msg{margin-top:6px;font-size:14px;padding:4px 12px}
+  #controls{left:58%;right:20px;bottom:auto;top:50%;transform:translateY(-50%);gap:12px}
+  #windBtn{height:64px;font-size:28px}#stopBtn{width:80%;height:44px}
+  #title{flex-direction:row;justify-content:space-around;align-items:center;gap:18px;padding:10px 18px}
+  #title h1{flex:1;min-width:0}#title h1 .s{font-size:22px}#title h1 .l{font-size:34px;margin-top:2px}
+  #title .card{flex:1;max-width:none;padding:10px 14px}.rules{font-size:12.5px;line-height:1.5;margin-bottom:8px}.big{height:48px;font-size:20px}
+  #result .card{width:min(640px,90%);padding:10px 16px;display:grid;grid-template-columns:1fr 1fr;column-gap:16px;align-items:center;max-height:96%}
+  #result .card>*{grid-column:1}#result .card #rBtns{grid-column:2;grid-row:1/8;margin:0}#rNum{font-size:48px}#rNum span{font-size:22px}#rRank{font-size:18px}#rNote{font-size:13px;margin-top:4px;line-height:1.4}#rBtns{margin-top:8px}
+  .sub{height:38px;margin-top:6px;font-size:14px}.ghost{height:38px;margin-top:6px;font-size:15px}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <canvas id="cv"></canvas>
+
+  <div id="hud" class="hide">
+    <div id="countWrap"><div id="count" class="outline">0</div><div class="unit outline">本</div></div>
+    <div id="best">自己ベスト 0本</div>
+    <div id="msg">輪ゴム、どこまで巻ける？</div>
+  </div>
+
+  <button id="mute" aria-label="音のオンオフ">🔊</button>
+
+  <div id="controls" class="hide">
+    <button id="windBtn">巻く！</button>
+    <button id="stopBtn" disabled>ここでやめる</button>
+  </div>
+
+  <div id="pan" class="outline">パーン！！</div>
+
+  <div id="title" class="overlay">
+    <h1 class="outline"><span class="s">スイカに輪ゴム、</span><span class="l">どこまで巻ける？</span></h1>
+    <div class="card">
+      <ul class="rules">
+        <li>「巻く！」で輪ゴムを1本ずつ巻く</li>
+        <li>スイカの限界は<b>毎回ちがう</b></li>
+        <li>割れる前に「やめる」と記録になる</li>
+        <li>割れたら<b>記録なし！</b></li>
+        <li>ミシミシ音とヒビがヒント</li>
+      </ul>
+      <button id="startBtn" class="big">はじめる</button>
+    </div>
+  </div>
+
+  <div id="result" class="overlay hide">
+    <div class="card">
+      <div id="rTag">セーフ！</div>
+      <div id="rNum" class="outline">0<span>本</span></div>
+      <div id="rRank"></div>
+      <div id="rNote"></div>
+      <div id="rBest"></div>
+      <div id="rBtns">
+        <button id="againBtn" class="big">もう1玉</button>
+        <button id="breakBtn" class="ghost">このスイカ、割ってみる 💥</button>
+        <a id="shareBtn" class="sub" href="#" target="_blank" rel="noopener">𝕏 で共有</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const app = $('app'), cv = $('cv'), ctx = cv.getContext('2d');
+const rnd = (a, b) => a + Math.random() * (b - a);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+const gauss = () => { let s = 0; for (let i = 0; i < 4; i++) s += Math.random(); return (s - 2) / 2; };
+
+/* ---------- storage ---------- */
+const KEY = 'suika-wagomu-best';
+let best = 0;
+try { best = parseInt(localStorage.getItem(KEY) || '0', 10) || 0; } catch (e) {}
+function saveBest(v) { try { localStorage.setItem(KEY, String(v)); } catch (e) {} }
+
+/* ---------- canvas ---------- */
+let W = 0, H = 0, dpr = 1, grain = [];
+function resize() {
+  dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+  W = app.clientWidth; H = app.clientHeight;
+  cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+  grain = [];
+  for (let i = 0; i < 26; i++) grain.push({ y: Math.random(), a: rnd(0, Math.PI * 2), f: rnd(0.008, 0.02), amp: rnd(1, 4), w: rnd(0.6, 1.6), o: rnd(0.05, 0.14) });
+}
+window.addEventListener('resize', resize);
+resize();
+
+/* ---------- audio ---------- */
+let ac = null, master = null, noiseBuf = null, muted = false;
+function initAudio() {
+  if (ac) { if (ac.state === 'suspended') ac.resume(); return; }
+  try {
+    ac = new (window.AudioContext || window.webkitAudioContext)();
+    const comp = ac.createDynamicsCompressor();
+    master = ac.createGain(); master.gain.value = muted ? 0 : 0.9;
+    master.connect(comp); comp.connect(ac.destination);
+    noiseBuf = ac.createBuffer(1, ac.sampleRate * 1.5, ac.sampleRate);
+    const d = noiseBuf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  } catch (e) { ac = null; }
+}
+function env(g, t, peak, a, dur) {
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(peak, t + a);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+}
+function noise(t, dur, type, freq, q, peak, a = 0.004) {
+  const n = ac.createBufferSource(); n.buffer = noiseBuf;
+  const f = ac.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q;
+  const g = ac.createGain(); env(g, t, peak, a, dur);
+  n.connect(f).connect(g).connect(master); n.start(t); n.stop(t + dur + 0.05);
+  return f;
+}
+function tone(t, type, f0, f1, dur, peak, a = 0.005) {
+  const o = ac.createOscillator(); o.type = type;
+  o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t + dur);
+  const g = ac.createGain(); env(g, t, peak, a, dur);
+  o.connect(g).connect(master); o.start(t); o.stop(t + dur + 0.05);
+}
+const sfx = {
+  snap(tension) {
+    if (!ac) return; const t = ac.currentTime;
+    noise(t, 0.05, 'bandpass', 2600 + rnd(-300, 300), 1.4, 0.55);                // パチン
+    tone(t, 'triangle', 460 + rnd(-40, 60), 150, 0.12, 0.22);                    // ゴムのビヨン
+    const thump = 105 + clamp(tension, 0, 1.1) * 130 + rnd(-10, 10);             // スイカの「ポン」(張るほど高く)
+    tone(t + 0.01, 'sine', thump, thump * 0.6, 0.14, 0.38);
+  },
+  creak(intensity) {
+    if (!ac) return; const t = ac.currentTime;
+    const dur = 0.22 + 0.4 * intensity;
+    const o = ac.createOscillator(); o.type = 'sawtooth';
+    const base = rnd(70, 120);
+    o.frequency.setValueAtTime(base, t); o.frequency.linearRampToValueAtTime(base * rnd(0.6, 1.4), t + dur);
+    const lfo = ac.createOscillator(); lfo.type = 'square'; lfo.frequency.value = rnd(18, 42);
+    const lg = ac.createGain(); lg.gain.value = 0.5;
+    const amp = ac.createGain(); amp.gain.value = 0.5;
+    lfo.connect(lg).connect(amp.gain);
+    const bp = ac.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = rnd(450, 900); bp.Q.value = 2.2;
+    const g = ac.createGain(); env(g, t, 0.05 + 0.4 * intensity, 0.03, dur);
+    o.connect(bp).connect(amp).connect(g).connect(master);
+    o.start(t); lfo.start(t); o.stop(t + dur + 0.05); lfo.stop(t + dur + 0.05);
+  },
+  crack() {
+    if (!ac) return; const t = ac.currentTime;
+    noise(t, 0.035, 'highpass', 3500, 0.7, 0.5, 0.002);
+    noise(t + 0.03, 0.05, 'bandpass', 5200, 3, 0.35, 0.002);
+  },
+  boom() {
+    if (!ac) return; const t = ac.currentTime;
+    const f = noise(t, 1.1, 'lowpass', 4000, 0.5, 1.0, 0.003);
+    f.frequency.setValueAtTime(4000, t); f.frequency.exponentialRampToValueAtTime(180, t + 1.0);
+    tone(t, 'sine', 90, 32, 0.5, 1.0, 0.003);
+    noise(t + 0.06, 0.7, 'highpass', 1400, 0.6, 0.35, 0.02);   // びしゃっ
+    for (let i = 0; i < 6; i++) noise(t + 0.25 + i * rnd(0.06, 0.14), 0.04, 'bandpass', rnd(800, 2000), 2, 0.25, 0.002); // ぼたぼた
+  },
+  safe() {
+    if (!ac) return; const t = ac.currentTime;
+    tone(t, 'sine', 880, 880, 0.18, 0.25); tone(t + 0.12, 'sine', 1320, 1320, 0.3, 0.25);
+  }
+};
+function vib(p) { try { navigator.vibrate && navigator.vibrate(p); } catch (e) {} }
+
+/* ---------- game state ---------- */
+const BAND_COLORS = ['#e0a63a', '#e0a63a', '#e0a63a', '#e0a63a', '#d99a2b', '#e8453c', '#3a7bd5', '#f06aa6', '#59b84a', '#f2c230'];
+let S;
+function freshState(phase) {
+  return {
+    phase, count: 0,
+    limit: Math.floor(15 + Math.pow(Math.random(), 0.9) * 55),   // 15〜69本
+    noise: rnd(-0.08, 0.08),
+    bands: [], cracks: [], drips: [], puddles: [], parts: [], splats: [], screenSplats: [],
+    jig: 0, jigV: 0, flash: 0, shake: 0, lastWind: 0, nextAmb: 2, burst: false, auto: false, result: null
+  };
+}
+S = freshState('title');
+
+/* ---------- geometry ---------- */
+function geo() {
+  const tableY = H * 0.68;
+  const rx0 = Math.min(W * 0.37, H * 0.2);
+  const sq = 0.32 * (1 - Math.exp(-S.count / 38));
+  const ry = rx0 * 0.86 * (1 + sq * 0.32) * (1 - S.jig * 0.5);
+  return { cx: (W > H * 1.2) ? W * 0.28 : W / 2, cy: tableY - ry * 0.96, rx: rx0 * (1 + S.jig), ry, sq, tableY };
+}
+function fW(g, yn) { const e = Math.exp(-((yn / 0.24) ** 2)); return (1 - g.sq * e) * (1 + g.sq * 0.18 * (1 - e)); }
+function halfW(g, yn) { return g.rx * fW(g, yn) * Math.sqrt(Math.max(0, 1 - yn * yn)); }
+function melonPath(g, ox, oy) {
+  ctx.beginPath();
+  for (let i = 0; i <= 100; i++) {
+    const t = i / 100 * Math.PI * 2, yn = Math.sin(t);
+    const x = g.cx + ox + Math.cos(t) * g.rx * fW(g, yn), y = g.cy + oy + yn * g.ry;
+    i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+  }
+  ctx.closePath();
+}
+function toScreen(g, u, yn, ox, oy) { return [g.cx + ox + u * halfW(g, yn), g.cy + oy + yn * g.ry]; }
+
+/* ---------- actions ---------- */
+function addCrack() {
+  const side = Math.random() < 0.5 ? -1 : 1;
+  let yn = side * rnd(0.05, 0.2), u = rnd(-0.75, 0.75);
+  const pts = [{ u, yn }], n = Math.floor(rnd(4, 9));
+  for (let i = 0; i < n; i++) { yn += side * rnd(0.035, 0.075); u = clamp(u + rnd(-0.11, 0.11), -0.95, 0.95); pts.push({ u, yn }); }
+  S.cracks.push({ pts, grow: 0 });
+}
+function spawnDrip() {
+  if (!S.cracks.length) return;
+  const c = pick(S.cracks), p = c.pts[Math.floor(Math.random() * c.pts.length)];
+  const g = geo(); const [x, y] = toScreen(g, p.u, p.yn, 0, 0);
+  S.drips.push({ x, y, vy: 0, wait: rnd(0, 0.4), r: rnd(2.2, 3.6) });
+}
+function pickMsg(rp) {
+  const r = rp + rnd(-0.07, 0.07);
+  if (r < 0.35) return [pick(['パチン！', 'まだまだ余裕', 'スイカは平気そう', 'いい音', 'どんどん巻こう']), false];
+  if (r < 0.6) return [pick(['ちょっと硬くなってきた', '形が変わってきた…', 'ギュッ…', 'まだいける…？']), false];
+  if (r < 0.8) return [pick(['ミシ…', '嫌な音がする', 'ミシミシ…', 'スイカが苦しそう']), true];
+  return [pick(['ピキッ…', 'もう限界かも', 'あと1本…いける？', '手が震える…', 'やめるなら今']), true];
+}
+function setMsg(text, warn) {
+  const m = $('msg'); m.textContent = text; m.classList.toggle('warn', !!warn);
+  m.classList.remove('pop'); void m.offsetWidth; m.classList.add('pop');
+}
+function updateCount() {
+  const c = $('count'); c.textContent = S.count;
+  c.classList.remove('bump'); void c.offsetWidth; c.classList.add('bump');
+  $('stopBtn').disabled = S.count < 1 || S.phase !== 'play';
+}
+
+function wind(force) {
+  if (S.phase !== 'play') return;
+  const now = performance.now();
+  if (!force && now - S.lastWind < 85) return;
+  S.lastWind = now;
+  S.count++;
+  updateCount();
+  if (S.count >= S.limit) { burst(); return; }
+  const spread = Math.min(0.2, 0.035 + S.count * 0.0032);
+  S.bands.push({ off: gauss() * spread, tilt: rnd(-0.05, 0.05), color: pick(BAND_COLORS), born: now });
+  S.jigV -= 1.4;
+  const r = S.count / S.limit, rp = r + S.noise;
+  sfx.snap(rp);
+  if (rp > 0.35 && Math.random() < (rp - 0.3) * 1.2) setTimeout(() => S.phase === 'play' && sfx.creak(clamp(rp, 0, 1)), 110);
+  if (r > 0.5 && Math.random() < (r - 0.42) * 1.1 && S.cracks.length < 16) { addCrack(); setTimeout(() => sfx.crack(), 70); }
+  if (r > 0.78 && Math.random() < 0.5) spawnDrip();
+  vib(r > 0.7 ? 25 : 10);
+  if (!S.auto) { const [t, w] = pickMsg(rp); setMsg(t, w); }
+}
+
+function burst() {
+  const g = geo();
+  S.phase = 'burst'; S.burst = true; S.flash = 1; S.shake = 1;
+  sfx.boom(); vib([70, 30, 200]);
+  // pieces
+  for (let i = 0; i < 150; i++) {
+    const yn = rnd(-0.95, 0.95), u = rnd(-1, 1);
+    const x = g.cx + u * halfW(g, yn), y = g.cy + yn * g.ry;
+    let dx = x - g.cx, dy = y - g.cy; const len = Math.hypot(dx, dy) || 1; dx /= len; dy /= len;
+    const sp = rnd(250, 1000);
+    const type = i < 95 ? 'flesh' : i < 130 ? 'seed' : 'rind';
+    const p = {
+      type, x, y, vx: dx * sp + rnd(-120, 120), vy: dy * sp - rnd(250, 700),
+      rot: rnd(0, 6.28), vr: rnd(-12, 12), floorY: g.tableY + rnd(-6, (H - g.tableY) * 0.85),
+      size: type === 'flesh' ? rnd(7, 18) : type === 'seed' ? rnd(3, 4.5) : rnd(12, 26), rest: false
+    };
+    if (type === 'flesh') { p.poly = []; const k = Math.floor(rnd(4, 7)); for (let j = 0; j < k; j++) p.poly.push(rnd(0.6, 1.1)); p.light = Math.random() < 0.3; }
+    S.parts.push(p);
+  }
+  for (const b of S.bands.slice(-45)) {
+    const dir = Math.random() < 0.5 ? -1 : 1;
+    S.parts.push({ type: 'band', color: b.color, x: g.cx + rnd(-20, 20), y: g.cy + b.off * g.ry, vx: dir * rnd(300, 900), vy: rnd(-900, -300), rot: rnd(0, 6.28), vr: rnd(-18, 18), floorY: g.tableY + rnd(0, (H - g.tableY) * 0.85), size: rnd(9, 16), rest: false });
+  }
+  // wall splats
+  for (let i = 0; i < 18; i++) {
+    const r = rnd(8, 30), drops = [];
+    for (let j = 0; j < 5; j++) { const a = rnd(0, 6.28), d = r * rnd(1.2, 2.2); drops.push([Math.cos(a) * d, Math.sin(a) * d, rnd(1.5, r * 0.25)]); }
+    S.splats.push({ x: g.cx + rnd(-W * 0.55, W * 0.55), y: rnd(H * 0.08, g.tableY - 12), r, drops, drip: 0, dripMax: rnd(10, 80), dw: r * rnd(0.15, 0.3) });
+  }
+  for (let i = 0; i < 4; i++) S.screenSplats.push({ x: rnd(0, W), y: rnd(0, H * 0.7), r: rnd(40, 90), a: 0.55, seed: Math.random() * 100 });
+  $('controls').classList.add('hide');
+  const pan = $('pan'); pan.classList.remove('show'); void pan.offsetWidth; pan.classList.add('show');
+  setMsg('パーン！', true);
+  setTimeout(() => showResult(), 1700);
+}
+
+function rank(n) {
+  if (n < 10) return '様子見ビギナー';
+  if (n < 20) return '慎重派';
+  if (n < 30) return '輪ゴム職人';
+  if (n < 40) return 'スイカ使い';
+  if (n < 50) return '限界を知る者';
+  return '伝説の巻き手';
+}
+
+function stopGame() {
+  if (S.phase !== 'play' || S.count < 1) return;
+  const n = S.count, left = S.limit - 1 - n;
+  const isBest = n > best; if (isBest) { best = n; saveBest(best); }
+  S.result = { safe: true, n, left, limit: S.limit, isBest };
+  S.phase = 'result';
+  sfx.safe(); vib(20);
+  $('controls').classList.add('hide');
+  showResult();
+}
+
+function showResult() {
+  const R = S.result || (() => {
+    const n = S.count;
+    return (S.result = { safe: false, n, prev: n - 1, limit: S.limit });
+  })();
+  if (S.phase === 'burst') S.phase = 'result';
+  const tag = $('rTag');
+  if (R.safe) {
+    tag.textContent = 'セーフ！'; tag.classList.remove('bad');
+    $('rNum').innerHTML = R.n + '<span>本</span>';
+    $('rRank').textContent = '【' + rank(R.n) + '】';
+    $('rNote').innerHTML = 'このスイカは <b>' + R.limit + '本目</b> で割れるはずだった<br>' +
+      (R.left > 0 ? 'あと <b>' + R.left + '本</b> いけた…！' : '<b>限界ギリギリ！</b>神ストップ');
+    $('rBest').textContent = R.isBest ? '🎉 自己ベスト更新！' : '自己ベスト ' + best + '本';
+    $('breakBtn').classList.toggle('hide', S.burst);
+  } else {
+    tag.textContent = '記録なし…'; tag.classList.add('bad');
+    $('rNum').innerHTML = R.n + '<span>本目</span>';
+    $('rRank').textContent = '欲張りすぎた…';
+    $('rNote').innerHTML = 'パーン！と割れてしまった<br>' + (R.prev > 0 ? 'やめていれば <b>' + R.prev + '本</b> だった' : 'いきなり割れた…運が悪い！');
+    $('rBest').textContent = '自己ベスト ' + best + '本';
+    $('breakBtn').classList.add('hide');
+  }
+  $('best').textContent = '自己ベスト ' + best + '本';
+  $('shareBtn').href = shareHref();
+  $('result').classList.remove('hide');
+}
+
+function breakIt() {
+  $('result').classList.add('hide');
+  S.phase = 'play'; S.auto = true;
+  setMsg('いけるところまで…', true);
+  const step = () => {
+    if (S.phase !== 'play') return;
+    wind(true);
+    if (S.phase === 'play') setTimeout(step, Math.max(45, 120 - (S.count / S.limit) * 70));
+  };
+  setTimeout(step, 300);
+}
+
+function startGame() {
+  initAudio();
+  S = freshState('play');
+  $('title').classList.add('hide');
+  $('result').classList.add('hide');
+  $('hud').classList.remove('hide');
+  $('controls').classList.remove('hide');
+  $('count').textContent = '0';
+  $('stopBtn').disabled = true;
+  $('best').textContent = '自己ベスト ' + best + '本';
+  setMsg('輪ゴム、どこまで巻ける？', false);
+}
+
+function shareHref() {
+  const R = S.result; if (!R) return '#';
+  const text = R.safe
+    ? 'スイカに輪ゴムを' + R.n + '本巻いてセーフ！🍉【' + rank(R.n) + '】\n' + (R.left > 0 ? '限界まであと' + R.left + '本だった…' : '限界ギリギリの神ストップ！') + '\n#スイカ輪ゴムチャレンジ'
+    : 'スイカに輪ゴムを' + R.n + '本巻いたらパーン！🍉💥\nやめていれば' + Math.max(0, R.prev) + '本だった…\n#スイカ輪ゴムチャレンジ';
+  const url = /^https?:/.test(location.href) ? location.href : '';
+  return 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(text) + (url ? '&url=' + encodeURIComponent(url) : '');
+}
+
+/* ---------- input ---------- */
+const press = (el, fn) => el.addEventListener('pointerdown', e => { e.preventDefault(); fn(); });
+press($('windBtn'), () => { initAudio(); wind(); });
+press($('stopBtn'), stopGame);
+$('startBtn').addEventListener('click', startGame);
+$('againBtn').addEventListener('click', startGame);
+$('breakBtn').addEventListener('click', breakIt);
+$('mute').addEventListener('click', () => {
+  muted = !muted; $('mute').textContent = muted ? '🔇' : '🔊';
+  if (master) master.gain.value = muted ? 0 : 0.9;
+});
+window.addEventListener('keydown', e => {
+  if (e.repeat) return;
+  if (e.code === 'Space') { e.preventDefault(); if (S.phase === 'title') startGame(); else if (!S.auto) wind(); }
+  if (e.code === 'Enter' && !S.auto) stopGame();
+});
+document.addEventListener('gesturestart', e => e.preventDefault());
+
+/* ---------- update ---------- */
+function update(dt, now) {
+  const acc = -420 * S.jig - 13 * S.jigV; S.jigV += acc * dt; S.jig += S.jigV * dt;
+  for (const c of S.cracks) c.grow = Math.min(1, c.grow + dt * 3.5);
+  S.flash = Math.max(0, S.flash - dt * 2.8);
+  S.shake = Math.max(0, S.shake - dt * 1.7);
+  const tableY = H * 0.68;
+  for (let i = S.drips.length - 1; i >= 0; i--) {
+    const d = S.drips[i];
+    if (d.wait > 0) { d.wait -= dt; continue; }
+    d.vy += 500 * dt; d.y += d.vy * dt;
+    if (d.y > tableY + 3) { S.puddles.push({ x: d.x, r: 0, max: rnd(5, 11) }); S.drips.splice(i, 1); }
+  }
+  for (const p of S.puddles) p.r = Math.min(p.max, p.r + dt * 14);
+  for (const p of S.parts) {
+    if (p.rest) continue;
+    p.vy += 1500 * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.rot += p.vr * dt;
+    if (p.y > p.floorY && p.vy > 0) {
+      p.y = p.floorY;
+      if (p.vy > 220) { p.vy *= -0.28; p.vx *= 0.55; p.vr *= 0.5; }
+      else { p.vy = 0; p.vx *= 0.8; p.vr *= 0.7; if (Math.abs(p.vx) < 8) p.rest = true; }
+    }
+  }
+  for (const s of S.splats) s.drip = Math.min(s.dripMax, s.drip + dt * 22);
+  for (const s of S.screenSplats) s.a = Math.max(0, s.a - dt * 0.18);
+  // 環境音のミシミシ
+  if (S.phase === 'play' && !S.auto) {
+    S.nextAmb -= dt;
+    const rp = S.count / S.limit + S.noise;
+    if (S.nextAmb <= 0) {
+      S.nextAmb = rnd(1.4, 3.2);
+      if (rp > 0.6 && Math.random() < rp) { sfx.creak(clamp(rp * 0.8, 0, 1)); vib(15); }
+    }
+  }
+}
+
+/* ---------- draw ---------- */
+function drawBG() {
+  const tableY = H * 0.68;
+  const wall = ctx.createLinearGradient(0, 0, 0, tableY);
+  wall.addColorStop(0, '#fff6e2'); wall.addColorStop(1, '#f3dfb8');
+  ctx.fillStyle = wall; ctx.fillRect(0, 0, W, tableY);
+  ctx.fillStyle = 'rgba(160,110,60,.06)';
+  for (let x = 0; x < W; x += 28) ctx.fillRect(x, 0, 12, tableY);
+  // soft sun
+  const sun = ctx.createRadialGradient(W * 0.82, H * 0.18, 0, W * 0.82, H * 0.18, W * 0.6);
+  sun.addColorStop(0, 'rgba(255,255,255,.55)'); sun.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = sun; ctx.fillRect(0, 0, W, tableY);
+  // table
+  const tb = ctx.createLinearGradient(0, tableY, 0, H);
+  tb.addColorStop(0, '#c98d52'); tb.addColorStop(1, '#9a6233');
+  ctx.fillStyle = tb; ctx.fillRect(0, tableY, W, H - tableY);
+  ctx.lineCap = 'round';
+  for (const gr of grain) {
+    const y0 = tableY + 10 + gr.y * (H - tableY - 10);
+    ctx.strokeStyle = 'rgba(90,50,20,' + gr.o + ')'; ctx.lineWidth = gr.w;
+    ctx.beginPath();
+    for (let x = -10; x <= W + 10; x += 12) { const y = y0 + Math.sin(x * gr.f + gr.a) * gr.amp; x < 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }
+    ctx.stroke();
+  }
+  ctx.fillStyle = 'rgba(255,230,190,.55)'; ctx.fillRect(0, tableY, W, 3);
+  ctx.fillStyle = 'rgba(80,40,10,.25)'; ctx.fillRect(0, tableY + 3, W, 2);
+}
+
+function drawSplats() {
+  for (const s of S.splats) {
+    ctx.fillStyle = 'rgba(214,52,52,.85)';
+    ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, 6.28); ctx.fill();
+    for (const d of s.drops) { ctx.beginPath(); ctx.arc(s.x + d[0], s.y + d[1], d[2], 0, 6.28); ctx.fill(); }
+    ctx.fillRect(s.x - s.dw / 2, s.y, s.dw, s.drip);
+    ctx.beginPath(); ctx.arc(s.x, s.y + s.drip, s.dw * 0.75, 0, 6.28); ctx.fill();
+  }
+}
+
+function drawMelon(g, ox, oy, now) {
+  const { cx, cy, rx, ry } = g;
+  // shadow
+  ctx.fillStyle = 'rgba(70,35,10,.28)';
+  ctx.beginPath(); ctx.ellipse(cx, g.tableY + 3, rx * 0.95, Math.max(8, rx * 0.12), 0, 0, 6.28); ctx.fill();
+  ctx.save();
+  melonPath(g, ox, oy);
+  const base = ctx.createRadialGradient(cx - rx * 0.3 + ox, cy - ry * 0.35 + oy, rx * 0.1, cx + ox, cy + oy, rx * 1.25);
+  base.addColorStop(0, '#9ad874'); base.addColorStop(1, '#3d8a2d');
+  ctx.fillStyle = base; ctx.fill(); ctx.clip();
+  // stripes
+  ctx.strokeStyle = '#1c4d1e'; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+  const N = 11;
+  for (let i = 0; i < N; i++) {
+    const ph = -Math.PI / 2 + (i + 0.5) * Math.PI / N, u = Math.sin(ph), cw = Math.cos(ph);
+    ctx.lineWidth = rx * 0.13 * cw + 1;
+    ctx.beginPath();
+    for (let k = 0; k <= 40; k++) {
+      const yn = -1 + 2 * k / 40, s = Math.sqrt(1 - yn * yn);
+      const z = (Math.sin(k * 1.9 + i * 2.3) + Math.sin(k * 3.7 + i)) * rx * 0.018 * s * cw;
+      const x = cx + ox + u * halfW(g, yn) + z, y = cy + oy + yn * ry;
+      k ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+    }
+    ctx.stroke();
+  }
+  // shading
+  const sh = ctx.createRadialGradient(cx - rx * 0.38 + ox, cy - ry * 0.42 + oy, 0, cx + ox, cy + oy, Math.max(rx, ry) * 1.05);
+  sh.addColorStop(0, 'rgba(255,255,255,.5)'); sh.addColorStop(0.22, 'rgba(255,255,255,.1)');
+  sh.addColorStop(0.65, 'rgba(0,0,0,0)'); sh.addColorStop(1, 'rgba(0,0,0,.4)');
+  ctx.fillStyle = sh; ctx.fillRect(0, 0, W, H);
+  // waist pinch shadow
+  if (g.sq > 0.01) {
+    const ws = ctx.createLinearGradient(0, cy + oy - ry * 0.3, 0, cy + oy + ry * 0.3);
+    const a = Math.min(0.35, g.sq * 1.2);
+    ws.addColorStop(0, 'rgba(0,0,0,0)'); ws.addColorStop(0.5, 'rgba(0,0,0,' + a + ')'); ws.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = ws; ctx.fillRect(0, cy + oy - ry * 0.3, W, ry * 0.6);
+  }
+  // cracks
+  for (const c of S.cracks) {
+    const segs = Math.max(1, Math.floor(c.grow * (c.pts.length - 1)));
+    ctx.beginPath();
+    for (let i = 0; i <= segs; i++) { const [x, y] = toScreen(g, c.pts[i].u, c.pts[i].yn, ox, oy); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+    ctx.strokeStyle = '#22130b'; ctx.lineWidth = 2.6; ctx.stroke();
+    ctx.strokeStyle = '#e04a3c'; ctx.lineWidth = 1; ctx.stroke();
+  }
+  ctx.restore();
+  // outline
+  melonPath(g, ox, oy); ctx.strokeStyle = 'rgba(18,45,18,.7)'; ctx.lineWidth = 2.2; ctx.stroke();
+  // stem
+  const sx = cx + ox, sy = cy + oy - ry;
+  ctx.strokeStyle = '#6b4a22'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(sx, sy + 3); ctx.quadraticCurveTo(sx + 3, sy - 10, sx + 12, sy - 13); ctx.stroke();
+  ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(sx + 12, sy - 13); ctx.bezierCurveTo(sx + 22, sy - 16, sx + 22, sy - 4, sx + 15, sy - 6); ctx.stroke();
+  // bands
+  for (const b of S.bands) {
+    const age = (now - b.born) / 1000;
+    const s = 1 + 0.4 * Math.exp(-age * 16) * Math.cos(age * 38);
+    const hw = halfW(g, b.off) * s, y = cy + oy + b.off * ry;
+    ctx.beginPath();
+    for (let k = 0; k <= 30; k++) {
+      const a = k / 30 * Math.PI;
+      const x = cx + ox + Math.cos(a) * hw, yy = y + Math.sin(a) * hw * 0.1 + Math.cos(a) * hw * b.tilt;
+      k ? ctx.lineTo(x, yy) : ctx.moveTo(x, yy);
+    }
+    ctx.strokeStyle = 'rgba(40,20,5,.75)'; ctx.lineWidth = 4.6; ctx.stroke();
+    ctx.strokeStyle = b.color; ctx.lineWidth = 3; ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 0.9; ctx.stroke();
+  }
+}
+
+function drawParts() {
+  for (const p of S.parts) {
+    ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+    if (p.type === 'flesh') {
+      ctx.beginPath();
+      const k = p.poly.length;
+      for (let j = 0; j < k; j++) { const a = j / k * 6.28, r = p.size * p.poly[j]; j ? ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r) : ctx.moveTo(Math.cos(a) * r, Math.sin(a) * r); }
+      ctx.closePath();
+      ctx.fillStyle = p.light ? '#ff6f61' : '#e23d36'; ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,.25)'; ctx.beginPath(); ctx.arc(-p.size * 0.25, -p.size * 0.25, p.size * 0.25, 0, 6.28); ctx.fill();
+    } else if (p.type === 'seed') {
+      ctx.fillStyle = '#1a120c'; ctx.beginPath(); ctx.ellipse(0, 0, p.size, p.size * 0.6, 0, 0, 6.28); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,.4)'; ctx.beginPath(); ctx.arc(-p.size * 0.3, -p.size * 0.15, p.size * 0.25, 0, 6.28); ctx.fill();
+    } else if (p.type === 'rind') {
+      ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.arc(0, p.size, p.size, -2.2, -0.9);
+      ctx.strokeStyle = '#2c6e26'; ctx.lineWidth = p.size * 0.32; ctx.stroke();
+      ctx.beginPath(); ctx.arc(0, p.size, p.size * 0.82, -2.2, -0.9);
+      ctx.strokeStyle = '#d7efb0'; ctx.lineWidth = p.size * 0.12; ctx.stroke();
+      ctx.beginPath(); ctx.arc(0, p.size, p.size * 0.7, -2.2, -0.9);
+      ctx.strokeStyle = '#e8453c'; ctx.lineWidth = p.size * 0.14; ctx.stroke();
+    } else if (p.type === 'band') {
+      ctx.strokeStyle = 'rgba(40,20,5,.6)'; ctx.lineWidth = 3.6;
+      const sq = Math.max(0.25, Math.abs(Math.cos(p.rot * 1.3)));
+      ctx.beginPath(); ctx.ellipse(0, 0, p.size, p.size * sq, 0, 0, 6.28); ctx.stroke();
+      ctx.strokeStyle = p.color; ctx.lineWidth = 2.2; ctx.stroke();
+    }
+    ctx.restore();
+  }
+}
+
+function draw(now) {
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  if (S.shake > 0) ctx.translate((Math.random() - 0.5) * S.shake * 24, (Math.random() - 0.5) * S.shake * 24);
+  drawBG();
+  drawSplats();
+  for (const p of S.puddles) {
+    ctx.fillStyle = 'rgba(200,40,40,.8)';
+    ctx.beginPath(); ctx.ellipse(p.x, H * 0.68 + 6 + p.max * 0.2, p.r * 1.6, p.r * 0.45, 0, 0, 6.28); ctx.fill();
+  }
+  if (!S.burst) {
+    const g = geo();
+    let ox = 0, oy = 0;
+    if (S.phase === 'title') { oy = Math.sin(now / 600) * 1.5; }
+    else {
+      const rp = S.count / S.limit + S.noise;
+      const amp = Math.max(0, rp - 0.5) * 6.5;
+      ox = (Math.random() - 0.5) * amp; oy = (Math.random() - 0.5) * amp * 0.5;
+    }
+    drawMelon(g, ox, oy, now);
+  } else {
+    drawParts();
+  }
+  ctx.fillStyle = '#c62f2f';
+  for (const d of S.drips) { ctx.beginPath(); ctx.arc(d.x, d.y, d.r, 0, 6.28); ctx.fill(); }
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  for (const s of S.screenSplats) {
+    if (s.a <= 0) continue;
+    ctx.fillStyle = 'rgba(210,40,40,' + s.a + ')';
+    ctx.beginPath();
+    for (let i = 0; i <= 18; i++) {
+      const a = i / 18 * 6.28, r = s.r * (0.75 + 0.25 * Math.sin(a * 5 + s.seed) + 0.1 * Math.sin(a * 11 + s.seed));
+      i ? ctx.lineTo(s.x + Math.cos(a) * r, s.y + Math.sin(a) * r) : ctx.moveTo(s.x + Math.cos(a) * r, s.y + Math.sin(a) * r);
+    }
+    ctx.fill();
+  }
+  if (S.flash > 0) { ctx.fillStyle = 'rgba(255,255,255,' + Math.min(0.9, S.flash) + ')'; ctx.fillRect(0, 0, W, H); }
+}
+
+let last = performance.now();
+function loop(t) {
+  const dt = Math.min(0.05, (t - last) / 1000); last = t;
+  update(dt, t); draw(t);
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
