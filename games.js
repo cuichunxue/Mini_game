@@ -13,7 +13,7 @@
  *
  * サイト上の「管理」画面からも追加・削除できます（その場合はこのブラウザだけに保存されます）。
  */
-window.GAMES_VERSION = "64";
+window.GAMES_VERSION = "65";
 
 /* 管理画面のパスワード（SHA-256 ハッシュ。パスワードそのものは書かない）
  * 変更するには: "mini-game-arcade:" + 新しいパスワード を SHA-256 にかけた値に置き換える */
@@ -559,5 +559,14 @@ window.GAMES = [
     emoji: "🍉",
     color: "#14532d",
     accent: "#ff4d5e"
+  },
+  {
+    id: "mosquito-room",
+    title: "蚊を倒したかっただけなのに",
+    description: "タップした場所に鉛筆が飛ぶ。30秒で蚊を何匹倒せる？外した鉛筆は壁やテレビに刺さって被害額が膨らむ、部屋がボロボロになるゲーム。",
+    path: "games/mosquito-room/index.html",
+    emoji: "🦟",
+    color: "#2a2438",
+    accent: "#ffcf4a"
   }
 ];
