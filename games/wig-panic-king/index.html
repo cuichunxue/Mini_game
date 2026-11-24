@@ -209,6 +209,12 @@ function hint(key,txt,target,force){if(!force&&(!S.tut||S.seen[key]))return;S.se
 function pop(x,y,txt,col){S.pops.push({x,y,txt,col:col||'#fff',t:0})}
 
 /* ---------- 風 ---------- */
+/* difficulty knobs (tuned with bot playtests: casual / normal / good players) */
+const DIF={fixGain:7,fixSus:5,fixCd:.5,fixMin:.4,holdGain:6,holdLeak:5,holdLeakFrom:.6,susHold:11,susDecay:4,windBase:1,windK:9,calm:.5,stageGift:3,tiltDrain:3,
+  gustIv:.75,quickIv:.6,birdSp:135,birdSpFinal:165,birdHit:25,birdSus:8,birdIv:[3.0,4.4],birdIvFinal:[2.2,3.2],
+  q:{windK:10,susHold:12},           // QUICK 30s: short, so every second is sharper
+  s:{windK:6,holdGain:7,holdLeak:3,stageGift:8}};  // SURVIVAL 150s: long, so per-second wear is gentler
+const K=n=>{const o=mode==='quick'?DIF.q:DIF.s;return o[n]!=null?o[n]:DIF[n]};
 function spawnGust(){
   const st=S.stageIdx;let dir=Math.random()<.5?-1:1,mag,dur,iv;
   if(st===0){mag=rnd(.5,.9);dur=rnd(1.6,2.4);iv=rnd(2.8,4.2)}
@@ -216,7 +222,8 @@ function spawnGust(){
   else if(st===2){mag=rnd(.8,1.3);dur=rnd(1.1,1.7);iv=rnd(1.4,2.4);dir=S.lastDir?-S.lastDir:dir}
   else if(st===3){mag=rnd(.6,1.1);dur=rnd(1.5,2.2);iv=rnd(2.2,3.2)}
   else{mag=rnd(1,1.5);dur=rnd(1.8,2.8);iv=rnd(1.6,2.6)}
-  if(S.t<S.stLen*.4)mag=Math.min(mag,.6);
+  if(S.t<Math.min(S.stLen*.4,6))mag=Math.min(mag,.6);
+  iv*=K('gustIv')*(mode==='quick'?K('quickIv'):1);
   S.lastDir=dir;
   S.gusts.push({dir,mag,dur,age:-.75});
   S.gT=iv+.75;
@@ -257,10 +264,10 @@ function scareBird(b){
 /* ---------- 補正 ---------- */
 function fix(dir){
   if(state!=='play'||S.fixCd>0)return;
-  S.fixCd=.22;
+  S.fixCd=K('fixCd');
   const need=-Math.sign(S.wx);
-  if(Math.abs(S.wx)>.25&&dir===need){
-    S.stab=clamp(S.stab+15,0,100);S.sus=clamp(S.sus+3,0,100);
+  if(Math.abs(S.wx)>K('fixMin')&&dir===need){
+    S.stab=clamp(S.stab+K('fixGain')*Math.min(1,Math.abs(S.wx)),0,100);S.sus=clamp(S.sus+K('fixSus'),0,100);
     S.wx*=.12;S.wv=dir*1.2;S.fixes++;
     S.bonus+=50;pop(180+dir*50,270,'ナイス直し！+50','#8dffb5');SFX.fix();
   }else{
@@ -289,7 +296,7 @@ function updatePlay(dt){
   S.t+=dt;S.fixCd=Math.max(0,S.fixCd-dt);
   const idx=Math.min(4,Math.floor(S.t/S.stLen));
   if(idx!==S.stageIdx){
-    S.stageIdx=idx;S.cleared++;S.stab=Math.min(100,S.stab+10);
+    S.stageIdx=idx;S.cleared++;S.stab=Math.min(100,S.stab+K('stageGift'));
     banner(STAGES[idx].n,STAGES[idx].t);SFX.clear();S.gusts.length=0;S.gT=2.2;pop(180,150,'STAGE CLEAR +500','#ffd84a');
     if(idx>=1)S.bT=Math.min(S.bT,2.5);
   }
@@ -304,34 +311,35 @@ function updatePlay(dt){
   S.wx=clamp(S.wx+S.wv*sd,-1.6,1.6);
   S.lift=clamp(S.windMag*9*(hold?.15:1)+Math.abs(S.wv)*3,0,24);
   // 安定度
-  if(hold){S.stab+=12*sd;S.holdTime+=dt;if(Math.random()<dt*7)SFX.squeak()}
+  if(hold){S.stab+=K('holdGain')*sd-Math.max(0,S.windMag-K('holdLeakFrom'))*K('holdLeak')*sd;S.holdTime+=dt;if(Math.random()<dt*7)SFX.squeak()}
   else{
     S.holdTime=0;
-    if(S.windMag<.2)S.stab+=1*sd;
-    else S.stab-=(.5+S.windMag*6)*sd;
+    if(S.windMag<.2)S.stab+=K('calm')*sd;
+    else S.stab-=(K('windBase')+S.windMag*K('windK'))*sd;
+    if(Math.abs(S.wx)>1)S.stab-=K('tiltDrain')*sd;
     if(S.windMag>.5&&Math.random()<dt*5)SFX.flutter();
   }
   S.stab=clamp(S.stab,0,100);
   // バレそう度
   if(hold){
-    let r=8;if(S.stageIdx===3)r*=1.4;if(S.holdTime>3)r*=1.4;
+    let r=K('susHold');if(S.stageIdx===3)r*=1.4;if(S.holdTime>3)r*=1.4;
     S.sus+=r*sd;
-  }else S.sus-=6*sd;
+  }else S.sus-=K('susDecay')*sd;
   S.sus=clamp(S.sus,0,100);S.maxSus=Math.max(S.maxSus,S.sus);S.susSum+=S.sus*dt;
   // 鳥
   if(S.stageIdx>=1){
     S.bT-=sd;
-    if(S.bT<=0){spawnBird();S.bT=S.stageIdx===4?rnd(2.8,3.8):rnd(3.6,5.2)}
+    if(S.bT<=0){spawnBird();const bi=S.stageIdx===4?K('birdIvFinal'):K('birdIv');S.bT=rnd(bi[0],bi[1])*(mode==='quick'?.7:1)}
   }
   for(let i=S.birds.length-1;i>=0;i--){
     const b=S.birds[i];b.t+=sd;
     if(b.state==='in'){
       const tx=180+Math.sin(b.ph+b.t*5)*14,ty=262,dx=tx-b.x,dy=ty-b.y,d=Math.hypot(dx,dy)||1;
-      const sp=(S.stageIdx===4?135:108);
+      const sp=(S.stageIdx===4?K('birdSpFinal'):K('birdSp'));
       b.x+=dx/d*sp*sd;b.y+=dy/d*sp*sd+Math.sin(b.t*9+b.ph)*40*sd;
       if(d<34){
-        S.stab=clamp(S.stab-20,0,100);S.sus=clamp(S.sus+5,0,100);S.wv+=b.side*3;S.shake=8;S.hurt=.4;
-        pop(180,230,'つつかれた！-20','#ff7a7a');SFX.peck();
+        S.stab=clamp(S.stab-K('birdHit'),0,100);S.sus=clamp(S.sus+K('birdSus'),0,100);S.wv+=b.side*3;S.shake=8;S.hurt=.4;
+        pop(180,230,'つつかれた！-'+K('birdHit'),'#ff7a7a');SFX.peck();
         b.state='out';b.t=0;
       }
     }else{
@@ -948,7 +956,7 @@ function frame(now){
 }
 toTitle();
 requestAnimationFrame(frame);
-window.__WPK={get S(){return S},get state(){return state},start:startGame,fix,
+window.__WPK={DIF,get S(){return S},get state(){return state},start:startGame,fix,
   jump(t){if(S)S.t=t},setStab(v){S.stab=v},setSus(v){S.sus=v},endWin,endLose,pause:pauseGame,resume:resumeGame,
   scare(){for(const b of S.birds)scareBird(b)}};
 })();
