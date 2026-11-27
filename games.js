@@ -13,7 +13,7 @@
  *
  * サイト上の「管理」画面からも追加・削除できます（その場合はこのブラウザだけに保存されます）。
  */
-window.GAMES_VERSION = "66";
+window.GAMES_VERSION = "67";
 
 /* 管理画面のパスワード（SHA-256 ハッシュ。パスワードそのものは書かない）
  * 変更するには: "mini-game-arcade:" + 新しいパスワード を SHA-256 にかけた値に置き換える */
@@ -577,5 +577,14 @@ window.GAMES = [
     emoji: "🌕",
     color: "#0c1030",
     accent: "#f6e27a"
+  },
+  {
+    id: "giant-swing-king",
+    title: "GIANT SWING KING",
+    description: "巨大ブランコを漕いで加速し、最高のタイミングで手を離して遠くへ飛べ！ぶんぶん回る遠心力の勢いを味方につける、タイミング勝負。",
+    path: "games/giant-swing-king/index.html",
+    emoji: "🎪",
+    color: "#1d1b2f",
+    accent: "#ffb347"
   }
 ];
