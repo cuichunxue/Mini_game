@@ -13,7 +13,7 @@
  *
  * サイト上の「管理」画面からも追加・削除できます（その場合はこのブラウザだけに保存されます）。
  */
-window.GAMES_VERSION = "65";
+window.GAMES_VERSION = "66";
 
 /* 管理画面のパスワード（SHA-256 ハッシュ。パスワードそのものは書かない）
  * 変更するには: "mini-game-arcade:" + 新しいパスワード を SHA-256 にかけた値に置き換える */
@@ -568,5 +568,14 @@ window.GAMES = [
     emoji: "🦟",
     color: "#2a2438",
     accent: "#ffcf4a"
+  },
+  {
+    id: "moon-slice-king",
+    title: "月斬り王 MOON SLICE KING",
+    description: "落書きした刀で、月を斬れ。8秒で刀を描き、スワイプで一刀両断。お題どおりに斬れるか？描いた形と振り方で結果が変わる。",
+    path: "games/moon-slice-king/index.html",
+    emoji: "🌕",
+    color: "#0c1030",
+    accent: "#f6e27a"
   }
 ];
