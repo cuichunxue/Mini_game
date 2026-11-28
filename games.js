@@ -13,7 +13,7 @@
  *
  * サイト上の「管理」画面からも追加・削除できます（その場合はこのブラウザだけに保存されます）。
  */
-window.GAMES_VERSION = "68";
+window.GAMES_VERSION = "69";
 
 /* 管理画面のパスワード（SHA-256 ハッシュ。パスワードそのものは書かない）
  * 変更するには: "mini-game-arcade:" + 新しいパスワード を SHA-256 にかけた値に置き換える */
@@ -586,5 +586,14 @@ window.GAMES = [
     emoji: "🎪",
     color: "#1d1b2f",
     accent: "#ffb347"
+  },
+  {
+    id: "high-bar-king",
+    title: "HIGH BAR KING 鉄棒飛翔王",
+    description: "回れ！飛べ！掴め！鉄棒の大車輪で勢いをつけ、空中で宙返り・ひねりを決めて次の鉄棒をキャッチ。限界速度で空を駆ける3Dアクション。",
+    path: "games/high-bar-king/index.html",
+    emoji: "🤸",
+    color: "#14284a",
+    accent: "#ffcf3a"
   }
 ];
