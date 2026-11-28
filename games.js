@@ -13,7 +13,7 @@
  *
  * サイト上の「管理」画面からも追加・削除できます（その場合はこのブラウザだけに保存されます）。
  */
-window.GAMES_VERSION = "71";
+window.GAMES_VERSION = "72";
 
 /* 管理画面のパスワード（SHA-256 ハッシュ。パスワードそのものは書かない）
  * 変更するには: "mini-game-arcade:" + 新しいパスワード を SHA-256 にかけた値に置き換える */
@@ -613,5 +613,14 @@ window.GAMES = [
     emoji: "⚽",
     color: "#0b1a2a",
     accent: "#ffd23f"
+  },
+  {
+    id: "crossing-king",
+    title: "CROSSING KING 踏切パニック王",
+    description: "たった一本のレバーで街の運命を握れ！遮断機を操って電車と車をさばく3D。NORMALは3分の踏切管理、CHAOSは遮断機を開け放って大惨事。",
+    path: "games/crossing-king/index.html",
+    emoji: "🚧",
+    color: "#2b2013",
+    accent: "#ffcf3a"
   }
 ];
