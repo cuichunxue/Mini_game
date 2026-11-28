@@ -13,7 +13,7 @@
  *
  * サイト上の「管理」画面からも追加・削除できます（その場合はこのブラウザだけに保存されます）。
  */
-window.GAMES_VERSION = "70";
+window.GAMES_VERSION = "71";
 
 /* 管理画面のパスワード（SHA-256 ハッシュ。パスワードそのものは書かない）
  * 変更するには: "mini-game-arcade:" + 新しいパスワード を SHA-256 にかけた値に置き換える */
@@ -604,5 +604,14 @@ window.GAMES = [
     emoji: "👁️",
     color: "#3a1030",
     accent: "#ff7ab8"
+  },
+  {
+    id: "long-curve-king",
+    title: "LONG CURVE KING 超長距離・高速覚醒魔球王",
+    description: "300m先のゴールへ、自分だけの魔球を描け。指で描いた線が球速とカーブになる。ステージ攻略・エンドレス・デイリー・フリープレイ。",
+    path: "games/long-curve-king/index.html",
+    emoji: "⚽",
+    color: "#0b1a2a",
+    accent: "#ffd23f"
   }
 ];
