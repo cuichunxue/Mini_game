@@ -13,7 +13,7 @@
  *
  * サイト上の「管理」画面からも追加・削除できます（その場合はこのブラウザだけに保存されます）。
  */
-window.GAMES_VERSION = "69";
+window.GAMES_VERSION = "70";
 
 /* 管理画面のパスワード（SHA-256 ハッシュ。パスワードそのものは書かない）
  * 変更するには: "mini-game-arcade:" + 新しいパスワード を SHA-256 にかけた値に置き換える */
@@ -595,5 +595,14 @@ window.GAMES = [
     emoji: "🤸",
     color: "#14284a",
     accent: "#ffcf3a"
+  },
+  {
+    id: "eyelash-king",
+    title: "Eyelash King つけまつげ王",
+    description: "その1mmが、運命を変える。お客さんの目につけまつげを貼る、ミリ単位の職人ゲーム。ズレ具合で点数とカオススコアが決まる。",
+    path: "games/eyelash-king/index.html",
+    emoji: "👁️",
+    color: "#3a1030",
+    accent: "#ff7ab8"
   }
 ];
